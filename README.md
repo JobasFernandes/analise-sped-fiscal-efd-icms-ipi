@@ -12,6 +12,7 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 • Exportação de gráficos em PNG (botão PNG em cada card de gráfico)
 • Tooltips padronizados com valores monetários e rótulos contextuais
 • Sem backend: todos os dados são processados localmente no browser
+• Parsing assíncrono com Web Worker (UI permanece responsiva e barra de progresso durante arquivos grandes)
 
 > Observação: Há um arquivo de exemplo na raiz do projeto (`MovEstoque_0106_3006_57168607000100.txt`) que pode ser usado para testes rápidos.
 
@@ -101,6 +102,7 @@ npm run preview
 	- Entradas: foco em notas de entrada
 	- Comparativo: gráfico de linhas Entradas vs Saídas
 6) Exporte imagens de gráficos clicando no botão “PNG” no canto do card.
+7) Durante o upload de arquivos grandes, acompanhe a barra de progresso (processamento feito em Web Worker).
 
 Escopo/limites atuais do parser:
 - Considera somente situação normal (COD_SIT = '00')
@@ -133,9 +135,27 @@ src/
 
 Arquitetura e fluxo de dados (alto nível):
 - FileUpload lê o .txt e entrega o conteúdo para `parseSpedFile`
-- SpedParser consolida entradas/saídas por dia e CFOP e calcula totais/período
+- SpedParser (executado dentro de um Web Worker) consolida entradas/saídas por dia e CFOP e calcula totais/período sem bloquear a thread principal
 - Dashboard consome `dadosProcessados` e usa `dataProcessor` para preparar os gráficos
 - CfopDetalhes cruza notas e itens do CFOP selecionado e permite exportar CSV
+
+### Parsing assíncrono (Web Worker)
+
+Para evitar travamentos ao processar arquivos grandes (dezenas de MB com centenas de milhares de linhas), o parsing ocorre em um Web Worker:
+
+1. O componente `App.jsx` instancia `spedParserWorker.ts` via `new Worker(new URL('./workers/spedParserWorker.ts', import.meta.url), { type: 'module' })`.
+2. O arquivo é lido (FileReader) e seu conteúdo textual é enviado ao worker `{ type: 'parse', content }`.
+3. O worker chama `parseSpedFile(content, onProgress)` e emite eventos intermediários `{ type: 'progress', progress, current, total }`.
+4. A UI exibe uma barra de progresso no `FileUpload` (percentual formatado).
+5. Ao finalizar, o worker envia `{ type: 'result', data, durationMs }` e os gráficos são renderizados.
+6. Se o worker falhar (ex: ambiente não suporta), há fallback síncrono com callback de progresso.
+
+Benefícios:
+- UI permanece responsiva (sem congelar inputs/scroll)
+- Feedback contínuo do andamento (percentual de linhas processadas)
+- Escalável para arquivos muito maiores sem alterar a API de alto nível
+
+Fallback: caso o worker não inicialize (erro de construção em algum ambiente), o parser roda no main thread utilizando a mesma API de progresso.
 
 ---
 
@@ -175,8 +195,8 @@ Arquitetura e fluxo de dados (alto nível):
 - Melhorar tooltips/legendas e permitir exportar imagem do gráfico
 
 2) Performance/Robustez
-- Mover parsing para Web Worker (arquivos grandes sem travar a UI)
-- Leitura streaming/chunks do arquivo SPED para reduzir memória
+- (Concluído) Parsing em Web Worker com barra de progresso
+- Próximo: leitura streaming/chunks do arquivo SPED para reduzir memória
 - Melhor detecção de encoding (UTF-8/ISO-8859-1) e normalização
 
 - Tipar a estrutura completa retornada pelo parser e datasets de gráfico

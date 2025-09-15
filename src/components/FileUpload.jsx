@@ -5,7 +5,7 @@ import { Upload, FileText, AlertCircle, CheckCircle } from 'lucide-react';
 /**
  * Componente para upload de arquivos SPED fiscal
  */
-const FileUpload = ({ onFileSelect, loading = false, error = null }) => {
+const FileUpload = ({ onFileSelect, loading = false, error = null, progress = 0 }) => {
   const onDrop = useCallback((acceptedFiles, rejectedFiles) => {
     // Verifica se há arquivos rejeitados
     if (rejectedFiles.length > 0) {
@@ -79,7 +79,15 @@ const FileUpload = ({ onFileSelect, loading = false, error = null }) => {
   // Ícone baseado no estado
   const getIcon = () => {
     if (loading) {
-      return <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mx-auto mb-4" />;
+      return (
+        <div className="relative mx-auto mb-4 flex flex-col items-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary-600 mb-2" />
+          <div className="w-40 h-2 bg-gray-200 rounded overflow-hidden">
+            <div className="h-full bg-primary-500 transition-all" style={{ width: `${Math.min(100, Math.max(0, progress * 100)).toFixed(1)}%` }} />
+          </div>
+          <span className="mt-1 text-xs text-gray-500">{(progress * 100).toFixed(1)}%</span>
+        </div>
+      );
     }
     if (isDragAccept) {
       return <CheckCircle className="h-12 w-12 text-green-500 mx-auto mb-4" />;
@@ -95,7 +103,7 @@ const FileUpload = ({ onFileSelect, loading = false, error = null }) => {
     if (loading) {
       return {
         primary: 'Processando arquivo...',
-        secondary: 'Aguarde enquanto analisamos o arquivo SPED'
+        secondary: `Analisando linhas do SPED (${(progress * 100).toFixed(1)}%)`
       };
     }
     if (isDragAccept) {

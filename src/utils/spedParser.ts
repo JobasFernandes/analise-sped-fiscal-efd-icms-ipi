@@ -1,6 +1,6 @@
-import { format, parse } from 'date-fns';
+import { format, parse } from "date-fns";
 // Importa do .js para manter o mapa estático de CFOPs até migrarmos totalmente
-import { getDescricaoCfop } from './cfopService';
+import { getDescricaoCfop } from "./cfopService";
 
 export type Nota = {
   numeroDoc: string;
@@ -9,7 +9,7 @@ export type Nota = {
   dataEntradaSaida: Date | null;
   valorDocumento: number;
   valorMercadoria: number;
-  indicadorOperacao: '0' | '1';
+  indicadorOperacao: "0" | "1";
   situacao: string;
   itens: Array<{
     cfop: string;
@@ -23,21 +23,46 @@ export type Nota = {
 
 export class SpedParser {
   data: any;
-  constructor() { this.resetData(); }
+  constructor() {
+    this.resetData();
+  }
 
-  parse(fileContent: string) {
-    const lines = fileContent.split('\n').filter(line => line.trim());
+  /**
+   * Faz o parsing completo do conteúdo do arquivo.
+   * @param fileContent Conteúdo textual do arquivo SPED
+   * @param onProgress Callback opcional (current, total) para reporte de progresso
+   */
+  parse(
+    fileContent: string,
+    onProgress?: (current: number, total: number) => void
+  ) {
+    const lines = fileContent.split("\n").filter((line) => line.trim());
     this.resetData();
     let currentNota: Nota | null = null;
+    const total = lines.length;
+    let processed = 0;
+    // Intervalo mínimo entre callbacks para evitar overhead (linhas)
+    const STEP = 200;
     for (const line of lines) {
       try {
         const registro = this.parseRegistro(line);
         if (!registro || !registro.tipo) continue;
-  if (registro.tipo === '0000') this.process0000(registro);
-  else if (registro.tipo === 'C100') currentNota = this.processC100(registro) as Nota | null;
-        else if (registro.tipo === 'C190' && currentNota) this.processC190(registro, currentNota);
+        if (registro.tipo === "0000") this.process0000(registro);
+        else if (registro.tipo === "C100")
+          currentNota = this.processC100(registro) as Nota | null;
+        else if (registro.tipo === "C190" && currentNota)
+          this.processC190(registro, currentNota);
       } catch (err) {
-        console.warn('Linha SPED ignorada por erro de parsing:', err);
+        console.warn("Linha SPED ignorada por erro de parsing:", err);
+      } finally {
+        processed++;
+        if (onProgress && (processed % STEP === 0 || processed === total)) {
+          try {
+            onProgress(processed, total);
+          } catch {
+            /* silencia erros de callback */
+          }
+        }
       }
     }
     this.processarDadosFinais();
@@ -46,12 +71,19 @@ export class SpedParser {
 
   resetData() {
     this.data = {
-      entradas: [], saidas: [],
-      entradasPorDia: new Map(), saidasPorDia: new Map(),
-      entradasPorCfop: new Map(), saidasPorCfop: new Map(),
-      entradasPorDiaCfop: new Map(), saidasPorDiaCfop: new Map(),
-      totalEntradas: 0, totalSaidas: 0, totalGeral: 0,
-      periodo: { inicio: null, fim: null }
+      entradas: [],
+      saidas: [],
+      entradasPorDia: new Map(),
+      saidasPorDia: new Map(),
+      entradasPorCfop: new Map(),
+      saidasPorCfop: new Map(),
+      entradasPorDiaCfop: new Map(),
+      saidasPorDiaCfop: new Map(),
+      itensPorCfop: new Map(),
+      totalEntradas: 0,
+      totalSaidas: 0,
+      totalGeral: 0,
+      periodo: { inicio: null, fim: null },
     };
   }
   process0000(registro: any) {
@@ -70,9 +102,11 @@ export class SpedParser {
   }
 
   parseRegistro(line: string) {
-    const partes = line.split('|');
+    const partes = line.split("|");
     if (!partes || partes.length < 2) return { tipo: null };
-    const campos = partes.filter((_, index) => index > 0 && index < partes.length - 1);
+    const campos = partes.filter(
+      (_, index) => index > 0 && index < partes.length - 1
+    );
     if (campos.length === 0) return { tipo: null };
     const tipo = campos[0];
     return { tipo, campos, linha: line };
@@ -85,7 +119,7 @@ export class SpedParser {
     const dataES = this.parseDate(campos[10]);
     const valorDoc = this.parseValor(campos[11]);
     const valorMerc = this.parseValor(campos[15]);
-    const indicadorOperacao = campos[1] as '0' | '1';
+    const indicadorOperacao = campos[1] as "0" | "1";
     const situacao = campos[5];
     const nota: Nota = {
       numeroDoc: campos[7],
@@ -96,15 +130,17 @@ export class SpedParser {
       valorMercadoria: valorMerc,
       indicadorOperacao,
       situacao,
-      itens: []
+      itens: [],
     };
-    if (valorDoc > 0 && situacao === '00') {
-      if (indicadorOperacao === '0') this.data.entradas.push(nota);
-      else if (indicadorOperacao === '1') this.data.saidas.push(nota);
+    if (valorDoc > 0 && situacao === "00") {
+      if (indicadorOperacao === "0") this.data.entradas.push(nota);
+      else if (indicadorOperacao === "1") this.data.saidas.push(nota);
       // Se não vier do header 0000, usa datas de documento para derivar período
       if (dataDoc && (!this.data.periodo.inicio || !this.data.periodo.fim)) {
-        if (!this.data.periodo.inicio || dataDoc < this.data.periodo.inicio) this.data.periodo.inicio = dataDoc;
-        if (!this.data.periodo.fim || dataDoc > this.data.periodo.fim) this.data.periodo.fim = dataDoc;
+        if (!this.data.periodo.inicio || dataDoc < this.data.periodo.inicio)
+          this.data.periodo.inicio = dataDoc;
+        if (!this.data.periodo.fim || dataDoc > this.data.periodo.fim)
+          this.data.periodo.fim = dataDoc;
       }
     }
     return nota;
@@ -115,24 +151,41 @@ export class SpedParser {
     if (campos.length < 5) return;
     const cfop = campos[2];
     const valorOperacao = this.parseValor(campos[4]);
-    if (valorOperacao > 0 && nota.situacao === '00') {
+    if (valorOperacao > 0 && nota.situacao === "00") {
       const item = {
         cfop,
         valorOperacao,
         cstIcms: campos[1],
         aliqIcms: this.parseValor(campos[3]),
         valorBcIcms: this.parseValor(campos[5]),
-        valorIcms: this.parseValor(campos[6])
+        valorIcms: this.parseValor(campos[6]),
       };
       nota.itens.push(item);
+      // Indexa item por CFOP com metadados da nota para consultas rápidas no UI
+      if (!this.data.itensPorCfop.has(cfop))
+        this.data.itensPorCfop.set(cfop, []);
+      this.data.itensPorCfop.get(cfop).push({
+        cfop,
+        valorOperacao: item.valorOperacao,
+        cstIcms: item.cstIcms,
+        aliqIcms: item.aliqIcms,
+        valorBcIcms: item.valorBcIcms,
+        valorIcms: item.valorIcms,
+        numeroDoc: nota.numeroDoc,
+        chaveNfe: nota.chaveNfe,
+        dataDocumento: nota.dataDocumento,
+        dataEntradaSaida: nota.dataEntradaSaida,
+        valorTotal: nota.valorDocumento,
+        situacao: nota.situacao,
+      });
       const dataKey = this.formatDateKey(nota.dataDocumento);
       if (dataKey) {
-        if (nota.indicadorOperacao === '0') {
+        if (nota.indicadorOperacao === "0") {
           this.acumularEntradaPorDia(dataKey, valorOperacao);
           this.acumularEntradaPorCfop(cfop, valorOperacao);
           this.acumularEntradaPorDiaCfop(dataKey, cfop, valorOperacao);
           this.data.totalEntradas += valorOperacao;
-        } else if (nota.indicadorOperacao === '1') {
+        } else if (nota.indicadorOperacao === "1") {
           this.acumularSaidaPorDia(dataKey, valorOperacao);
           this.acumularSaidaPorCfop(cfop, valorOperacao);
           this.acumularSaidaPorDiaCfop(dataKey, cfop, valorOperacao);
@@ -145,70 +198,135 @@ export class SpedParser {
 
   parseDate(dateStr?: string) {
     if (!dateStr || dateStr.length !== 8) return null;
-    try { return parse(dateStr, 'ddMMyyyy', new Date()); }
-    catch { return null; }
+    try {
+      return parse(dateStr, "ddMMyyyy", new Date());
+    } catch {
+      return null;
+    }
   }
   parseValor(valorStr?: string) {
     if (!valorStr) return 0;
-    const cleanValue = valorStr.replace(/\s/g, '').replace(',', '.');
+    const cleanValue = valorStr.replace(/\s/g, "").replace(",", ".");
     const valor = parseFloat(cleanValue);
     return isNaN(valor) ? 0 : valor;
   }
   formatDateKey(date?: Date | null) {
     if (!date) return null;
-    return format(date, 'yyyy-MM-dd');
+    return format(date, "yyyy-MM-dd");
   }
   acumularEntradaPorDia(dataKey: string, valor: number) {
-    if (!this.data.entradasPorDia.has(dataKey)) this.data.entradasPorDia.set(dataKey, 0);
-    this.data.entradasPorDia.set(dataKey, this.data.entradasPorDia.get(dataKey) + valor);
+    if (!this.data.entradasPorDia.has(dataKey))
+      this.data.entradasPorDia.set(dataKey, 0);
+    this.data.entradasPorDia.set(
+      dataKey,
+      this.data.entradasPorDia.get(dataKey) + valor
+    );
   }
   acumularSaidaPorDia(dataKey: string, valor: number) {
-    if (!this.data.saidasPorDia.has(dataKey)) this.data.saidasPorDia.set(dataKey, 0);
-    this.data.saidasPorDia.set(dataKey, this.data.saidasPorDia.get(dataKey) + valor);
+    if (!this.data.saidasPorDia.has(dataKey))
+      this.data.saidasPorDia.set(dataKey, 0);
+    this.data.saidasPorDia.set(
+      dataKey,
+      this.data.saidasPorDia.get(dataKey) + valor
+    );
   }
   acumularEntradaPorCfop(cfop: string, valor: number) {
-    if (!this.data.entradasPorCfop.has(cfop)) this.data.entradasPorCfop.set(cfop, 0);
-    this.data.entradasPorCfop.set(cfop, this.data.entradasPorCfop.get(cfop) + valor);
+    if (!this.data.entradasPorCfop.has(cfop))
+      this.data.entradasPorCfop.set(cfop, 0);
+    this.data.entradasPorCfop.set(
+      cfop,
+      this.data.entradasPorCfop.get(cfop) + valor
+    );
   }
   acumularSaidaPorCfop(cfop: string, valor: number) {
-    if (!this.data.saidasPorCfop.has(cfop)) this.data.saidasPorCfop.set(cfop, 0);
-    this.data.saidasPorCfop.set(cfop, this.data.saidasPorCfop.get(cfop) + valor);
+    if (!this.data.saidasPorCfop.has(cfop))
+      this.data.saidasPorCfop.set(cfop, 0);
+    this.data.saidasPorCfop.set(
+      cfop,
+      this.data.saidasPorCfop.get(cfop) + valor
+    );
   }
   acumularEntradaPorDiaCfop(dataKey: string, cfop: string, valor: number) {
     const key = `${dataKey}-${cfop}`;
-    if (!this.data.entradasPorDiaCfop.has(key)) this.data.entradasPorDiaCfop.set(key, { data: dataKey, cfop, valor: 0 });
+    if (!this.data.entradasPorDiaCfop.has(key))
+      this.data.entradasPorDiaCfop.set(key, { data: dataKey, cfop, valor: 0 });
     const item = this.data.entradasPorDiaCfop.get(key);
     item.valor += valor;
   }
   acumularSaidaPorDiaCfop(dataKey: string, cfop: string, valor: number) {
     const key = `${dataKey}-${cfop}`;
-    if (!this.data.saidasPorDiaCfop.has(key)) this.data.saidasPorDiaCfop.set(key, { data: dataKey, cfop, valor: 0 });
+    if (!this.data.saidasPorDiaCfop.has(key))
+      this.data.saidasPorDiaCfop.set(key, { data: dataKey, cfop, valor: 0 });
     const item = this.data.saidasPorDiaCfop.get(key);
     item.valor += valor;
   }
   processarDadosFinais() {
-    this.data.entradasPorDiaArray = Array.from(this.data.entradasPorDia.entries() as Iterable<[string, number]>)
+    this.data.entradasPorDiaArray = Array.from(
+      this.data.entradasPorDia.entries() as Iterable<[string, number]>
+    )
       .map(([data, valor]) => ({ data, valor }))
       .sort((a: any, b: any) => a.data.localeCompare(b.data));
-    this.data.entradasPorCfopArray = Array.from(this.data.entradasPorCfop.entries() as Iterable<[string, number]>)
-      .map(([cfop, valor]) => ({ cfop, valor, descricao: getDescricaoCfop(cfop) }))
+    this.data.entradasPorCfopArray = Array.from(
+      this.data.entradasPorCfop.entries() as Iterable<[string, number]>
+    )
+      .map(([cfop, valor]) => ({
+        cfop,
+        valor,
+        descricao: getDescricaoCfop(cfop),
+      }))
       .sort((a: any, b: any) => b.valor - a.valor);
-    this.data.entradasPorDiaCfopArray = Array.from(this.data.entradasPorDiaCfop.values() as Iterable<{ data: string; cfop: string; valor: number }>)
-      .sort((a: any, b: any) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop));
-    this.data.saidasPorDiaArray = Array.from(this.data.saidasPorDia.entries() as Iterable<[string, number]>)
+    this.data.entradasPorDiaCfopArray = Array.from(
+      this.data.entradasPorDiaCfop.values() as Iterable<{
+        data: string;
+        cfop: string;
+        valor: number;
+      }>
+    ).sort(
+      (a: any, b: any) =>
+        a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
+    );
+    this.data.saidasPorDiaArray = Array.from(
+      this.data.saidasPorDia.entries() as Iterable<[string, number]>
+    )
       .map(([data, valor]) => ({ data, valor }))
       .sort((a: any, b: any) => a.data.localeCompare(b.data));
-    this.data.saidasPorCfopArray = Array.from(this.data.saidasPorCfop.entries() as Iterable<[string, number]>)
-      .map(([cfop, valor]) => ({ cfop, valor, descricao: getDescricaoCfop(cfop) }))
+    this.data.saidasPorCfopArray = Array.from(
+      this.data.saidasPorCfop.entries() as Iterable<[string, number]>
+    )
+      .map(([cfop, valor]) => ({
+        cfop,
+        valor,
+        descricao: getDescricaoCfop(cfop),
+      }))
       .sort((a: any, b: any) => b.valor - a.valor);
-    this.data.saidasPorDiaCfopArray = Array.from(this.data.saidasPorDiaCfop.values() as Iterable<{ data: string; cfop: string; valor: number }>)
-      .sort((a: any, b: any) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop));
+    this.data.saidasPorDiaCfopArray = Array.from(
+      this.data.saidasPorDiaCfop.values() as Iterable<{
+        data: string;
+        cfop: string;
+        valor: number;
+      }>
+    ).sort(
+      (a: any, b: any) =>
+        a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
+    );
     this.data.vendas = this.data.saidas;
     this.data.vendasPorDia = this.data.saidasPorDia;
     this.data.vendasPorCfop = this.data.saidasPorCfop;
+
+    // Converte índice Map para objeto serializável (cfop -> itens[])
+    const itensIndexObj: Record<string, any[]> = {};
+    for (const [cfop, itens] of this.data.itensPorCfop.entries() as Iterable<
+      [string, any[]]
+    >) {
+      itensIndexObj[cfop] = itens;
+    }
+    this.data.itensPorCfopIndex = itensIndexObj;
   }
 }
 
-export function parseSpedFile(content: string) {
-  return new SpedParser().parse(content);
+export function parseSpedFile(
+  content: string,
+  onProgress?: (current: number, total: number) => void
+) {
+  return new SpedParser().parse(content, onProgress);
 }

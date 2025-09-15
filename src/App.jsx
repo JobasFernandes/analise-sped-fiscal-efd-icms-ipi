@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { parseSpedFile } from './utils/spedParser';
 import FileUpload from './components/FileUpload';
 import Dashboard from './components/Dashboard';
@@ -12,40 +12,82 @@ function App() {
   const [arquivoInfo, setArquivoInfo] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [progress, setProgress] = useState(0);
+  const workerRef = useRef(null);
+
+  // Cleanup do worker ao desmontar
+  useEffect(() => {
+    return () => {
+      if (workerRef.current) {
+        workerRef.current.terminate();
+        workerRef.current = null;
+      }
+    };
+  }, []);
 
   // Manipula o upload e processamento do arquivo
+  const iniciarWorkerSeNecessario = () => {
+    if (workerRef.current) return workerRef.current;
+    try {
+      // Vite permite importar via new URL(relativePath, import.meta.url)
+      // @ts-ignore
+      const worker = new Worker(new URL('./workers/spedParserWorker.ts', import.meta.url), { type: 'module' });
+      workerRef.current = worker;
+      return worker;
+    } catch (e) {
+      console.warn('Falha ao iniciar Web Worker, usando fallback síncrono.', e);
+      return null;
+    }
+  };
+
   const handleFileSelect = async (fileData) => {
     setLoading(true);
     setError(null);
+    setProgress(0);
     setDadosProcessados(null);
 
-    try {
-      console.log('Processando arquivo:', fileData.name);
-      
-      // Simula um pequeno delay para mostrar o loading
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Processa o arquivo SPED
-      const dados = parseSpedFile(fileData.content);
-      
-      if (!dados || dados.totalGeral === 0) {
-        throw new Error('Arquivo SPED não contém dados de vendas válidos ou não foi possível processar o arquivo.');
-      }
+    const worker = iniciarWorkerSeNecessario();
 
-      console.log('Dados processados:', dados);
-      
-      setDadosProcessados(dados);
-      setArquivoInfo({
-        name: fileData.name,
-        size: fileData.size,
-        lastModified: fileData.lastModified
-      });
-      
-    } catch (err) {
-      console.error('Erro ao processar arquivo:', err);
-      setError(err.message || 'Erro ao processar o arquivo SPED. Verifique se o arquivo está no formato correto.');
-    } finally {
-      setLoading(false);
+    if (worker) {
+      // Parsing via worker
+      const onMessage = (e) => {
+        const msg = e.data;
+        if (!msg || !msg.type) return;
+        if (msg.type === 'progress') {
+          setProgress(msg.progress);
+        } else if (msg.type === 'result') {
+          const dados = msg.data;
+          if (!dados || dados.totalGeral === 0) {
+            setError('Arquivo SPED não contém dados válidos.');
+          } else {
+            setDadosProcessados(dados);
+            setArquivoInfo({ name: fileData.name, size: fileData.size, lastModified: fileData.lastModified });
+          }
+          setLoading(false);
+          worker.removeEventListener('message', onMessage);
+        } else if (msg.type === 'error') {
+          setError(msg.error || 'Erro ao processar arquivo no worker.');
+          setLoading(false);
+          worker.removeEventListener('message', onMessage);
+        }
+      };
+      worker.addEventListener('message', onMessage);
+      worker.postMessage({ type: 'parse', content: fileData.content });
+    } else {
+      // Fallback síncrono
+      try {
+        const dados = parseSpedFile(fileData.content, (current, total) => setProgress(current / total));
+        if (!dados || dados.totalGeral === 0) {
+          throw new Error('Arquivo SPED não contém dados de vendas válidos ou não foi possível processar o arquivo.');
+        }
+        setDadosProcessados(dados);
+        setArquivoInfo({ name: fileData.name, size: fileData.size, lastModified: fileData.lastModified });
+      } catch (err) {
+        console.error('Erro ao processar arquivo (fallback):', err);
+        setError(err.message || 'Erro ao processar o arquivo SPED.');
+      } finally {
+        setLoading(false);
+      }
     }
   };
 
@@ -54,6 +96,7 @@ function App() {
     setDadosProcessados(null);
     setArquivoInfo(null);
     setError(null);
+    setProgress(0);
   };
 
   return (
@@ -109,6 +152,7 @@ function App() {
               onFileSelect={handleFileSelect}
               loading={loading}
               error={error}
+              progress={progress}
             />
 
             {/* Features */}
