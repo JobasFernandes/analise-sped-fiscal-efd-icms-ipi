@@ -33,7 +33,8 @@ export class SpedParser {
       try {
         const registro = this.parseRegistro(line);
         if (!registro || !registro.tipo) continue;
-        if (registro.tipo === 'C100') currentNota = this.processC100(registro) as Nota | null;
+  if (registro.tipo === '0000') this.process0000(registro);
+  else if (registro.tipo === 'C100') currentNota = this.processC100(registro) as Nota | null;
         else if (registro.tipo === 'C190' && currentNota) this.processC190(registro, currentNota);
       } catch (err) {
         console.warn('Linha SPED ignorada por erro de parsing:', err);
@@ -52,6 +53,20 @@ export class SpedParser {
       totalEntradas: 0, totalSaidas: 0, totalGeral: 0,
       periodo: { inicio: null, fim: null }
     };
+  }
+  process0000(registro: any) {
+    const campos = registro.campos;
+    // |0000|...|DT_INI|DT_FIN|...
+    try {
+      const dtIniStr = campos[3];
+      const dtFimStr = campos[4];
+      const dtIni = this.parseDate(dtIniStr);
+      const dtFim = this.parseDate(dtFimStr);
+      if (dtIni) this.data.periodo.inicio = dtIni;
+      if (dtFim) this.data.periodo.fim = dtFim;
+    } catch {
+      // ignora erros de header
+    }
   }
 
   parseRegistro(line: string) {
@@ -86,7 +101,8 @@ export class SpedParser {
     if (valorDoc > 0 && situacao === '00') {
       if (indicadorOperacao === '0') this.data.entradas.push(nota);
       else if (indicadorOperacao === '1') this.data.saidas.push(nota);
-      if (dataDoc) {
+      // Se não vier do header 0000, usa datas de documento para derivar período
+      if (dataDoc && (!this.data.periodo.inicio || !this.data.periodo.fim)) {
         if (!this.data.periodo.inicio || dataDoc < this.data.periodo.inicio) this.data.periodo.inicio = dataDoc;
         if (!this.data.periodo.fim || dataDoc > this.data.periodo.fim) this.data.periodo.fim = dataDoc;
       }

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   FileText, 
   DollarSign, 
@@ -8,7 +8,7 @@ import {
   ArrowDownCircle,
   ArrowUpCircle
 } from 'lucide-react';
-import { formatarMoeda, formatarNumero, gerarResumoExecutivo } from '../utils/dataProcessor';
+import { formatarMoeda, formatarNumero, gerarResumoExecutivo, filtrarDadosProcessadosPorPeriodo, formatarData } from '../utils/dataProcessor';
 import VendasPorDiaChart from './charts/VendasPorDiaChart';
 import DistribuicaoCfopChart from './charts/DistribuicaoCfopChart';
 import CfopDetalhes from './CfopDetalhes';
@@ -18,6 +18,18 @@ import CfopDetalhes from './CfopDetalhes';
  */
 const Dashboard = ({ dados, arquivo }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);
+  const [dataInicio, setDataInicio] = useState('');
+  const [dataFim, setDataFim] = useState('');
+
+  // Define automaticamente o período do arquivo nos filtros quando os dados mudarem
+  useEffect(() => {
+    if (dados?.periodo?.inicio && dados?.periodo?.fim) {
+      const ini = formatarData(dados.periodo.inicio, 'yyyy-MM-dd');
+      const fim = formatarData(dados.periodo.fim, 'yyyy-MM-dd');
+      setDataInicio(ini);
+      setDataFim(fim);
+    }
+  }, [dados?.periodo?.inicio, dados?.periodo?.fim]);
 
   if (!dados) {
     return (
@@ -33,7 +45,14 @@ const Dashboard = ({ dados, arquivo }) => {
     );
   }
 
-  const resumo = gerarResumoExecutivo(dados);
+  const dadosFiltrados = filtrarDadosProcessadosPorPeriodo(
+    dados,
+    dataInicio || undefined,
+    dataFim || undefined
+  );
+  const resumo = gerarResumoExecutivo(dadosFiltrados);
+  const minPeriodo = dados?.periodo?.inicio ? formatarData(dados.periodo.inicio, 'yyyy-MM-dd') : '';
+  const maxPeriodo = dados?.periodo?.fim ? formatarData(dados.periodo.fim, 'yyyy-MM-dd') : '';
 
   return (
     <div className="space-y-8">
@@ -48,11 +67,35 @@ const Dashboard = ({ dados, arquivo }) => {
               Arquivo: {arquivo?.name || 'Não identificado'}
             </p>
           </div>
-          <div className="text-right">
-            <p className="text-sm text-gray-500">Período</p>
-            <p className="text-lg font-medium text-gray-900">
-              {resumo.periodoAnalise || 'Não identificado'}
-            </p>
+          <div className="flex items-end space-x-3">
+      <div>
+              <label className="block text-xs text-gray-500 mb-1">Data início</label>
+              <input
+                type="date"
+                value={dataInicio}
+                onChange={(e) => setDataInicio(e.target.value)}
+                min={minPeriodo}
+                max={dataFim || maxPeriodo}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              />
+            </div>
+            <div>
+              <label className="block text-xs text-gray-500 mb-1">Data fim</label>
+              <input
+                type="date"
+                value={dataFim}
+                onChange={(e) => setDataFim(e.target.value)}
+                min={dataInicio || minPeriodo}
+                max={maxPeriodo}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              />
+            </div>
+            <div className="text-right ml-2">
+              <p className="text-sm text-gray-500">Período</p>
+              <p className="text-lg font-medium text-gray-900">
+                {resumo.periodoAnalise || 'Não identificado'}
+              </p>
+            </div>
           </div>
         </div>
       </div>
@@ -127,7 +170,7 @@ const Dashboard = ({ dados, arquivo }) => {
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             Saídas por Dia
           </h2>
-          <VendasPorDiaChart dados={dados.saidasPorDiaArray || dados.vendasPorDiaArray} />
+          <VendasPorDiaChart dados={dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray} />
         </div>
 
         {/* Distribuição por CFOP de Saída */}
@@ -135,19 +178,19 @@ const Dashboard = ({ dados, arquivo }) => {
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             Distribuição CFOPs de Saída
           </h2>
-          <DistribuicaoCfopChart dados={dados.saidasPorCfopArray || dados.vendasPorCfopArray} />
+          <DistribuicaoCfopChart dados={dadosFiltrados.saidasPorCfopArray || dadosFiltrados.vendasPorCfopArray} />
         </div>
       </div>
 
       {/* Gráficos de Entrada */}
-      {dados.entradasPorDiaArray && dados.entradasPorDiaArray.length > 0 && (
+  {dadosFiltrados.entradasPorDiaArray && dadosFiltrados.entradasPorDiaArray.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Entradas por Dia */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
             <h2 className="text-lg font-medium text-gray-900 mb-4">
               Entradas por Dia
             </h2>
-            <VendasPorDiaChart dados={dados.entradasPorDiaArray} />
+            <VendasPorDiaChart dados={dadosFiltrados.entradasPorDiaArray} />
           </div>
 
           {/* Distribuição por CFOP de Entrada */}
@@ -155,13 +198,13 @@ const Dashboard = ({ dados, arquivo }) => {
             <h2 className="text-lg font-medium text-gray-900 mb-4">
               Distribuição CFOPs de Entrada
             </h2>
-            <DistribuicaoCfopChart dados={dados.entradasPorCfopArray} />
+            <DistribuicaoCfopChart dados={dadosFiltrados.entradasPorCfopArray} />
           </div>
         </div>
       )}
 
       {/* Tabela de Detalhes por CFOP - Saídas */}
-      {dados.saidasPorCfopArray && dados.saidasPorCfopArray.length > 0 && (
+  {dadosFiltrados.saidasPorCfopArray && dadosFiltrados.saidasPorCfopArray.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             Detalhes por CFOP - Saídas
@@ -188,7 +231,7 @@ const Dashboard = ({ dados, arquivo }) => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {dados.saidasPorCfopArray?.map((item, index) => {
+                {dadosFiltrados.saidasPorCfopArray?.map((item, index) => {
                   const percentual = resumo.totalSaidas > 0 
                     ? (item.valor / resumo.totalSaidas) * 100 
                     : 0;
@@ -226,7 +269,7 @@ const Dashboard = ({ dados, arquivo }) => {
       )}
 
       {/* Tabela de Detalhes por CFOP - Entradas */}
-      {dados.entradasPorCfopArray && dados.entradasPorCfopArray.length > 0 && (
+  {dadosFiltrados.entradasPorCfopArray && dadosFiltrados.entradasPorCfopArray.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             Detalhes por CFOP - Entradas
@@ -253,7 +296,7 @@ const Dashboard = ({ dados, arquivo }) => {
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {dados.entradasPorCfopArray?.map((item, index) => {
+                {dadosFiltrados.entradasPorCfopArray?.map((item, index) => {
                   const percentual = resumo.totalEntradas > 0 
                     ? (item.valor / resumo.totalEntradas) * 100 
                     : 0;
@@ -307,7 +350,7 @@ const Dashboard = ({ dados, arquivo }) => {
       {cfopSelecionado && (
         <CfopDetalhes 
           cfop={cfopSelecionado}
-          dados={dados}
+          dados={dadosFiltrados}
           onFechar={() => setCfopSelecionado(null)}
         />
       )}

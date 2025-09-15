@@ -6,6 +6,7 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 • Parser dedicado do SPED (C100/C190), filtrando apenas notas em situação normal (00)
 • Dashboards interativos com Chart.js (linhas, barras e rosca)
 • Resumo executivo, ranking por CFOP e detalhes com exportação CSV
+• Filtro por período (data início/fim) com preenchimento automático a partir do arquivo
 • Sem backend: todos os dados são processados localmente no browser
 
 > Observação: Há um arquivo de exemplo na raiz do projeto (`MovEstoque_0106_3006_57168607000100.txt`) que pode ser usado para testes rápidos.
@@ -23,12 +24,12 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 	- Entradas/saídas por dia (YYYY-MM-DD)
 	- Entradas/saídas por CFOP (com descrição via mapa estático)
 	- Totais de entradas, saídas e geral, e período analisado
-5) A UI exibe cards de KPIs, gráficos por dia/CFOP e uma tabela detalhada por CFOP com filtro, ordenação e exportação CSV.
+5) A UI exibe cards de KPIs, gráficos por dia/CFOP e uma tabela detalhada por CFOP com filtro, ordenação e exportação CSV. Há um filtro por período (data início/fim) aplicado a todos os gráficos/tabelas.
 
 Principais arquivos envolvidos:
 - `src/utils/spedParser.ts`: classe SpedParser (parsing C100/C190, agregações, totais, período)
 - `src/utils/cfopService.ts`: mapa estático de CFOPs e utilitários (descrição, tipo entrada/saída)
-- `src/utils/dataProcessor.ts`: formatações (moeda/data), preparação de datasets para Chart.js e resumo executivo
+- `src/utils/dataProcessor.ts`: formatações (moeda/data), preparação de datasets para Chart.js, resumo executivo e filtragem por período
 - `src/components/*`: FileUpload (drag-and-drop), Dashboard, CfopDetalhes (modal com CSV), gráficos
 
 ---
@@ -87,6 +88,9 @@ npm run preview
 	- Distribuição de CFOPs de saída (rosca)
 	- Entradas por dia/CFOP (se presentes no arquivo)
 	- Tabelas detalhadas por CFOP com filtro/ordenação e exportação CSV
+4) Ajuste o período no topo do dashboard, se necessário:
+	- As datas vêm preenchidas automaticamente com o período do arquivo (lido do registro 0000)
+	- Ao alterar as datas, todo o dashboard é recalculado (resumo, gráficos e tabelas)
 
 Escopo/limites atuais do parser:
 - Considera somente situação normal (COD_SIT = '00')
@@ -146,13 +150,17 @@ Arquitetura e fluxo de dados (alto nível):
 - Testes unitários com Vitest (fixtures SPED mínimas e canceladas)
 - Build de produção validado via Vite
 - Configurações ESM alinhadas (Tailwind/PostCSS como ESM)
+ - Filtro por período na UI e no processamento
+	 - Parser lê DT_INI/DT_FIN do 0000 para definir o período do arquivo
+	 - Inputs de data vêm preenchidos automaticamente
+	 - Filtragem considera data de entrada/saída quando disponível, sem descartar notas sem data
 
 ---
 
 ## Próximas tarefas sugeridas (priorizadas)
 
 1) UX/Produto
-- Filtro por período (data início/fim) na UI e no processamento
+- Persistir filtros na URL (query params) e permitir limpar rapidamente
 - Alternar visão Entradas/Saídas e comparação lado a lado
 - Melhorar tooltips/legendas e permitir exportar imagem do gráfico
 
@@ -161,9 +169,9 @@ Arquitetura e fluxo de dados (alto nível):
 - Leitura streaming/chunks do arquivo SPED para reduzir memória
 - Melhor detecção de encoding (UTF-8/ISO-8859-1) e normalização
 
-3) Técnico/Qualidade
 - Tipar a estrutura completa retornada pelo parser e datasets de gráfico
 - Adicionar testes de borda (linhas inválidas, campos vazios, datas fora do padrão)
+- Testes unitários específicos para o filtro por período (happy path + bordas)
 - Linting/format automático (ESLint + Prettier) e CI básico
 
 4) Dados/Amplitude
