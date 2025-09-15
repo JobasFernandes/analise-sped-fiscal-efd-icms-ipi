@@ -9,6 +9,8 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 • Filtro por período (data início/fim) com preenchimento automático a partir do arquivo
 • Persistência de filtros de período via query params (?inicio=YYYY-MM-DD&fim=YYYY-MM-DD)
 • Alternância de visão: Entradas | Saídas | Comparativo Entradas vs Saídas
+• Exportação de gráficos em PNG (botão PNG em cada card de gráfico)
+• Tooltips padronizados com valores monetários e rótulos contextuais
 • Sem backend: todos os dados são processados localmente no browser
 
 > Observação: Há um arquivo de exemplo na raiz do projeto (`MovEstoque_0106_3006_57168607000100.txt`) que pode ser usado para testes rápidos.
@@ -98,6 +100,7 @@ npm run preview
 	- Saídas: foco em vendas/saídas
 	- Entradas: foco em notas de entrada
 	- Comparativo: gráfico de linhas Entradas vs Saídas
+6) Exporte imagens de gráficos clicando no botão “PNG” no canto do card.
 
 Escopo/limites atuais do parser:
 - Considera somente situação normal (COD_SIT = '00')
@@ -167,8 +170,8 @@ Arquitetura e fluxo de dados (alto nível):
 ## Próximas tarefas sugeridas (priorizadas)
 
 1) UX/Produto
-- (Concluídos) Persistir filtros na URL (query params) e alternar visão Entradas/Saídas/Comparativo
-- Melhorar tooltips/legendas e permitir exportar imagem do gráfico
+- (Concluídos) Persistir filtros na URL (query params), alternar visão Entradas/Saídas/Comparativo, exportar gráficos PNG, padronizar tooltips
+- Próximo: permitir exportar imagem em SVG e copiar para clipboard
 - Melhorar tooltips/legendas e permitir exportar imagem do gráfico
 
 2) Performance/Robustez

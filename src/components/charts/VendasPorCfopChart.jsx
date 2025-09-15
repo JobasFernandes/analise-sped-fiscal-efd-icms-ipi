@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -10,6 +10,7 @@ import {
 } from 'chart.js';
 import { Bar } from 'react-chartjs-2';
 import { prepararDadosVendasPorCfop, formatarMoeda } from '../../utils/dataProcessor';
+import { downloadChartImage } from '../../utils/chartExport';
 
 // Registra os componentes necessários do Chart.js
 ChartJS.register(
@@ -24,7 +25,9 @@ ChartJS.register(
 /**
  * Componente de gráfico de barras para vendas por CFOP
  */
-const VendasPorCfopChart = ({ dados, limite = 10 }) => {
+const VendasPorCfopChart = ({ dados, limite = 10, exportFilename = 'vendas_por_cfop', title = 'Vendas por CFOP' }) => {
+  const chartRef = useRef(null);
+  const chartRef = useRef(null);
   if (!dados || dados.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
@@ -124,7 +127,18 @@ const VendasPorCfopChart = ({ dados, limite = 10 }) => {
 
   return (
     <div className="h-80 w-full">
-      <Bar data={data} options={options} />
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-gray-700 tracking-tight">{title}</h3>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => downloadChartImage(chartRef.current, exportFilename)}
+            className="px-2 py-1 text-xs rounded bg-white border border-gray-300 hover:bg-gray-50 shadow-sm"
+          >PNG</button>
+        </div>
+      </div>
+      <div className="h-[calc(100%-1.25rem)]">
+        <Bar ref={chartRef} data={data} options={options} />
+      </div>
     </div>
   );
 };

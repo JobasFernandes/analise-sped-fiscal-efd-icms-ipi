@@ -181,56 +181,32 @@ const Dashboard = ({ dados, arquivo }) => {
       {visao === 'saidas' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Saídas por Dia</h2>
-            <VendasPorDiaChart labelOverride="Saídas" tooltipPrefix="Saídas" dados={dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray} />
+            <VendasPorDiaChart title="Saídas por Dia" labelOverride="Saídas" tooltipPrefix="Saídas" dados={dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray} />
           </div>
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Distribuição CFOPs de Saída</h2>
-            <DistribuicaoCfopChart dados={dadosFiltrados.saidasPorCfopArray || dadosFiltrados.vendasPorCfopArray} />
+            <DistribuicaoCfopChart title="Distribuição CFOPs de Saída" dados={dadosFiltrados.saidasPorCfopArray || dadosFiltrados.vendasPorCfopArray} />
           </div>
         </div>
       )}
       {visao === 'entradas' && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Entradas por Dia</h2>
-            <VendasPorDiaChart labelOverride="Entradas" tooltipPrefix="Entradas" dados={dadosFiltrados.entradasPorDiaArray} />
+            <VendasPorDiaChart title="Entradas por Dia" labelOverride="Entradas" tooltipPrefix="Entradas" dados={dadosFiltrados.entradasPorDiaArray} />
           </div>
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Distribuição CFOPs de Entrada</h2>
-            <DistribuicaoCfopChart dados={dadosFiltrados.entradasPorCfopArray} />
+            <DistribuicaoCfopChart title="Distribuição CFOPs de Entrada" dados={dadosFiltrados.entradasPorCfopArray} />
           </div>
         </div>
       )}
       {visao === 'ambas' && (
         <div className="grid grid-cols-1 gap-8">
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">Comparativo Entradas vs Saídas</h2>
-            <EntradasSaidasComparativoChart entradas={dadosFiltrados.entradasPorDiaArray} saidas={dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray} />
+            <EntradasSaidasComparativoChart title="Comparativo Entradas vs Saídas" entradas={dadosFiltrados.entradasPorDiaArray} saidas={dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray} />
           </div>
         </div>
       )}
 
-      {/* Gráficos de Entrada */}
-  {false && visao !== 'saidas' && dadosFiltrados.entradasPorDiaArray && dadosFiltrados.entradasPorDiaArray.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Entradas por Dia */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              Entradas por Dia
-            </h2>
-            <VendasPorDiaChart dados={dadosFiltrados.entradasPorDiaArray} />
-          </div>
-
-          {/* Distribuição por CFOP de Entrada */}
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-            <h2 className="text-lg font-medium text-gray-900 mb-4">
-              Distribuição CFOPs de Entrada
-            </h2>
-            <DistribuicaoCfopChart dados={dadosFiltrados.entradasPorCfopArray} />
-          </div>
-        </div>
-      )}
+      {/* bloco antigo removido */}
 
       {/* Tabela de Detalhes por CFOP - Saídas */}
   {visao !== 'entradas' && dadosFiltrados.saidasPorCfopArray && dadosFiltrados.saidasPorCfopArray.length > 0 && (

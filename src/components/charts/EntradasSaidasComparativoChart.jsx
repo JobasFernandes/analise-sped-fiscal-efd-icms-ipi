@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useRef } from 'react';
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -11,6 +11,7 @@ import {
 } from 'chart.js';
 import { Line } from 'react-chartjs-2';
 import { prepararDadosEntradasSaidasPorDia, formatarMoeda } from '../../utils/dataProcessor';
+import { downloadChartImage } from '../../utils/chartExport';
 
 ChartJS.register(
   CategoryScale,
@@ -22,7 +23,8 @@ ChartJS.register(
   Legend
 );
 
-const EntradasSaidasComparativoChart = ({ entradas, saidas }) => {
+const EntradasSaidasComparativoChart = ({ entradas, saidas, exportFilename = 'comparativo_entradas_saidas', title = 'Comparativo Entradas vs Saídas' }) => {
+  const chartRef = useRef(null);
   if ((!entradas || entradas.length === 0) && (!saidas || saidas.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
@@ -49,7 +51,18 @@ const EntradasSaidasComparativoChart = ({ entradas, saidas }) => {
   };
   return (
     <div className="h-64 w-full">
-      <Line data={chartData} options={options} />
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-gray-700 tracking-tight">{title}</h3>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => downloadChartImage(chartRef.current, exportFilename)}
+            className="px-2 py-1 text-xs rounded bg-white border border-gray-300 hover:bg-gray-50 shadow-sm"
+          >PNG</button>
+        </div>
+      </div>
+      <div className="h-[calc(100%-1.25rem)]">
+        <Line ref={chartRef} data={chartData} options={options} />
+      </div>
     </div>
   );
 };

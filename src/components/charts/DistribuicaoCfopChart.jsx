@@ -1,11 +1,8 @@
-import React from "react";
+import React, { useRef } from "react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
-import {
-  prepararDadosDistribuicaoCfop,
-  formatarMoeda,
-  formatarNumero,
-} from "../../utils/dataProcessor";
+import { prepararDadosDistribuicaoCfop, formatarMoeda } from "../../utils/dataProcessor";
+import { downloadChartImage } from '../../utils/chartExport';
 
 // Registra os componentes necessários do Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -13,7 +10,8 @@ ChartJS.register(ArcElement, Tooltip, Legend);
 /**
  * Componente de gráfico de rosca para distribuição por CFOP
  */
-const DistribuicaoCfopChart = ({ dados, limite = 8 }) => {
+const DistribuicaoCfopChart = ({ dados, limite = 8, exportFilename = 'distribuicao_cfop', title = 'Distribuição CFOP' }) => {
+  const chartRef = useRef(null);
   if (!dados || dados.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
@@ -126,11 +124,18 @@ const DistribuicaoCfopChart = ({ dados, limite = 8 }) => {
 
   return (
     <div className="h-64 w-full">
-      <Doughnut
-        data={chartData}
-        options={options}
-        plugins={[centerTextPlugin]}
-      />
+      <div className="flex items-center justify-between mb-2">
+        <h3 className="text-sm font-medium text-gray-700 tracking-tight">{title}</h3>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => downloadChartImage(chartRef.current, exportFilename)}
+            className="px-2 py-1 text-xs rounded bg-white border border-gray-300 hover:bg-gray-50 shadow-sm"
+          >PNG</button>
+        </div>
+      </div>
+      <div className="h-[calc(100%-1.25rem)]">
+        <Doughnut ref={chartRef} data={chartData} options={options} plugins={[centerTextPlugin]} />
+      </div>
     </div>
   );
 };
