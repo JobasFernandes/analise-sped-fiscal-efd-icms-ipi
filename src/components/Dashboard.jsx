@@ -9,6 +9,7 @@ import {
   ArrowUpCircle
 } from 'lucide-react';
 import { formatarMoeda, formatarNumero, gerarResumoExecutivo, filtrarDadosProcessadosPorPeriodo, formatarData } from '../utils/dataProcessor';
+import EntradasSaidasComparativoChart from './charts/EntradasSaidasComparativoChart';
 import VendasPorDiaChart from './charts/VendasPorDiaChart';
 import DistribuicaoCfopChart from './charts/DistribuicaoCfopChart';
 import CfopDetalhes from './CfopDetalhes';
@@ -20,6 +21,7 @@ const Dashboard = ({ dados, arquivo }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);
   const [dataInicio, setDataInicio] = useState('');
   const [dataFim, setDataFim] = useState('');
+  const [visao, setVisao] = useState('saidas'); // 'saidas' | 'entradas' | 'ambas'
 
   // Define automaticamente o período do arquivo nos filtros quando os dados mudarem
   useEffect(() => {
@@ -68,6 +70,18 @@ const Dashboard = ({ dados, arquivo }) => {
             </p>
           </div>
           <div className="flex items-end space-x-3">
+      <div>
+              <label className="block text-xs text-gray-500 mb-1">Visão</label>
+              <select
+                value={visao}
+                onChange={(e) => setVisao(e.target.value)}
+                className="border border-gray-300 rounded px-2 py-1 text-sm"
+              >
+                <option value="saidas">Saídas</option>
+                <option value="entradas">Entradas</option>
+                <option value="ambas">Comparativo</option>
+              </select>
+            </div>
       <div>
               <label className="block text-xs text-gray-500 mb-1">Data início</label>
               <input
@@ -163,27 +177,42 @@ const Dashboard = ({ dados, arquivo }) => {
         </div>
       </div>
 
-      {/* Gráficos */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Vendas por Dia */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Saídas por Dia
-          </h2>
-          <VendasPorDiaChart dados={dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray} />
+      {/* Gráficos Dinâmicos conforme visão */}
+      {visao === 'saidas' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Saídas por Dia</h2>
+            <VendasPorDiaChart labelOverride="Saídas" tooltipPrefix="Saídas" dados={dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray} />
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Distribuição CFOPs de Saída</h2>
+            <DistribuicaoCfopChart dados={dadosFiltrados.saidasPorCfopArray || dadosFiltrados.vendasPorCfopArray} />
+          </div>
         </div>
-
-        {/* Distribuição por CFOP de Saída */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-          <h2 className="text-lg font-medium text-gray-900 mb-4">
-            Distribuição CFOPs de Saída
-          </h2>
-          <DistribuicaoCfopChart dados={dadosFiltrados.saidasPorCfopArray || dadosFiltrados.vendasPorCfopArray} />
+      )}
+      {visao === 'entradas' && (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Entradas por Dia</h2>
+            <VendasPorDiaChart labelOverride="Entradas" tooltipPrefix="Entradas" dados={dadosFiltrados.entradasPorDiaArray} />
+          </div>
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Distribuição CFOPs de Entrada</h2>
+            <DistribuicaoCfopChart dados={dadosFiltrados.entradasPorCfopArray} />
+          </div>
         </div>
-      </div>
+      )}
+      {visao === 'ambas' && (
+        <div className="grid grid-cols-1 gap-8">
+          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+            <h2 className="text-lg font-medium text-gray-900 mb-4">Comparativo Entradas vs Saídas</h2>
+            <EntradasSaidasComparativoChart entradas={dadosFiltrados.entradasPorDiaArray} saidas={dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray} />
+          </div>
+        </div>
+      )}
 
       {/* Gráficos de Entrada */}
-  {dadosFiltrados.entradasPorDiaArray && dadosFiltrados.entradasPorDiaArray.length > 0 && (
+  {false && visao !== 'saidas' && dadosFiltrados.entradasPorDiaArray && dadosFiltrados.entradasPorDiaArray.length > 0 && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Entradas por Dia */}
           <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
@@ -204,7 +233,7 @@ const Dashboard = ({ dados, arquivo }) => {
       )}
 
       {/* Tabela de Detalhes por CFOP - Saídas */}
-  {dadosFiltrados.saidasPorCfopArray && dadosFiltrados.saidasPorCfopArray.length > 0 && (
+  {visao !== 'entradas' && dadosFiltrados.saidasPorCfopArray && dadosFiltrados.saidasPorCfopArray.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             Detalhes por CFOP - Saídas
@@ -269,7 +298,7 @@ const Dashboard = ({ dados, arquivo }) => {
       )}
 
       {/* Tabela de Detalhes por CFOP - Entradas */}
-  {dadosFiltrados.entradasPorCfopArray && dadosFiltrados.entradasPorCfopArray.length > 0 && (
+  {visao !== 'saidas' && dadosFiltrados.entradasPorCfopArray && dadosFiltrados.entradasPorCfopArray.length > 0 && (
         <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
           <h2 className="text-lg font-medium text-gray-900 mb-4">
             Detalhes por CFOP - Entradas

@@ -7,6 +7,8 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 • Dashboards interativos com Chart.js (linhas, barras e rosca)
 • Resumo executivo, ranking por CFOP e detalhes com exportação CSV
 • Filtro por período (data início/fim) com preenchimento automático a partir do arquivo
+• Persistência de filtros de período via query params (?inicio=YYYY-MM-DD&fim=YYYY-MM-DD)
+• Alternância de visão: Entradas | Saídas | Comparativo Entradas vs Saídas
 • Sem backend: todos os dados são processados localmente no browser
 
 > Observação: Há um arquivo de exemplo na raiz do projeto (`MovEstoque_0106_3006_57168607000100.txt`) que pode ser usado para testes rápidos.
@@ -91,6 +93,11 @@ npm run preview
 4) Ajuste o período no topo do dashboard, se necessário:
 	- As datas vêm preenchidas automaticamente com o período do arquivo (lido do registro 0000)
 	- Ao alterar as datas, todo o dashboard é recalculado (resumo, gráficos e tabelas)
+	- O estado do filtro é persistido na URL (facilita compartilhamento e reload)
+5) Use a seleção de visão para alternar:
+	- Saídas: foco em vendas/saídas
+	- Entradas: foco em notas de entrada
+	- Comparativo: gráfico de linhas Entradas vs Saídas
 
 Escopo/limites atuais do parser:
 - Considera somente situação normal (COD_SIT = '00')
@@ -160,8 +167,8 @@ Arquitetura e fluxo de dados (alto nível):
 ## Próximas tarefas sugeridas (priorizadas)
 
 1) UX/Produto
-- Persistir filtros na URL (query params) e permitir limpar rapidamente
-- Alternar visão Entradas/Saídas e comparação lado a lado
+- (Concluídos) Persistir filtros na URL (query params) e alternar visão Entradas/Saídas/Comparativo
+- Melhorar tooltips/legendas e permitir exportar imagem do gráfico
 - Melhorar tooltips/legendas e permitir exportar imagem do gráfico
 
 2) Performance/Robustez

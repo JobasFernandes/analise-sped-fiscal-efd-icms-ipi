@@ -28,7 +28,7 @@ ChartJS.register(
 /**
  * Componente de gráfico de vendas por dia
  */
-const VendasPorDiaChart = ({ dados }) => {
+const VendasPorDiaChart = ({ dados, labelOverride = 'Vendas', tooltipPrefix }) => {
   if (!dados || dados.length === 0) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
@@ -38,6 +38,9 @@ const VendasPorDiaChart = ({ dados }) => {
   }
 
   const chartData = prepararDadosVendasPorDia(dados);
+  if (chartData.datasets[0]) {
+    chartData.datasets[0].label = labelOverride;
+  }
 
   // Configurações do gráfico
   const options = {
@@ -64,7 +67,8 @@ const VendasPorDiaChart = ({ dados }) => {
         cornerRadius: 6,
         callbacks: {
           label: function(context) {
-            return `Vendas: ${formatarMoeda(context.parsed.y)}`;
+            const prefix = tooltipPrefix || labelOverride;
+            return `${prefix}: ${formatarMoeda(context.parsed.y)}`;
           }
         }
       }
