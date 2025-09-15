@@ -9,6 +9,15 @@
 				"test",
 				"--silent"
 			]
+		},
+		{
+			"label": "Run tests after CSV worker",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent"
+			]
 		}
 	]
 }

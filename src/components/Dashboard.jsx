@@ -136,44 +136,80 @@ const Dashboard = ({ dados, arquivo }) => {
 
     if (!itens.length) return;
 
-    // Cabeçalho
-    const headers = [
-      "Tipo",
-      "CFOP",
-      "Numero NF",
-      "Chave NFe",
-      "Data Doc",
-      "CST ICMS",
-      "Aliq ICMS (%)",
-      "Valor Operacao",
-      "BC ICMS",
-      "Valor ICMS",
-    ];
+    // Tenta exportação via Web Worker (streaming de chunks); fallback para método síncrono
+    let worker;
+    try {
+      // @ts-ignore
+      worker = new Worker(new URL("../workers/csvExportWorker.ts", import.meta.url), { type: "module" });
+    } catch (e) {
+      worker = null;
+    }
 
-    const linhas = itens.map((it) => [
-      parseInt(it.cfop, 10) < 4000 ? "Entrada" : "Saida",
-      removerAcentos(it.cfop),
-      removerAcentos(it.numeroDoc),
-      removerAcentos(it.chaveNfe),
-      it.dataDocumento ? formatarData(it.dataDocumento) : "",
-      removerAcentos(it.cstIcms),
-      formatarValorCSV(it.aliqIcms),
-      formatarValorCSV(it.valorOperacao),
-      formatarValorCSV(it.valorBcIcms),
-      formatarValorCSV(it.valorIcms),
-    ]);
+    if (!worker) {
+      // Fallback: método anterior síncrono
+      // Cabeçalho
+      const headers = [
+        "Tipo",
+        "CFOP",
+        "Numero NF",
+        "Chave NFe",
+        "Data Doc",
+        "CST ICMS",
+        "Aliq ICMS (%)",
+        "Valor Operacao",
+        "BC ICMS",
+        "Valor ICMS",
+      ];
+      const linhas = itens.map((it) => [
+        parseInt(it.cfop, 10) < 4000 ? "Entrada" : "Saida",
+        removerAcentos(it.cfop),
+        removerAcentos(it.numeroDoc),
+        removerAcentos(it.chaveNfe),
+        it.dataDocumento ? formatarData(it.dataDocumento) : "",
+        removerAcentos(it.cstIcms),
+        formatarValorCSV(it.aliqIcms),
+        formatarValorCSV(it.valorOperacao),
+        formatarValorCSV(it.valorBcIcms),
+        formatarValorCSV(it.valorIcms),
+      ]);
+      const csv = [headers, ...linhas]
+        .map((l) => l.map((c) => `"${c || ""}"`).join(";"))
+        .join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const link = document.createElement("a");
+      const periodoTag = resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
+      link.href = URL.createObjectURL(blob);
+      link.download = `cfops_${tipo}_${periodoTag}.csv`;
+      link.click();
+      return;
+    }
 
-    const csv = [headers, ...linhas]
-      .map((l) => l.map((c) => `"${c || ""}"`).join(";"))
-      .join("\n");
+    const encoder = new TextEncoder();
+    const partes = []; // Uint8Array[]
+    const periodoTag = resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
+    const filename = `cfops_${tipo}_${periodoTag}.csv`;
 
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    const periodoTag =
-      resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
-    link.href = URL.createObjectURL(blob);
-    link.download = `cfops_${tipo}_${periodoTag}.csv`;
-    link.click();
+    const onMessage = (e) => {
+      const msg = e.data;
+      if (!msg || !msg.type) return;
+      if (msg.type === "chunk") {
+        partes.push(encoder.encode(msg.chunk || ""));
+      } else if (msg.type === "done") {
+        const blob = new Blob(partes, { type: "text/csv;charset=utf-8;" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(blob);
+        link.download = filename;
+        link.click();
+        worker.removeEventListener("message", onMessage);
+        worker.terminate();
+      } else if (msg.type === "error") {
+        console.error("Erro no csvExportWorker:", msg.error);
+        worker.removeEventListener("message", onMessage);
+        worker.terminate();
+      }
+    };
+    worker.addEventListener("message", onMessage);
+    worker.postMessage({ type: "exportCsvAll", items: itens, filename });
   };
 
   return (
