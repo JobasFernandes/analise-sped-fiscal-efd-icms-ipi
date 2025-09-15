@@ -443,7 +443,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
                     {formatarMoeda(item.valorIcms)}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 font-mono text-xs">
+                  <td className="px-6 py-4 text-gray-500 font-mono text-xs">
                     <div className="max-w-xs truncate" title={item.chaveNfe}>
                       {item.chaveNfe || 'N/A'}
                     </div>
@@ -491,4 +491,4 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
   );
 };
 
-export default CfopDetalhes; 
+export default CfopDetalhes;

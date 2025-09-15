@@ -1,13 +1,15 @@
 {
   "name": "analizador-sped",
   "version": "1.0.0",
+  "type": "module",
   "description": "Aplicativo para análise e visualização de arquivos SPED fiscal",
   "main": "index.js",
   "scripts": {
     "dev": "vite --host",
     "build": "vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
+    "test": "vitest"
   },
   "dependencies": {
     "react": "^18.2.0",
@@ -19,8 +21,10 @@
     "react-dropzone": "^14.2.3"
   },
   "devDependencies": {
+  "typescript": "^5.6.2",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
+  "@types/node": "^20.11.19",
     "@vitejs/plugin-react": "^3.1.0",
     "autoprefixer": "^10.4.14",
     "eslint": "^8.45.0",
@@ -29,6 +33,7 @@
     "eslint-plugin-react-refresh": "^0.4.3",
     "postcss": "^8.4.27",
     "tailwindcss": "^3.3.3",
-    "vite": "^4.3.9"
+    "vite": "^4.3.9",
+  "vitest": "^1.5.0"
   }
 }

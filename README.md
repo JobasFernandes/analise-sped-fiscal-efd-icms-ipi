@@ -26,9 +26,9 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 5) A UI exibe cards de KPIs, gráficos por dia/CFOP e uma tabela detalhada por CFOP com filtro, ordenação e exportação CSV.
 
 Principais arquivos envolvidos:
-- `src/utils/spedParser.js`: classe SpedParser (parsing C100/C190, agregações, totais, período)
-- `src/utils/cfopService.js`: mapa estático de CFOPs e utilitários (descrição, tipo entrada/saída)
-- `src/utils/dataProcessor.js`: formatações (moeda/data), preparação de datasets para Chart.js e resumo executivo
+- `src/utils/spedParser.ts`: classe SpedParser (parsing C100/C190, agregações, totais, período)
+- `src/utils/cfopService.ts`: mapa estático de CFOPs e utilitários (descrição, tipo entrada/saída)
+- `src/utils/dataProcessor.ts`: formatações (moeda/data), preparação de datasets para Chart.js e resumo executivo
 - `src/components/*`: FileUpload (drag-and-drop), Dashboard, CfopDetalhes (modal com CSV), gráficos
 
 ---
@@ -92,7 +92,7 @@ Escopo/limites atuais do parser:
 - Considera somente situação normal (COD_SIT = '00')
 - Valores menores/iguais a 0 são desconsiderados
 - Datas em DDMMAAAA (C100) são convertidas para Date e padronizadas para YYYY-MM-DD na agregação
-- Descrições de CFOP vêm de um mapa estático (arquivo `cfopService.js`)
+- Descrições de CFOP vêm de um mapa estático (arquivo `cfopService.ts`)
 
 ---
 
@@ -112,9 +112,9 @@ src/
 		VendasPorCfopChart.jsx
 		DistribuicaoCfopChart.jsx
   utils/
-	 spedParser.js         # Parser C100/C190 e agregações (Maps -> Arrays)
-	 dataProcessor.js      # Formatações e datasets Chart.js
-	 cfopService.js        # Descrição e tipo de CFOP (mapa estático)
+	 spedParser.ts         # Parser C100/C190 e agregações (Maps -> Arrays)
+	 dataProcessor.ts      # Formatações e datasets Chart.js
+	 cfopService.ts        # Descrição e tipo de CFOP (mapa estático)
 ```
 
 Arquitetura e fluxo de dados (alto nível):
@@ -134,6 +134,50 @@ Arquitetura e fluxo de dados (alto nível):
 ---
 
 ## Roadmap de melhorias
+
+## Implementações concluídas (set/2025)
+
+- Migração para TypeScript dos utilitários principais:
+	- `src/utils/dataProcessor.ts`
+	- `src/utils/spedParser.ts`
+	- `src/utils/cfopService.ts` (remoção do fallback `.js`)
+- Correção runtime do Chart.js em `DistribuicaoCfopChart.jsx` com import/registro explícito (ArcElement, Tooltip, Legend)
+- Fortalecimento do parser (tratamento de erros por linha e filtros de situação/valores)
+- Testes unitários com Vitest (fixtures SPED mínimas e canceladas)
+- Build de produção validado via Vite
+- Configurações ESM alinhadas (Tailwind/PostCSS como ESM)
+
+---
+
+## Próximas tarefas sugeridas (priorizadas)
+
+1) UX/Produto
+- Filtro por período (data início/fim) na UI e no processamento
+- Alternar visão Entradas/Saídas e comparação lado a lado
+- Melhorar tooltips/legendas e permitir exportar imagem do gráfico
+
+2) Performance/Robustez
+- Mover parsing para Web Worker (arquivos grandes sem travar a UI)
+- Leitura streaming/chunks do arquivo SPED para reduzir memória
+- Melhor detecção de encoding (UTF-8/ISO-8859-1) e normalização
+
+3) Técnico/Qualidade
+- Tipar a estrutura completa retornada pelo parser e datasets de gráfico
+- Adicionar testes de borda (linhas inválidas, campos vazios, datas fora do padrão)
+- Linting/format automático (ESLint + Prettier) e CI básico
+
+4) Dados/Amplitude
+- Suporte a bloco C170 (itens detalhados) quando necessário
+- Exportações extras (JSON completo, XLSX) e CSV padronizado para BI
+
+5) DX/Build
+- Dockerfile simples para servir build de produção
+- Script de benchmark de parsing com arquivos grandes
+
+Critérios de aceite (exemplos):
+- Filtro de período: seleção de data atualiza todos os gráficos/tabelas e o resumo executivo; cobrir com testes simples de filtragem
+- Web Worker: UI permanece responsiva ao importar um arquivo de 50-100MB; barra de progresso exibida
+- Tipagem datasets: sem `any` nas funções de datasets, com interfaces claras e verificação no CI
 
 Produto/UX
 - Filtros por período, CFOP, UF e participação mínima

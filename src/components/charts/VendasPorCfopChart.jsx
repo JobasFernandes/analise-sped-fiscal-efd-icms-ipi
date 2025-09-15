@@ -129,4 +129,4 @@ const VendasPorCfopChart = ({ dados, limite = 10 }) => {
   );
 };
 
-export default VendasPorCfopChart; 
+export default VendasPorCfopChart;

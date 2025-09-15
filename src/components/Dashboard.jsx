@@ -315,4 +315,4 @@ const Dashboard = ({ dados, arquivo }) => {
   );
 };
 
-export default Dashboard; 
+export default Dashboard;

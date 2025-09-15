@@ -1,64 +1,7 @@
-/**
- * Serviço para obter CFOPs via web scraping
- * Adaptado do código PHP fornecido
- */
+export type CfopInfo = { cfop: number; descricao: string };
 
-/**
- * Busca CFOPs da página da SEFAZ PE
- * @returns {Promise<Array>} Array com CFOPs e descrições
- */
-export async function getCfops() {
-  try {
-    const response = await fetch('https://www.sefaz.pe.gov.br/Legislacao/Tributaria/Documents/Legislacao/Tabelas/CFOP.htm');
-    const html = await response.text();
-    
-    // Cria um parser DOM
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, 'text/html');
-    
-    const data = [];
-    const tables = doc.getElementsByTagName('table');
-    
-    for (let table of tables) {
-      const rows = table.getElementsByTagName('tr');
-      for (let row of rows) {
-        const cols = row.getElementsByTagName('td');
-        if (cols.length > 1) {
-          const cfopText = cols[0].textContent.trim();
-          const descricao = cols[1].textContent.trim();
-          
-          // Remove pontos e converte para número
-          const cfop = parseInt(cfopText.replace(/\./g, ''));
-          
-          // Remove quebras de linha da descrição
-          const descricaoLimpa = descricao.replace(/[\n\r]/g, '');
-          
-          if (cfop > 0 && descricaoLimpa) {
-            data.push({
-              cfop: cfop,
-              descricao: descricaoLimpa
-            });
-          }
-        }
-      }
-    }
-    
-    // Remove o primeiro item se for 0 (como no PHP)
-    if (data.length > 0 && data[0].cfop === 0) {
-      data.shift();
-    }
-    
-    return data;
-  } catch (error) {
-    console.error('Erro ao buscar CFOPs:', error);
-    return [];
-  }
-}
-
-/**
- * Mapa estático dos principais CFOPs para fallback
- */
-export const CFOPS_ESTATICOS = {
+// Mapa estático dos principais CFOPs (entrada 1xxx/2xxx/3xxx e saída 5xxx/6xxx/7xxx)
+export const CFOPS_ESTATICOS: Record<string, string> = {
   // CFOPs de ENTRADA (1xxx, 2xxx, 3xxx)
   '1101': 'Compra para industrialização',
   '1102': 'Compra para comercialização',
@@ -152,7 +95,7 @@ export const CFOPS_ESTATICOS = {
   '1924': 'Entrada para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente',
   '1925': 'Retorno de mercadoria remetida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente',
   '1949': 'Outra entrada de mercadoria ou prestação de serviço não especificada',
-  
+
   // CFOPs interestaduais (2xxx)
   '2101': 'Compra para industrialização',
   '2102': 'Compra para comercialização',
@@ -240,7 +183,7 @@ export const CFOPS_ESTATICOS = {
   '2924': 'Entrada para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente',
   '2925': 'Retorno de mercadoria remetida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente',
   '2949': 'Outra entrada de mercadoria ou prestação de serviço não especificada',
-  
+
   // CFOPs do exterior (3xxx)
   '3101': 'Compra para industrialização',
   '3102': 'Compra para comercialização',
@@ -275,7 +218,7 @@ export const CFOPS_ESTATICOS = {
   '3653': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte',
   '3930': 'Lançamento efetuado a título de entrada de bem sob amparo de regime especial aduaneiro de admissão temporária',
   '3949': 'Outra entrada de mercadoria ou prestação de serviço não especificada',
-  
+
   // CFOPs de SAÍDA (5xxx, 6xxx, 7xxx)
   '5101': 'Venda de produção do estabelecimento',
   '5102': 'Venda de mercadoria adquirida ou recebida de terceiros',
@@ -406,7 +349,7 @@ export const CFOPS_ESTATICOS = {
   '5932': 'Prestação de serviço de transporte iniciada em Unidade da Federação diversa daquela onde inscrito o prestador',
   '5933': 'Prestação de serviço tributado pelo ISSQN',
   '5949': 'Outra saída de mercadoria ou prestação de serviço não especificada',
-  
+
   // CFOPs interestaduais de saída (6xxx)
   '6101': 'Venda de produção do estabelecimento',
   '6102': 'Venda de mercadoria adquirida ou recebida de terceiros',
@@ -534,7 +477,7 @@ export const CFOPS_ESTATICOS = {
   '6932': 'Prestação de serviço de transporte iniciada em Unidade da Federação diversa daquela onde inscrito o prestador',
   '6933': 'Prestação de serviço tributado pelo ISSQN',
   '6949': 'Outra saída de mercadoria ou prestação de serviço não especificada',
-  
+
   // CFOPs do exterior (7xxx)
   '7101': 'Venda de produção do estabelecimento',
   '7102': 'Venda de mercadoria adquirida ou recebida de terceiros',
@@ -571,62 +514,32 @@ export const CFOPS_ESTATICOS = {
   '7949': 'Outra saída de mercadoria ou prestação de serviço não especificada'
 };
 
-/**
- * Obtém a descrição de um CFOP
- * @param {string} cfop - Código CFOP
- * @returns {string} Descrição do CFOP
- */
-export function getDescricaoCfop(cfop) {
+export function getDescricaoCfop(cfop: string): string {
   return CFOPS_ESTATICOS[cfop] || `CFOP ${cfop}`;
 }
 
-/**
- * Determina se um CFOP é de entrada ou saída
- * @param {string} cfop - Código CFOP
- * @returns {string} 'entrada' ou 'saida'
- */
-export function getTipoCfop(cfop) {
-  const numero = parseInt(cfop);
-  
-  // CFOPs de entrada: 1xxx, 2xxx, 3xxx
-  if (numero >= 1000 && numero <= 3999) {
-    return 'entrada';
-  }
-  
-  // CFOPs de saída: 5xxx, 6xxx, 7xxx
-  if (numero >= 5000 && numero <= 7999) {
-    return 'saida';
-  }
-  
-  return 'saida'; // Default para saída
+export function getTipoCfop(cfop: string): 'entrada' | 'saida' {
+  const numero = parseInt(cfop, 10);
+  if (numero >= 1000 && numero <= 3999) return 'entrada';
+  if (numero >= 5000 && numero <= 7999) return 'saida';
+  return 'saida';
 }
 
-/**
- * Filtra CFOPs por tipo
- * @param {Array} cfops - Array de CFOPs
- * @param {string} tipo - 'entrada' ou 'saida'
- * @returns {Array} CFOPs filtrados
- */
-export function filtrarCfopsPorTipo(cfops, tipo) {
-  return cfops.filter(cfop => getTipoCfop(cfop.cfop) === tipo);
+export function filtrarCfopsPorTipo(
+  cfops: Array<{ cfop: number | string; descricao: string }>,
+  tipo: 'entrada' | 'saida'
+) {
+  return cfops.filter(cf => getTipoCfop(String(cf.cfop)) === tipo);
 }
 
-/**
- * Obtém os principais CFOPs de entrada
- * @returns {Array} Array com CFOPs de entrada
- */
-export function getCfopsEntrada() {
+export function getCfopsEntrada(): CfopInfo[] {
   return Object.entries(CFOPS_ESTATICOS)
-    .filter(([cfop]) => getTipoCfop(cfop) === 'entrada')
-    .map(([cfop, descricao]) => ({ cfop: parseInt(cfop), descricao }));
+    .filter(([cf]) => getTipoCfop(cf) === 'entrada')
+    .map(([cf, descricao]) => ({ cfop: parseInt(cf, 10), descricao: String(descricao) }));
 }
 
-/**
- * Obtém os principais CFOPs de saída
- * @returns {Array} Array com CFOPs de saída
- */
-export function getCfopsSaida() {
+export function getCfopsSaida(): CfopInfo[] {
   return Object.entries(CFOPS_ESTATICOS)
-    .filter(([cfop]) => getTipoCfop(cfop) === 'saida')
-    .map(([cfop, descricao]) => ({ cfop: parseInt(cfop), descricao }));
-} 
+    .filter(([cf]) => getTipoCfop(cf) === 'saida')
+    .map(([cf, descricao]) => ({ cfop: parseInt(cf, 10), descricao: String(descricao) }));
+}

@@ -134,4 +134,4 @@ const VendasPorDiaChart = ({ dados }) => {
   );
 };
 
-export default VendasPorDiaChart; 
+export default VendasPorDiaChart;

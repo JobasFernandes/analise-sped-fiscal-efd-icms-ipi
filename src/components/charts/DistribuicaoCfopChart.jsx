@@ -1,12 +1,11 @@
-import React from 'react';
+import React from "react";
+import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
+import { Doughnut } from "react-chartjs-2";
 import {
-  Chart as ChartJS,
-  ArcElement,
-  Tooltip,
-  Legend
-} from 'chart.js';
-import { Doughnut } from 'react-chartjs-2';
-import { prepararDadosDistribuicaoCfop, formatarMoeda, formatarNumero } from '../../utils/dataProcessor';
+  prepararDadosDistribuicaoCfop,
+  formatarMoeda,
+  formatarNumero,
+} from "../../utils/dataProcessor";
 
 // Registra os componentes necessários do Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend);
@@ -32,15 +31,15 @@ const DistribuicaoCfopChart = ({ dados, limite = 8 }) => {
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        position: 'right',
+        position: "right",
         labels: {
           usePointStyle: true,
-          pointStyle: 'circle',
+          pointStyle: "circle",
           font: {
-            size: 11
+            size: 11,
           },
           padding: 15,
-          generateLabels: function(chart) {
+          generateLabels: function (chart) {
             const data = chart.data;
             return data.labels.map((label, index) => {
               const value = data.datasets[0].data[index];
@@ -51,85 +50,89 @@ const DistribuicaoCfopChart = ({ dados, limite = 8 }) => {
                 strokeStyle: data.datasets[0].borderColor[index],
                 lineWidth: data.datasets[0].borderWidth,
                 hidden: false,
-                index: index
+                index: index,
               };
             });
-          }
-        }
+          },
+        },
       },
       tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: 'white',
-        bodyColor: 'white',
-        borderColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        titleColor: "white",
+        bodyColor: "white",
+        borderColor: "rgba(0, 0, 0, 0.8)",
         borderWidth: 1,
         cornerRadius: 6,
         callbacks: {
-          title: function(context) {
+          title: function (context) {
             const index = context[0].dataIndex;
             const cfopData = dados[index];
             return cfopData ? `CFOP ${cfopData.cfop}` : context[0].label;
           },
-          label: function(context) {
+          label: function (context) {
             const value = context.parsed;
             const percentage = ((value / total) * 100).toFixed(1);
             return [
               `Valor: ${formatarMoeda(value)}`,
-              `Participação: ${percentage}%`
+              `Participação: ${percentage}%`,
             ];
           },
-          afterLabel: function(context) {
+          afterLabel: function (context) {
             const index = context.dataIndex;
             const cfopData = dados[index];
-            if (cfopData && cfopData.descricao && cfopData.cfop !== 'OUTROS') {
+            if (cfopData && cfopData.descricao && cfopData.cfop !== "OUTROS") {
               return cfopData.descricao;
             }
             return null;
-          }
-        }
-      }
+          },
+        },
+      },
     },
-    cutout: '60%',
+    cutout: "60%",
     elements: {
       arc: {
         borderWidth: 2,
-        borderColor: '#ffffff'
-      }
-    }
+        borderColor: "#ffffff",
+      },
+    },
   };
 
   // Centro do gráfico com total
   const centerTextPlugin = {
-    id: 'centerText',
-    beforeDraw: function(chart) {
+    id: "centerText",
+    beforeDraw: function (chart) {
       const { width, height, ctx } = chart;
       ctx.restore();
-      
+
       const centerX = width / 2;
       const centerY = height / 2;
-      
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      
+
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
       // Texto principal
-      ctx.font = 'bold 16px Arial';
-      ctx.fillStyle = '#374151';
-      ctx.fillText('Total', centerX, centerY - 10);
-      
+      ctx.font = "bold 16px Arial";
+      ctx.fillStyle = "#374151";
+      ctx.fillText("Total", centerX, centerY - 10);
+
       // Valor
-      ctx.font = 'bold 14px Arial';
-      ctx.fillStyle = '#059669';
+      ctx.font = "bold 14px Arial";
+      ctx.fillStyle = "#059669";
       ctx.fillText(formatarMoeda(total), centerX, centerY + 10);
-      
+
       ctx.save();
-    }
+    },
   };
 
   return (
     <div className="h-64 w-full">
-      <Doughnut data={chartData} options={options} plugins={[centerTextPlugin]} />
+      <Doughnut
+        data={chartData}
+        options={options}
+        plugins={[centerTextPlugin]}
+      />
     </div>
   );
 };
 
-export default DistribuicaoCfopChart; 
+export default DistribuicaoCfopChart;
