@@ -6,6 +6,7 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 • Parser dedicado do SPED (C100/C190), filtrando apenas notas em situação normal (00)
 • Dashboards interativos com Chart.js (linhas, barras e rosca)
 • Resumo executivo, ranking por CFOP e detalhes com exportação CSV
+• Exportação CSV em massa de todos os CFOPs (Entradas/Saídas) diretamente do Dashboard
 • Filtro por período (data início/fim) com preenchimento automático a partir do arquivo
 • Persistência de filtros de período via query params (?inicio=YYYY-MM-DD&fim=YYYY-MM-DD)
 • Alternância de visão: Entradas | Saídas | Comparativo Entradas vs Saídas
@@ -13,6 +14,7 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 • Tooltips padronizados com valores monetários e rótulos contextuais
 • Sem backend: todos os dados são processados localmente no browser
 • Parsing assíncrono com Web Worker (UI permanece responsiva e barra de progresso durante arquivos grandes)
+• Detalhes de CFOP abrindo instantaneamente via índice pré-computado e UI otimizada (memoização, paginação, debounce)
 
 > Observação: Há um arquivo de exemplo na raiz do projeto (`MovEstoque_0106_3006_57168607000100.txt`) que pode ser usado para testes rápidos.
 
@@ -29,13 +31,14 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 	- Entradas/saídas por dia (YYYY-MM-DD)
 	- Entradas/saídas por CFOP (com descrição via mapa estático)
 	- Totais de entradas, saídas e geral, e período analisado
-5) A UI exibe cards de KPIs, gráficos por dia/CFOP e uma tabela detalhada por CFOP com filtro, ordenação e exportação CSV. Há um filtro por período (data início/fim) aplicado a todos os gráficos/tabelas.
+5) A UI exibe cards de KPIs, gráficos por dia/CFOP e uma tabela detalhada por CFOP com filtro, ordenação e exportação CSV. Há um filtro por período (data início/fim) aplicado a todos os gráficos/tabelas. No Dashboard existem botões de “Exportar Todos (CSV)” para gerar um CSV consolidado de todos os CFOPs de Entradas e de Saídas.
 
 Principais arquivos envolvidos:
-- `src/utils/spedParser.ts`: classe SpedParser (parsing C100/C190, agregações, totais, período)
+- `src/utils/spedParser.ts`: classe SpedParser (parsing C100/C190, agregações, totais, período, índice `itensPorCfopIndex` para detalhes instantâneos)
 - `src/utils/cfopService.ts`: mapa estático de CFOPs e utilitários (descrição, tipo entrada/saída)
 - `src/utils/dataProcessor.ts`: formatações (moeda/data), preparação de datasets para Chart.js, resumo executivo e filtragem por período
 - `src/components/*`: FileUpload (drag-and-drop), Dashboard, CfopDetalhes (modal com CSV), gráficos
+- `src/workers/spedParserWorker.ts`: Web Worker que processa o arquivo fora da main thread e envia progresso/resultado
 
 ---
 
@@ -47,6 +50,8 @@ Principais arquivos envolvidos:
 - date-fns (datas, pt-BR)
 - react-dropzone (upload drag-and-drop)
 - lucide-react (ícones)
+- Vitest (testes unitários)
+- Web Workers (parsing assíncrono com barra de progresso)
 
 ---
 
@@ -136,8 +141,8 @@ src/
 Arquitetura e fluxo de dados (alto nível):
 - FileUpload lê o .txt e entrega o conteúdo para `parseSpedFile`
 - SpedParser (executado dentro de um Web Worker) consolida entradas/saídas por dia e CFOP e calcula totais/período sem bloquear a thread principal
-- Dashboard consome `dadosProcessados` e usa `dataProcessor` para preparar os gráficos
-- CfopDetalhes cruza notas e itens do CFOP selecionado e permite exportar CSV
+- Dashboard consome `dadosProcessados` e usa `dataProcessor` para preparar os gráficos; possui botões “Exportar Todos (CSV)” em Entradas e Saídas
+- CfopDetalhes utiliza o índice `itensPorCfopIndex` (gerado pelo parser) para abrir instantaneamente os itens de um CFOP; há fallback para reconstrução a partir das notas quando necessário; UI otimizada com memoização, paginação e pesquisa com debounce
 
 ### Parsing assíncrono (Web Worker)
 
@@ -185,59 +190,58 @@ Fallback: caso o worker não inicialize (erro de construção em algum ambiente)
 	 - Inputs de data vêm preenchidos automaticamente
 	 - Filtragem considera data de entrada/saída quando disponível, sem descartar notas sem data
 
+- Parsing assíncrono com Web Worker e barra de progresso (UI não bloqueia durante arquivos grandes)
+- Índice `itensPorCfopIndex` gerado no parser para abertura instantânea do modal de CFOP
+- CfopDetalhes otimizado com memoização, paginação (tamanho configurável) e filtro com debounce
+- Botões “Exportar Todos (CSV)” no Dashboard para Entradas e Saídas (gera CSV consolidado de todos os CFOPs)
+- Testes de callback de progresso (múltiplos eventos em arquivos grandes e evento final em arquivos pequenos)
+
+- Tipagem completa do payload do parser e dos datasets (removido uso de `any`):
+	- Arquivo `src/utils/types.ts` com todas as interfaces públicas (Nota, ItemDetalhado, DiaValor, CfopValor, ProcessedData, etc.)
+	- `spedParser.ts` e `dataProcessor.ts` atualizados para retornar e consumir tipos fortes
+	- Maior segurança de tipos e menor chance de regressões silenciosas
+
+- Testes de borda adicionais com Vitest:
+	- Ignora corretamente COD_SIT != '00' e valores <= 0
+	- `itensPorCfopIndex` presente no resultado
+	- Filtro por período recalcula totais e agrupamentos
+
 ---
 
-## Próximas tarefas sugeridas (priorizadas)
+## Próximas tarefas sugeridas (apenas performance)
 
-1) UX/Produto
-- (Concluídos) Persistir filtros na URL (query params), alternar visão Entradas/Saídas/Comparativo, exportar gráficos PNG, padronizar tooltips
-- Próximo: permitir exportar imagem em SVG e copiar para clipboard
-- Melhorar tooltips/legendas e permitir exportar imagem do gráfico
+1) Virtualização da tabela de `CfopDetalhes`
+- Usar `react-window` (ou similar) para renderizar apenas linhas visíveis; manter paginação como fallback
+- Ganho: abertura instantânea para CFOPs com dezenas de milhares de linhas; menor uso de memória/CPU
 
-2) Performance/Robustez
-- (Concluído) Parsing em Web Worker com barra de progresso
-- Próximo: leitura streaming/chunks do arquivo SPED para reduzir memória
-- Melhor detecção de encoding (UTF-8/ISO-8859-1) e normalização
+2) Leitura streaming/chunked do arquivo SPED no Worker
+- Ler o arquivo com `ReadableStream`/File slicing e processar por blocos
+- Ganho: menor pico de memória e início de progresso mais cedo em arquivos muito grandes
 
-- Tipar a estrutura completa retornada pelo parser e datasets de gráfico
-- Adicionar testes de borda (linhas inválidas, campos vazios, datas fora do padrão)
-- Testes unitários específicos para o filtro por período (happy path + bordas)
-- Linting/format automático (ESLint + Prettier) e CI básico
+3) Exportação CSV em streaming/chunks (no Worker)
+- Gerar CSV em blocos e fazer download via `ReadableStream`/`Blob` incremental
+- Ganho: evitar travamentos na exportação de conjuntos massivos (entradas/saídas)
 
-4) Dados/Amplitude
-- Suporte a bloco C170 (itens detalhados) quando necessário
-- Exportações extras (JSON completo, XLSX) e CSV padronizado para BI
+Critérios de aceite focados em performance:
+- Virtualização: abrir CFOP com 50k+ linhas em < 200ms; scroll suave; CPU estável
+- Streaming leitura: reduzir pico de memória em >50% vs leitura full e iniciar progresso em < 500ms
+- CSV streaming: exportar 100k+ linhas sem travar a UI e sem estouro de memória
 
-5) DX/Build
-- Dockerfile simples para servir build de produção
-- Script de benchmark de parsing com arquivos grandes
+---
 
-Critérios de aceite (exemplos):
-- Filtro de período: seleção de data atualiza todos os gráficos/tabelas e o resumo executivo; cobrir com testes simples de filtragem
-- Web Worker: UI permanece responsiva ao importar um arquivo de 50-100MB; barra de progresso exibida
-- Tipagem datasets: sem `any` nas funções de datasets, com interfaces claras e verificação no CI
+## Próxima etapa recomendada (alta prioridade)
 
-Produto/UX
-- Filtros por período, CFOP, UF e participação mínima
-- Alternar entre entradas/saídas e comparação lado a lado
-- Tooltip e legendas mais ricas nos gráficos; salvar imagem do gráfico
+Virtualizar a tabela de `CfopDetalhes` usando `react-window` (ou similar) para renderizar apenas as linhas visíveis, mantendo paginação como fallback.
 
-Técnico/Qualidade
-- Migração gradual para TypeScript (tipos para dados do parser e datasets)
-- Web Worker para parsing de arquivos grandes (não bloquear a UI)
-- Leitura streaming/chunked para reduzir memória em arquivos muito grandes
-- Melhor detecção de encoding (UTF-8 vs ISO-8859-1) e normalização
-- Tratamento robusto de erros e feedback ao usuário (linhas inválidas, campos ausentes)
-- Atualizar tabela dinâmica de CFOPs (usar `getCfops()` com cache/localStorage e fallback estático)
-- Dockerfile para servir o build de produção facilmente
+Proposta de implementação (resumo):
+- Introduzir `FixedSizeList` envolvendo o `<tbody>` e renderização de linha virtualizada.
+- Manter ordenação, filtro com debounce e totais; calcular total via `reduce` em dados filtrados (independente da virtualização).
+- Preservar exportação CSV usando o conjunto filtrado/ordenado completo (não apenas linhas visíveis).
 
-Dados/Amplitude
-- Suporte a mais blocos do SPED quando necessário (ex.: detalhamento por C170)
-- Exportações adicionais (JSON completo, XLSX) e integração com BI (CSV padronizado)
-
-Segurança/Privacidade
-- Banner e política de privacidade claros (dados permanecem no navegador)
-- Sanitização extra de campos textuais nas exportações e na UI
+Critérios de aceite:
+- Abrir um CFOP com 50k+ linhas em < 200ms (após dados já carregados).
+- Scroll suave, sem stutters, CPU < 50% durante rolagem.
+- Nenhuma regressão funcional: filtros, ordenação, exportação CSV e contagens permanecem corretos.
 
 ---
 

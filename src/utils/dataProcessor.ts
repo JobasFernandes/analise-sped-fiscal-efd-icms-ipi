@@ -1,5 +1,13 @@
 import { format, parseISO } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import type {
+  ChartDataShape,
+  BasicDataset,
+  DiaValor,
+  CfopValor,
+  ProcessedData,
+  ResumoExecutivo,
+} from "./types";
 
 export function formatarMoeda(valor: number | null | undefined): string {
   return new Intl.NumberFormat("pt-BR", {
@@ -51,11 +59,10 @@ export function calcularEstatisticas(dados: Array<{ valor: number }>): {
 }
 
 export function agruparPorPeriodo(
-  vendasPorDia: Array<{ data: string; valor: number }>,
+  vendasPorDia: DiaValor[],
   periodo: "dia" | "semana" | "mes" = "dia"
-) {
-  if (!vendasPorDia || vendasPorDia.length === 0)
-    return [] as Array<{ periodo: string; valor: number; count: number }>;
+): Array<{ periodo: string; valor: number; count: number }> {
+  if (!vendasPorDia || vendasPorDia.length === 0) return [];
   const grupos = new Map<
     string,
     { periodo: string; valor: number; count: number }
@@ -90,11 +97,11 @@ export function agruparPorPeriodo(
 }
 
 export function filtrarPorPeriodo(
-  dados: any[],
+  dados: Array<{ data?: string; periodo?: string }> ,
   dataInicio?: string,
   dataFim?: string
-) {
-  if (!dados || dados.length === 0) return [] as any[];
+): Array<{ data?: string; periodo?: string }> {
+  if (!dados || dados.length === 0) return [];
   if (!dataInicio && !dataFim) return dados;
   return dados.filter((item) => {
     const dataItem = (item as any).data || (item as any).periodo;
@@ -132,7 +139,7 @@ export function gerarDataset(
   dados: Array<{ valor: number }>,
   label: string,
   tipo: "line" | "bar" | "pie" | "doughnut" = "bar"
-) {
+): BasicDataset {
   const cores = gerarCores(dados.length);
   switch (tipo) {
     case "line":
@@ -165,10 +172,10 @@ export function gerarDataset(
 }
 
 export function prepararDadosVendasPorDia(
-  vendasPorDia: Array<{ data: string; valor: number }>
-) {
+  vendasPorDia: DiaValor[]
+): ChartDataShape {
   if (!vendasPorDia || vendasPorDia.length === 0)
-    return { labels: [] as string[], datasets: [] as any[] };
+    return { labels: [], datasets: [] };
   const labels = vendasPorDia.map((item) => formatarData(item.data, "dd/MM"));
   const dataset = gerarDataset(vendasPorDia, "Vendas", "line");
   return { labels, datasets: [dataset] };
@@ -177,9 +184,9 @@ export function prepararDadosVendasPorDia(
 export function prepararDadosVendasPorCfop(
   vendasPorCfop: Array<{ cfop: string; descricao: string; valor: number }>,
   limite: number = 10
-) {
+): ChartDataShape {
   if (!vendasPorCfop || vendasPorCfop.length === 0)
-    return { labels: [] as string[], datasets: [] as any[] };
+    return { labels: [], datasets: [] };
   const topCfops = vendasPorCfop.slice(0, limite);
   const labels = topCfops.map(
     (item) => `${item.cfop}\n${item.descricao.substring(0, 30)}...`
@@ -191,9 +198,9 @@ export function prepararDadosVendasPorCfop(
 export function prepararDadosDistribuicaoCfop(
   vendasPorCfop: Array<{ cfop: string; descricao?: string; valor: number }>,
   limite: number = 8
-) {
+): ChartDataShape {
   if (!vendasPorCfop || vendasPorCfop.length === 0)
-    return { labels: [] as string[], datasets: [] as any[] };
+    return { labels: [], datasets: [] };
   let dados = [...vendasPorCfop];
   if (dados.length > limite) {
     const principais = dados.slice(0, limite - 1);
@@ -236,10 +243,10 @@ export function calcularTendencia(dados: Array<{ valor: number }>) {
 }
 
 export function prepararDadosEntradasPorDia(
-  entradasPorDia: Array<{ data: string; valor: number }>
-) {
+  entradasPorDia: DiaValor[]
+): ChartDataShape {
   if (!entradasPorDia || entradasPorDia.length === 0)
-    return { labels: [] as string[], datasets: [] as any[] };
+    return { labels: [], datasets: [] };
   const labels = entradasPorDia.map((item) => formatarData(item.data));
   const valores = entradasPorDia.map((item) => item.valor);
   return {
@@ -258,10 +265,10 @@ export function prepararDadosEntradasPorDia(
 }
 
 export function prepararDadosSaidasPorDia(
-  saidasPorDia: Array<{ data: string; valor: number }>
-) {
+  saidasPorDia: DiaValor[]
+): ChartDataShape {
   if (!saidasPorDia || saidasPorDia.length === 0)
-    return { labels: [] as string[], datasets: [] as any[] };
+    return { labels: [], datasets: [] };
   const labels = saidasPorDia.map((item) => formatarData(item.data));
   const valores = saidasPorDia.map((item) => item.valor);
   return {
@@ -280,16 +287,15 @@ export function prepararDadosSaidasPorDia(
 }
 
 export function prepararDadosEntradasSaidasPorDia(
-  entradasPorDia?: Array<{ data: string; valor: number }>,
-  saidasPorDia?: Array<{ data: string; valor: number }>
-) {
+  entradasPorDia?: DiaValor[],
+  saidasPorDia?: DiaValor[]
+): ChartDataShape {
   const todasDatas = new Set<string>();
   if (entradasPorDia)
     entradasPorDia.forEach((item) => todasDatas.add(item.data));
   if (saidasPorDia) saidasPorDia.forEach((item) => todasDatas.add(item.data));
   const datasOrdenadas = Array.from(todasDatas).sort();
-  if (datasOrdenadas.length === 0)
-    return { labels: [] as string[], datasets: [] as any[] };
+  if (datasOrdenadas.length === 0) return { labels: [], datasets: [] };
   const labels = datasOrdenadas.map((data) => formatarData(data));
   const entradasMap = new Map<string, number>();
   const saidasMap = new Map<string, number>();
@@ -327,9 +333,9 @@ export function prepararDadosEntradasSaidasPorDia(
 export function prepararDadosEntradasPorCfop(
   entradasPorCfop: Array<{ cfop: string; valor: number }>,
   limite: number = 10
-) {
+): ChartDataShape {
   if (!entradasPorCfop || entradasPorCfop.length === 0)
-    return { labels: [] as string[], datasets: [] as any[] };
+    return { labels: [], datasets: [] };
   const dadosLimitados = entradasPorCfop.slice(0, limite);
   const labels = dadosLimitados.map((item) => `CFOP ${item.cfop}`);
   const valores = dadosLimitados.map((item) => item.valor);
@@ -350,9 +356,9 @@ export function prepararDadosEntradasPorCfop(
 export function prepararDadosDistribuicaoCfopEntrada(
   entradasPorCfop: Array<{ cfop: string; valor: number }>,
   limite: number = 8
-) {
+): ChartDataShape {
   if (!entradasPorCfop || entradasPorCfop.length === 0)
-    return { labels: [] as string[], datasets: [] as any[] };
+    return { labels: [], datasets: [] };
   const dadosLimitados = entradasPorCfop.slice(0, limite);
   const labels = dadosLimitados.map((item) => `CFOP ${item.cfop}`);
   const valores = dadosLimitados.map((item) => item.valor);
@@ -361,6 +367,7 @@ export function prepararDadosDistribuicaoCfopEntrada(
     labels,
     datasets: [
       {
+        label: "Entradas",
         data: valores,
         backgroundColor: cores,
         borderColor: cores.map((cor) => cor.replace("0.7", "1")),
@@ -373,9 +380,9 @@ export function prepararDadosDistribuicaoCfopEntrada(
 export function prepararDadosDistribuicaoCfopSaida(
   saidasPorCfop: Array<{ cfop: string; valor: number }>,
   limite: number = 8
-) {
+): ChartDataShape {
   if (!saidasPorCfop || saidasPorCfop.length === 0)
-    return { labels: [] as string[], datasets: [] as any[] };
+    return { labels: [], datasets: [] };
   const dadosLimitados = saidasPorCfop.slice(0, limite);
   const labels = dadosLimitados.map((item) => `CFOP ${item.cfop}`);
   const valores = dadosLimitados.map((item) => item.valor);
@@ -384,6 +391,7 @@ export function prepararDadosDistribuicaoCfopSaida(
     labels,
     datasets: [
       {
+        label: "Saídas",
         data: valores,
         backgroundColor: cores,
         borderColor: cores.map((cor) => cor.replace("0.7", "1")),
@@ -393,7 +401,7 @@ export function prepararDadosDistribuicaoCfopSaida(
   };
 }
 
-export function gerarResumoExecutivo(dadosProcessados: any) {
+export function gerarResumoExecutivo(dadosProcessados: ProcessedData | null): ResumoExecutivo {
   if (!dadosProcessados) {
     return {
       totalVendas: 0,
@@ -448,7 +456,7 @@ export function gerarResumoExecutivo(dadosProcessados: any) {
       ? `${formatarData(periodo.inicio)} a ${formatarData(periodo.fim)}`
       : null;
   const tendencia = calcularTendencia(
-    vendasPorDiaArray || saidasPorDiaArray || entradasPorDiaArray || []
+    (vendasPorDiaArray as DiaValor[] | undefined) || (saidasPorDiaArray as DiaValor[] | undefined) || (entradasPorDiaArray as DiaValor[] | undefined) || []
   );
   return {
     totalVendas: totalGeral || 0,
@@ -468,7 +476,7 @@ export function gerarResumoExecutivo(dadosProcessados: any) {
 
 // Filtra e re-agrega os dados processados pelo parser dentro do período informado (strings yyyy-MM-dd)
 export function filtrarDadosProcessadosPorPeriodo(
-  dados: any,
+  dados: ProcessedData,
   dataInicio?: string,
   dataFim?: string
 ) {
@@ -483,18 +491,18 @@ export function filtrarDadosProcessadosPorPeriodo(
 
   // Filtrar arrays por dia
   const entradasPorDiaArray = (dados.entradasPorDiaArray || []).filter(
-    (d: any) => inRange(d.data)
+    (d) => inRange(d.data)
   );
-  const saidasPorDiaArray = (dados.saidasPorDiaArray || []).filter((d: any) =>
+  const saidasPorDiaArray = (dados.saidasPorDiaArray || []).filter((d) =>
     inRange(d.data)
   );
 
   // Filtrar arrays dia+cfop
   const entradasPorDiaCfopArray = (dados.entradasPorDiaCfopArray || []).filter(
-    (d: any) => inRange(d.data)
+    (d) => inRange(d.data)
   );
   const saidasPorDiaCfopArray = (dados.saidasPorDiaCfopArray || []).filter(
-    (d: any) => inRange(d.data)
+    (d) => inRange(d.data)
   );
 
   // Re-agrupar CFOPs com base nas versões filtradas por dia
@@ -513,7 +521,10 @@ export function filtrarDadosProcessadosPorPeriodo(
 
   // Filtrar notas por data de referência: usa dataEntradaSaida se existir, senão dataDocumento
   // Mantém notas sem data (não exclui) para evitar perdas de contagem quando o arquivo tem falhas
-  const filtrarNotas = (notas: any[]) =>
+  const filtrarNotas = (notas: Array<{
+    dataEntradaSaida?: Date | null;
+    dataDocumento?: Date | null;
+  }>) =>
     (notas || []).filter((n) => {
       const refDate: Date | null | undefined =
         n?.dataEntradaSaida || n?.dataDocumento;

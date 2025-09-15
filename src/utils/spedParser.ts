@@ -1,28 +1,41 @@
 import { format, parse } from "date-fns";
-// Importa do .js para manter o mapa estático de CFOPs até migrarmos totalmente
 import { getDescricaoCfop } from "./cfopService";
-
-export type Nota = {
-  numeroDoc: string;
-  chaveNfe: string;
-  dataDocumento: Date | null;
-  dataEntradaSaida: Date | null;
-  valorDocumento: number;
-  valorMercadoria: number;
-  indicadorOperacao: "0" | "1";
-  situacao: string;
-  itens: Array<{
-    cfop: string;
-    valorOperacao: number;
-    cstIcms: string;
-    aliqIcms: number;
-    valorBcIcms: number;
-    valorIcms: number;
-  }>;
-};
+import type {
+  Nota,
+  ItemDetalhado,
+  DiaValor,
+  CfopValor,
+  DiaCfopValor,
+  ProcessedData,
+} from "./types";
 
 export class SpedParser {
-  data: any;
+  data!: {
+    entradas: Nota[];
+    saidas: Nota[];
+    entradasPorDia: Map<string, number>;
+    saidasPorDia: Map<string, number>;
+    entradasPorCfop: Map<string, number>;
+    saidasPorCfop: Map<string, number>;
+    entradasPorDiaCfop: Map<string, DiaCfopValor>;
+    saidasPorDiaCfop: Map<string, DiaCfopValor>;
+    itensPorCfop: Map<string, ItemDetalhado[]>;
+    totalEntradas: number;
+    totalSaidas: number;
+    totalGeral: number;
+    periodo: { inicio: Date | null; fim: Date | null };
+    // aliases de compat
+    vendas?: Nota[];
+    vendasPorDia?: Map<string, number>;
+    vendasPorCfop?: Map<string, number>;
+    entradasPorDiaArray?: DiaValor[];
+    saidasPorDiaArray?: DiaValor[];
+    entradasPorCfopArray?: CfopValor[];
+    saidasPorCfopArray?: CfopValor[];
+    entradasPorDiaCfopArray?: DiaCfopValor[];
+    saidasPorDiaCfopArray?: DiaCfopValor[];
+    itensPorCfopIndex?: Record<string, ItemDetalhado[]>;
+  };
   constructor() {
     this.resetData();
   }
@@ -35,7 +48,7 @@ export class SpedParser {
   parse(
     fileContent: string,
     onProgress?: (current: number, total: number) => void
-  ) {
+  ): ProcessedData {
     const lines = fileContent.split("\n").filter((line) => line.trim());
     this.resetData();
     let currentNota: Nota | null = null;
@@ -66,7 +79,7 @@ export class SpedParser {
       }
     }
     this.processarDadosFinais();
-    return this.data;
+    return this.data as unknown as ProcessedData;
   }
 
   resetData() {
@@ -164,7 +177,7 @@ export class SpedParser {
       // Indexa item por CFOP com metadados da nota para consultas rápidas no UI
       if (!this.data.itensPorCfop.has(cfop))
         this.data.itensPorCfop.set(cfop, []);
-      this.data.itensPorCfop.get(cfop).push({
+      this.data.itensPorCfop.get(cfop)!.push({
         cfop,
         valorOperacao: item.valorOperacao,
         cstIcms: item.cstIcms,
@@ -217,47 +230,35 @@ export class SpedParser {
   acumularEntradaPorDia(dataKey: string, valor: number) {
     if (!this.data.entradasPorDia.has(dataKey))
       this.data.entradasPorDia.set(dataKey, 0);
-    this.data.entradasPorDia.set(
-      dataKey,
-      this.data.entradasPorDia.get(dataKey) + valor
-    );
+    this.data.entradasPorDia.set(dataKey, (this.data.entradasPorDia.get(dataKey) || 0) + valor);
   }
   acumularSaidaPorDia(dataKey: string, valor: number) {
     if (!this.data.saidasPorDia.has(dataKey))
       this.data.saidasPorDia.set(dataKey, 0);
-    this.data.saidasPorDia.set(
-      dataKey,
-      this.data.saidasPorDia.get(dataKey) + valor
-    );
+    this.data.saidasPorDia.set(dataKey, (this.data.saidasPorDia.get(dataKey) || 0) + valor);
   }
   acumularEntradaPorCfop(cfop: string, valor: number) {
     if (!this.data.entradasPorCfop.has(cfop))
       this.data.entradasPorCfop.set(cfop, 0);
-    this.data.entradasPorCfop.set(
-      cfop,
-      this.data.entradasPorCfop.get(cfop) + valor
-    );
+    this.data.entradasPorCfop.set(cfop, (this.data.entradasPorCfop.get(cfop) || 0) + valor);
   }
   acumularSaidaPorCfop(cfop: string, valor: number) {
     if (!this.data.saidasPorCfop.has(cfop))
       this.data.saidasPorCfop.set(cfop, 0);
-    this.data.saidasPorCfop.set(
-      cfop,
-      this.data.saidasPorCfop.get(cfop) + valor
-    );
+    this.data.saidasPorCfop.set(cfop, (this.data.saidasPorCfop.get(cfop) || 0) + valor);
   }
   acumularEntradaPorDiaCfop(dataKey: string, cfop: string, valor: number) {
     const key = `${dataKey}-${cfop}`;
     if (!this.data.entradasPorDiaCfop.has(key))
       this.data.entradasPorDiaCfop.set(key, { data: dataKey, cfop, valor: 0 });
-    const item = this.data.entradasPorDiaCfop.get(key);
+    const item = this.data.entradasPorDiaCfop.get(key)!;
     item.valor += valor;
   }
   acumularSaidaPorDiaCfop(dataKey: string, cfop: string, valor: number) {
     const key = `${dataKey}-${cfop}`;
     if (!this.data.saidasPorDiaCfop.has(key))
       this.data.saidasPorDiaCfop.set(key, { data: dataKey, cfop, valor: 0 });
-    const item = this.data.saidasPorDiaCfop.get(key);
+    const item = this.data.saidasPorDiaCfop.get(key)!;
     item.valor += valor;
   }
   processarDadosFinais() {
@@ -314,9 +315,9 @@ export class SpedParser {
     this.data.vendasPorCfop = this.data.saidasPorCfop;
 
     // Converte índice Map para objeto serializável (cfop -> itens[])
-    const itensIndexObj: Record<string, any[]> = {};
+    const itensIndexObj: Record<string, ItemDetalhado[]> = {};
     for (const [cfop, itens] of this.data.itensPorCfop.entries() as Iterable<
-      [string, any[]]
+      [string, ItemDetalhado[]]
     >) {
       itensIndexObj[cfop] = itens;
     }
@@ -327,6 +328,6 @@ export class SpedParser {
 export function parseSpedFile(
   content: string,
   onProgress?: (current: number, total: number) => void
-) {
+): ProcessedData {
   return new SpedParser().parse(content, onProgress);
 }
