@@ -14,7 +14,9 @@ export function ThemeProvider({ children, defaultTheme = "system" }) {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
       if (saved === "light" || saved === "dark") return saved;
-    } catch {}
+    } catch {
+      // ignora
+    }
     if (defaultTheme === "system") return getSystemTheme();
     return defaultTheme === "dark" ? "dark" : "light";
   };
@@ -27,7 +29,9 @@ export function ThemeProvider({ children, defaultTheme = "system" }) {
     else root.classList.remove("dark");
     try {
       localStorage.setItem(STORAGE_KEY, theme);
-    } catch {}
+    } catch {
+      // ignora
+    }
   }, [theme]);
 
   useEffect(() => {

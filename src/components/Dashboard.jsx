@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
   FileText,
-  DollarSign,
   Eye,
   TrendingUp,
   TrendingDown,

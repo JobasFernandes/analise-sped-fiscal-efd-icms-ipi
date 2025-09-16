@@ -4,7 +4,6 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
-  DialogBody,
   DialogFooter,
   DialogTitle,
   DialogDescription,
@@ -47,11 +46,12 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     return () => clearTimeout(t);
   }, [filtroTextoInput]);
 
-  if (!cfop || !dados) return null;
-
   const [open, setOpen] = useState(true);
 
+  const hasData = !!(cfop && dados);
+
   const itensDetalhados = useMemo(() => {
+    if (!hasData) return [];
     let base =
       (dados.itensPorCfopIndex && dados.itensPorCfopIndex[cfop.cfop]) || null;
     if (!base) {
@@ -79,8 +79,8 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
       }
       base = coletados;
     }
-    return base;
-  }, [dados, cfop]);
+    return base || [];
+  }, [dados, cfop, hasData]);
 
   useEffect(() => {
     setPage(1);
@@ -90,7 +90,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     const texto = filtroTextoDebounced.toLowerCase();
     if (!texto) return itensDetalhados;
     return itensDetalhados.filter((item) => {
-      if (item.numeroDoc?.toLowerCase().includes(texto)) return true;
+      if (item.numeroDoc?.toString().toLowerCase().includes(texto)) return true;
       if (item.chaveNfe?.toLowerCase().includes(texto)) return true;
       const dataFmt = formatarData(item.dataDocumento)?.toLowerCase();
       if (dataFmt && dataFmt.includes(texto)) return true;
@@ -221,7 +221,11 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     return { tipo: "Indefinido", cor: "text-gray-600", bg: "bg-gray-100" };
   };
 
-  const tipoOperacao = getTipoOperacao(cfop.cfop);
+  const tipoOperacao = hasData
+    ? getTipoOperacao(cfop.cfop)
+    : { tipo: "", cor: "", bg: "" };
+
+  if (!hasData) return null;
 
   return (
     <Dialog
