@@ -18,6 +18,42 @@
 				"test",
 				"--silent"
 			]
+		},
+		{
+			"label": "Run vitest",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent"
+			],
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run tests after CSV worker",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent"
+			],
+			"problemMatcher": [
+				"$tsc"
+			]
+		},
+		{
+			"label": "Run vitest",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"test",
+				"--silent"
+			],
+			"problemMatcher": [
+				"$tsc"
+			]
 		}
 	]
 }

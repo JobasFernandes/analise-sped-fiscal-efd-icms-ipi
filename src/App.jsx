@@ -5,6 +5,12 @@ import Dashboard from "./components/Dashboard";
 import { FileText, BarChart3, Upload } from "lucide-react";
 import ThemeToggle from "./components/ThemeToggle";
 import Button from "./components/ui/button";
+import { addSped } from "./db/daos/spedDao";
+import SpedManager from "./components/SpedManager";
+import { getSped } from "./db/daos/spedDao";
+import { getSpedProcessed } from "./db/daos/spedProcessedDao";
+import { toProcessedData } from "./db/adapters/toProcessedData";
+import { db } from "./db";
 
 function App() {
   const [dadosProcessados, setDadosProcessados] = useState(null);
@@ -12,7 +18,9 @@ function App() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [progress, setProgress] = useState(0);
+  const [savedSpedId, setSavedSpedId] = useState(null);
   const workerRef = useRef(null);
+  const [showManager, setShowManager] = useState(false);
 
   useEffect(() => {
     return () => {
@@ -43,11 +51,26 @@ function App() {
     setError(null);
     setProgress(0);
     setDadosProcessados(null);
+    setSavedSpedId(null);
 
     const worker = iniciarWorkerSeNecessario();
 
+    const computeHash = async (text) => {
+      try {
+        const enc = new TextEncoder();
+        const data = enc.encode(text);
+        const buf = await crypto.subtle.digest("SHA-256", data);
+        const arr = Array.from(new Uint8Array(buf));
+        return arr.map((b) => b.toString(16).padStart(2, "0")).join("");
+      } catch (e) {
+        return null;
+      }
+    };
+
+    const contentHash = await computeHash(fileData.content);
+
     if (worker) {
-      const onMessage = (e) => {
+      const onMessage = async (e) => {
         const msg = e.data;
         if (!msg || !msg.type) return;
         if (msg.type === "progress") {
@@ -63,6 +86,16 @@ function App() {
               size: fileData.size,
               lastModified: fileData.lastModified,
             });
+            try {
+              const newSpedId = await addSped(dados, {
+                filename: fileData.name,
+                size: fileData.size,
+                contentHash,
+              });
+              setSavedSpedId(newSpedId);
+            } catch (persistErr) {
+              console.warn("Falha ao salvar SPED localmente:", persistErr);
+            }
           }
           setLoading(false);
           worker.removeEventListener("message", onMessage);
@@ -90,6 +123,16 @@ function App() {
           size: fileData.size,
           lastModified: fileData.lastModified,
         });
+        try {
+          const newSpedId = await addSped(dados, {
+            filename: fileData.name,
+            size: fileData.size,
+            contentHash,
+          });
+          setSavedSpedId(newSpedId);
+        } catch (persistErr) {
+          console.warn("Falha ao salvar SPED localmente:", persistErr);
+        }
       } catch (err) {
         console.error("Erro ao processar arquivo (fallback):", err);
         setError(err.message || "Erro ao processar o arquivo SPED.");
@@ -104,6 +147,39 @@ function App() {
     setArquivoInfo(null);
     setError(null);
     setProgress(0);
+    setShowManager(false);
+  };
+
+  const handleLoadFromDb = async (spedId) => {
+    try {
+      try {
+        const dados = await getSpedProcessed(spedId);
+        const sped = await db.sped_files.get(spedId).catch(() => null);
+        setDadosProcessados(dados);
+        setArquivoInfo({
+          name: sped?.filename || `SPED #${spedId}`,
+          size: sped?.size || 0,
+          lastModified: sped?.importedAt || new Date().toISOString(),
+        });
+        setShowManager(false);
+        return;
+      } catch (e) {
+        // fallback
+      }
+
+      const { sped, documents, items } = await getSped(spedId);
+      const dados = toProcessedData(sped, documents, items);
+      setDadosProcessados(dados);
+      setArquivoInfo({
+        name: sped.filename,
+        size: sped.size,
+        lastModified: sped.importedAt,
+      });
+      setShowManager(false);
+    } catch (e) {
+      console.error("Falha ao carregar SPED do banco:", e);
+      setError(e?.message || "Falha ao carregar SPED do banco");
+    }
   };
 
   return (
@@ -124,9 +200,18 @@ function App() {
             </div>
             <div className="flex items-center gap-3">
               <ThemeToggle />
+              <Button
+                variant="outline"
+                onClick={() => setShowManager(true)}
+                className="flex items-center gap-2"
+                title="Gerenciar SPEDs salvos"
+              >
+                <FileText className="h-4 w-4" />
+                Meus SPEDs
+              </Button>
               {dadosProcessados && (
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   onClick={handleReset}
                   className="flex items-center gap-2"
                 >
@@ -140,7 +225,12 @@ function App() {
       </header>
 
       <main className="w-full px-2 sm:px-3 lg:px-4 py-4">
-        {!dadosProcessados ? (
+        {showManager ? (
+          <SpedManager
+            onBack={() => setShowManager(false)}
+            onLoad={handleLoadFromDb}
+          />
+        ) : !dadosProcessados ? (
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <FileText className="h-16 w-16 text-primary-600 dark:text-primary-300 mx-auto mb-4" />
@@ -153,6 +243,8 @@ function App() {
                 interativa e visual.
               </p>
             </div>
+
+            {/* Botão 'Meus SPEDs' movido para o navbar */}
 
             <FileUpload
               onFileSelect={handleFileSelect}
@@ -200,7 +292,11 @@ function App() {
             </div>
           </div>
         ) : (
-          <Dashboard dados={dadosProcessados} arquivo={arquivoInfo} />
+          <Dashboard
+            dados={dadosProcessados}
+            arquivo={arquivoInfo}
+            savedSpedId={savedSpedId}
+          />
         )}
       </main>
 

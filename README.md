@@ -13,6 +13,9 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 • Exportação de gráficos em PNG (botão PNG em cada card de gráfico)
 • Tooltips padronizados com valores monetários e rótulos contextuais
 • Sem backend: todos os dados são processados localmente no browser
+• Persistência local dos SPEDs via IndexedDB com gerenciador para listar/carregar/excluir
+• Carregamento rápido de SPEDs salvos com agregados pré-calculados (v2): somas por dia, por CFOP e dia+CFOP
+• Backup/Restore do banco local (exportar/importar JSON) para migração entre máquinas
 • Parsing assíncrono com Web Worker (UI permanece responsiva e barra de progresso durante arquivos grandes)
 • Detalhes de CFOP abrindo instantaneamente via índice pré-computado e UI otimizada (memoização, paginação, debounce)
 
@@ -151,6 +154,30 @@ Arquitetura e fluxo de dados (alto nível):
 - SpedParser (executado dentro de um Web Worker) consolida entradas/saídas por dia e CFOP e calcula totais/período sem bloquear a thread principal
 - Dashboard consome `dadosProcessados` e usa `dataProcessor` para preparar os gráficos; possui botões “Exportar Todos (CSV)” em Entradas e Saídas
 - CfopDetalhes utiliza o índice `itensPorCfopIndex` (gerado pelo parser) para abrir instantaneamente os itens de um CFOP; há fallback para reconstrução a partir das notas quando necessário; UI otimizada com memoização, paginação e pesquisa com debounce
+- Após o parsing, o resultado é salvo no IndexedDB; a página “Meus SPEDs” permite listar, carregar e excluir SPEDs.
+
+### Persistência local e Gerenciador de SPEDs
+
+- O app salva automaticamente os SPEDs processados no navegador usando IndexedDB.
+- Acesse “Meus SPEDs” (botão acima do upload) para:
+  - Listar SPEDs salvos, com período e totais
+  - Carregar um SPED salvo no Dashboard
+  - Excluir um SPED e todos os dados relacionados (cascade)
+
+Camada de dados:
+
+- Schema v1: `sped_files`, `documents`, `items`
+- Schema v2 (agregados): `day_aggs`, `cfop_aggs`, `day_cfop_aggs`
+- DAO: `addSped`, `listSpeds`, `getSped`, `deleteSped`, `getSpedProcessed`
+- O carregamento pelo gerenciador usa `getSpedProcessed` (agregados) quando disponíveis; há fallback para reconstrução via `documents`/`items` para compatibilidade.
+- Ferramenta de manutenção: na tela “Meus SPEDs”, botões para “Recalcular agregados” (por SPED ou todos). Útil para SPEDs antigos que não tinham agregados.
+
+#### Backup e migração (JSON)
+
+- Exporte um backup completo do IndexedDB clicando em `Exportar backup` em “Meus SPEDs”. Será baixado um arquivo `sped-backup-YYYY-MM-DDTHH-mm-SS.json`.
+- Para importar em outra máquina/navegador, clique em `Importar backup`, selecione o JSON exportado e marque a opção “Limpar banco antes de importar” (recomendado).
+- A importação usa operações em lote e preserva os dados de agregados para carregamento rápido.
+- Duplicidades: se optar por não limpar, pode ocorrer conflito de chaves. A deduplicação por `hash` só é aplicada ao importar via `addSped`; no import de backup o comportamento é de restauração fiel (inclui IDs originais).
 
 ### Parsing assíncrono (Web Worker)
 
