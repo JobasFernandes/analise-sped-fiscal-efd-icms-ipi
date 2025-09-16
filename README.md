@@ -2,6 +2,8 @@
 
 # Analizador SPED Fiscal
 
+<img src="images/banner.png" alt="Screenshot da aplicação Analizador SPED Fiscal" width="100%" style="max-width:1180px;border-radius:8px;" />
+
 Aplicação web (client-side) para análise exploratória e visualização de dados de arquivos **SPED Fiscal** (Bloco C) inteiramente no navegador: parsing local, agregações, indicadores, gráficos, exportações e persistência offline com **IndexedDB/Dexie**.
 
 </div>
@@ -13,10 +15,10 @@ Aplicação web (client-side) para análise exploratória e visualização de da
 - Filtragem automática: somente notas em situação normal (`COD_SIT = 00`) e valores positivos
 - Cálculo de indicadores ("Indicadores") pré‑computados: soma por dia, por CFOP e por dia+CFOP
 - Visualizações interativas (Chart.js + react-chartjs-2):
-   - Entradas por dia
-   - Saídas por dia
-   - Comparativo Entradas vs Saídas
-   - Distribuição de CFOPs (entrada/saída)
+  - Entradas por dia
+  - Saídas por dia
+  - Comparativo Entradas vs Saídas
+  - Distribuição de CFOPs (entrada/saída)
 - Drill‑down de CFOP com modal de detalhes (itens e notas relacionadas)
 - Índice rápido (`itensPorCfopIndex`) para abertura instantânea dos detalhes
 - Exportação **CSV** (por CFOP ou consolidado Entradas/Saídas) — com Web Worker para grandes volumes
@@ -168,14 +170,14 @@ Use-o para um primeiro teste: abra a aplicação, clique em “Meus SPEDs” par
 
 ## 🧠 Decisões de design
 
-| Tema | Decisão |
-|------|---------|
-| Parsing | Linha a linha com streaming lógico em worker para escalabilidade |
-| Datas | Parse local (date-fns) evitando `new Date('yyyy-MM-dd')` e offsets UTC |
-| Performance | Pré-cálculo de indicadores em tabelas auxiliares + fallback compatível |
-| Acessibilidade | Tooltips Radix e foco preservado nos modais (Dialog) |
-| Persistência | Dexie com versionamento transparente e backup JSON |
-| Exportações | Web Worker para CSV grande + Canvas toDataURL para PNG |
+| Tema           | Decisão                                                                |
+| -------------- | ---------------------------------------------------------------------- |
+| Parsing        | Linha a linha com streaming lógico em worker para escalabilidade       |
+| Datas          | Parse local (date-fns) evitando `new Date('yyyy-MM-dd')` e offsets UTC |
+| Performance    | Pré-cálculo de indicadores em tabelas auxiliares + fallback compatível |
+| Acessibilidade | Tooltips Radix e foco preservado nos modais (Dialog)                   |
+| Persistência   | Dexie com versionamento transparente e backup JSON                     |
+| Exportações    | Web Worker para CSV grande + Canvas toDataURL para PNG                 |
 
 ## 🛡 Limites atuais
 
