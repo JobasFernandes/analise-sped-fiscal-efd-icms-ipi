@@ -4,6 +4,8 @@
 
 <img src="images/banner.png" alt="Screenshot da aplicação Analizador SPED Fiscal" width="100%" style="max-width:1180px;border-radius:8px;" />
 
+<p><strong>Deploy (GitHub Pages):</strong> <a href="https://SEU-USUARIO.github.io/analise-sped-fiscal-efd-icms-ipi/" target="_blank">Acesse aplicação</a></p>
+
 Aplicação web (client-side) para análise exploratória e visualização de dados de arquivos **SPED Fiscal** (Bloco C) inteiramente no navegador: parsing local, agregações, indicadores, gráficos, exportações e persistência offline com **IndexedDB/Dexie**.
 
 </div>

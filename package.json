@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "dev": "vite --host",
-    "build": "vite build",
+    "build": "vite build && node -e \"const fs=require('fs');fs.copyFileSync('dist/index.html','dist/404.html');\"",
     "preview": "vite preview",
     "lint": "eslint . --ext js,jsx --report-unused-disable-directives --max-warnings 0",
     "test": "vitest"
