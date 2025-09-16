@@ -55,51 +55,51 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+  }
 
-    .custom-scroll {
-      scrollbar-width: thin;
-      scrollbar-color: hsl(var(--muted-foreground)) transparent;
-    }
-    .custom-scroll::-webkit-scrollbar {
-      height: 8px;
-      width: 8px;
-    }
-    .custom-scroll::-webkit-scrollbar-track {
-      background: transparent;
-    }
-    .custom-scroll::-webkit-scrollbar-thumb {
-      background-color: hsl(var(--muted-foreground) / 0.4);
-      border-radius: 9999px;
-    }
-    .dark .custom-scroll::-webkit-scrollbar-thumb {
-      background-color: hsl(var(--muted-foreground) / 0.6);
-    }
+  /* Scrollbar custom */
+  .custom-scroll {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) transparent;
+  }
+  .custom-scroll::-webkit-scrollbar {
+    height: 8px;
+    width: 8px;
+  }
+  .custom-scroll::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  .custom-scroll::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.4);
+    border-radius: 9999px;
+  }
+  .dark .custom-scroll::-webkit-scrollbar-thumb {
+    background-color: hsl(var(--muted-foreground) / 0.6);
+  }
 
-    input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(0.5);
-      cursor: pointer;
-      border-radius: 2px;
-      padding: 2px;
-    }
-    .dark input[type="date"]::-webkit-calendar-picker-indicator {
-      filter: invert(0.8) brightness(1.2);
-    }
-
-    input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-      color: hsl(var(--foreground));
-    }
-    .dark input[type="date"]::-webkit-datetime-edit-fields-wrapper {
-      color: hsl(var(--foreground));
-    }
-
-    @media (prefers-color-scheme: dark) {
-      input[type="date"] {
-        color-scheme: dark;
-      }
-    }
-    .dark input[type="date"] {
+  /* Date inputs */
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.5);
+    cursor: pointer;
+    border-radius: 2px;
+    padding: 2px;
+  }
+  .dark input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.8) brightness(1.2);
+  }
+  input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+    color: hsl(var(--foreground));
+  }
+  .dark input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+    color: hsl(var(--foreground));
+  }
+  @media (prefers-color-scheme: dark) {
+    input[type="date"] {
       color-scheme: dark;
     }
+  }
+  .dark input[type="date"] {
+    color-scheme: dark;
   }
 }
 @layer components {
