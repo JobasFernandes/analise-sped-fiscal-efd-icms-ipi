@@ -1,545 +1,826 @@
 export type CfopInfo = { cfop: number; descricao: string };
 
-// Mapa estático dos principais CFOPs (entrada 1xxx/2xxx/3xxx e saída 5xxx/6xxx/7xxx)
 export const CFOPS_ESTATICOS: Record<string, string> = {
-  // CFOPs de ENTRADA (1xxx, 2xxx, 3xxx)
-  '1101': 'Compra para industrialização',
-  '1102': 'Compra para comercialização',
-  '1111': 'Compra para industrialização de mercadoria recebida anteriormente em consignação industrial',
-  '1113': 'Compra para comercialização, de mercadoria recebida anteriormente em consignação mercantil',
-  '1116': 'Compra para industrialização originada de encomenda para recebimento futuro',
-  '1117': 'Compra para comercialização originada de encomenda para recebimento futuro',
-  '1118': 'Compra para industrialização efetuada por terceiros',
-  '1120': 'Compra para industrialização, efetuada para entrega ao adquirente originário, em venda à ordem',
-  '1121': 'Compra para comercialização, efetuada para entrega ao adquirente originário, em venda à ordem',
-  '1122': 'Compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária, efetuada para entrega ao adquirente originário',
-  '1124': 'Industrialização efetuada para outra empresa',
-  '1125': 'Industrialização efetuada para outra empresa quando a mercadoria recebida para utilização no processo de industrialização não transitar pelo estabelecimento adquirente da mercadoria',
-  '1151': 'Transferência para industrialização',
-  '1152': 'Transferência para comercialização',
-  '1153': 'Transferência de energia elétrica para distribuição',
-  '1154': 'Transferência para transformação',
-  '1201': 'Devolução de venda de produção do estabelecimento',
-  '1202': 'Devolução de venda de mercadoria adquirida ou recebida de terceiros',
-  '1203': 'Devolução de venda de produção do estabelecimento, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio',
-  '1204': 'Devolução de venda de mercadoria adquirida ou recebida de terceiros, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio',
-  '1208': 'Devolução de produção do estabelecimento, remetida em transferência',
-  '1209': 'Devolução de mercadoria adquirida ou recebida de terceiros, remetida em transferência',
-  '1251': 'Compra de energia elétrica para distribuição ou comercialização',
-  '1252': 'Compra de energia elétrica por estabelecimento industrial',
-  '1253': 'Compra de energia elétrica por estabelecimento comercial',
-  '1254': 'Compra de energia elétrica por estabelecimento prestador de serviço de transporte',
-  '1255': 'Compra de energia elétrica por estabelecimento prestador de serviços',
-  '1256': 'Compra de energia elétrica por estabelecimento de produtor rural',
-  '1257': 'Compra de energia elétrica para consumo por demanda contratada',
-  '1401': 'Compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '1403': 'Compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '1406': 'Compra de bem para o ativo imobilizado cuja mercadoria está sujeita ao regime de substituição tributária',
-  '1407': 'Compra de mercadoria para uso ou consumo cuja mercadoria está sujeita ao regime de substituição tributária',
-  '1408': 'Transferência para industrialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '1409': 'Transferência para comercialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '1410': 'Devolução de venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '1411': 'Devolução de venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária',
-  '1414': 'Retorno de produção do estabelecimento, remetida para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '1415': 'Retorno de mercadoria adquirida ou recebida de terceiros, remetida para venda fora do estabelecimento em operação com mercadoria sujeita ao regime de substituição tributária',
-  '1451': 'Compra de combustível ou lubrificante para industrialização subsequente',
-  '1452': 'Compra de combustível ou lubrificante para comercialização',
-  '1501': 'Entrada de mercadoria recebida com fim específico de exportação',
-  '1503': 'Entrada decorrente de devolução de produto industrializado fora do estabelecimento',
-  '1504': 'Entrada de mercadoria destinada à composição de produto industrializado ou produzido fora do estabelecimento',
-  '1505': 'Entrada de mercadoria destinada à composição de produto industrializado ou produzido pelo próprio estabelecimento remetente',
-  '1551': 'Compra de bem para o ativo imobilizado',
-  '1552': 'Transferência de bem do ativo imobilizado',
-  '1553': 'Devolução de venda de bem do ativo imobilizado',
-  '1554': 'Retorno de bem do ativo imobilizado remetido para uso fora do estabelecimento',
-  '1555': 'Entrada de bem do ativo imobilizado de terceiro, remetido para uso no estabelecimento',
-  '1556': 'Compra de combustível ou lubrificante para industrialização subsequente',
-  '1557': 'Compra de combustível ou lubrificante para comercialização',
-  '1601': 'Recebimento, por transferência, de classificação fiscal',
-  '1602': 'Recebimento, por transferência, de classificação fiscal em operação com produto sujeito ao regime de substituição tributária',
-  '1603': 'Ressarcimento de ICMS retido por substituição tributária',
-  '1651': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado à industrialização na unidade federativa de origem',
-  '1652': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado à comercialização',
-  '1653': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte',
-  '1658': 'Transferência de combustível e lubrificante de produção do estabelecimento',
-  '1659': 'Entrada de combustível ou lubrificante para armazenagem',
-  '1660': 'Devolução de venda de combustível ou lubrificante destinado à industrialização na unidade federativa de origem',
-  '1661': 'Devolução de venda de combustível ou lubrificante destinado à comercialização',
-  '1662': 'Devolução de venda de combustível ou lubrificante destinado a não contribuinte',
-  '1663': 'Entrada para industrialização por encomenda',
-  '1664': 'Retorno de combustível ou lubrificante remetido para venda fora do estabelecimento',
-  '1665': 'Retorno de combustível ou lubrificante remetido para armazenagem',
-  '1901': 'Entrada para industrialização por encomenda',
-  '1902': 'Retorno de mercadoria utilizada na industrialização por encomenda',
-  '1903': 'Entrada de mercadoria recebida para conserto ou reparo',
-  '1904': 'Retorno de mercadoria remetida para conserto ou reparo',
-  '1905': 'Entrada de mercadoria recebida para beneficiamento',
-  '1906': 'Retorno de mercadoria remetida para beneficiamento',
-  '1907': 'Retorno da mercadoria remetida para industrialização quando vinculada a ordem de produção',
-  '1908': 'Entrada de mercadoria recebida para depósito em depósito fechado ou armazém geral',
-  '1909': 'Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral',
-  '1910': 'Entrada de bonificação, doação ou brinde',
-  '1911': 'Entrada de amostra grátis',
-  '1912': 'Entrada de mercadoria ou bem recebido para demonstração',
-  '1913': 'Retorno de mercadoria ou bem remetido para demonstração',
-  '1914': 'Retorno de mercadoria ou bem remetido para exposição ou feira',
-  '1915': 'Entrada de mercadoria ou bem recebido para exposição ou feira',
-  '1916': 'Entrada de mercadoria ou bem recebido do vendedor remetente, na venda à ordem',
-  '1917': 'Entrada de mercadoria ou bem recebido em consignação mercantil ou industrial',
-  '1918': 'Entrada de mercadoria ou bem recebido em depósito',
-  '1919': 'Entrada para depósito de mercadoria de terceiros',
-  '1920': 'Entrada de vasilhame ou sacaria',
-  '1921': 'Retorno de vasilhame ou sacaria',
-  '1922': 'Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura',
-  '1923': 'Entrada de mercadoria recebida do vendedor remetente na venda à ordem',
-  '1924': 'Entrada para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente',
-  '1925': 'Retorno de mercadoria remetida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente',
-  '1949': 'Outra entrada de mercadoria ou prestação de serviço não especificada',
+  "1101": "Compra para industrialização",
+  "1102": "Compra para comercialização",
+  "1111":
+    "Compra para industrialização de mercadoria recebida anteriormente em consignação industrial",
+  "1113":
+    "Compra para comercialização, de mercadoria recebida anteriormente em consignação mercantil",
+  "1116":
+    "Compra para industrialização originada de encomenda para recebimento futuro",
+  "1117":
+    "Compra para comercialização originada de encomenda para recebimento futuro",
+  "1118": "Compra para industrialização efetuada por terceiros",
+  "1120":
+    "Compra para industrialização, efetuada para entrega ao adquirente originário, em venda à ordem",
+  "1121":
+    "Compra para comercialização, efetuada para entrega ao adquirente originário, em venda à ordem",
+  "1122":
+    "Compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária, efetuada para entrega ao adquirente originário",
+  "1124": "Industrialização efetuada para outra empresa",
+  "1125":
+    "Industrialização efetuada para outra empresa quando a mercadoria recebida para utilização no processo de industrialização não transitar pelo estabelecimento adquirente da mercadoria",
+  "1151": "Transferência para industrialização",
+  "1152": "Transferência para comercialização",
+  "1153": "Transferência de energia elétrica para distribuição",
+  "1154": "Transferência para transformação",
+  "1201": "Devolução de venda de produção do estabelecimento",
+  "1202": "Devolução de venda de mercadoria adquirida ou recebida de terceiros",
+  "1203":
+    "Devolução de venda de produção do estabelecimento, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio",
+  "1204":
+    "Devolução de venda de mercadoria adquirida ou recebida de terceiros, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio",
+  "1208": "Devolução de produção do estabelecimento, remetida em transferência",
+  "1209":
+    "Devolução de mercadoria adquirida ou recebida de terceiros, remetida em transferência",
+  "1251": "Compra de energia elétrica para distribuição ou comercialização",
+  "1252": "Compra de energia elétrica por estabelecimento industrial",
+  "1253": "Compra de energia elétrica por estabelecimento comercial",
+  "1254":
+    "Compra de energia elétrica por estabelecimento prestador de serviço de transporte",
+  "1255":
+    "Compra de energia elétrica por estabelecimento prestador de serviços",
+  "1256": "Compra de energia elétrica por estabelecimento de produtor rural",
+  "1257": "Compra de energia elétrica para consumo por demanda contratada",
+  "1401":
+    "Compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "1403":
+    "Compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "1406":
+    "Compra de bem para o ativo imobilizado cuja mercadoria está sujeita ao regime de substituição tributária",
+  "1407":
+    "Compra de mercadoria para uso ou consumo cuja mercadoria está sujeita ao regime de substituição tributária",
+  "1408":
+    "Transferência para industrialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "1409":
+    "Transferência para comercialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "1410":
+    "Devolução de venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "1411":
+    "Devolução de venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária",
+  "1414":
+    "Retorno de produção do estabelecimento, remetida para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "1415":
+    "Retorno de mercadoria adquirida ou recebida de terceiros, remetida para venda fora do estabelecimento em operação com mercadoria sujeita ao regime de substituição tributária",
+  "1451":
+    "Compra de combustível ou lubrificante para industrialização subsequente",
+  "1452": "Compra de combustível ou lubrificante para comercialização",
+  "1501": "Entrada de mercadoria recebida com fim específico de exportação",
+  "1503":
+    "Entrada decorrente de devolução de produto industrializado fora do estabelecimento",
+  "1504":
+    "Entrada de mercadoria destinada à composição de produto industrializado ou produzido fora do estabelecimento",
+  "1505":
+    "Entrada de mercadoria destinada à composição de produto industrializado ou produzido pelo próprio estabelecimento remetente",
+  "1551": "Compra de bem para o ativo imobilizado",
+  "1552": "Transferência de bem do ativo imobilizado",
+  "1553": "Devolução de venda de bem do ativo imobilizado",
+  "1554":
+    "Retorno de bem do ativo imobilizado remetido para uso fora do estabelecimento",
+  "1555":
+    "Entrada de bem do ativo imobilizado de terceiro, remetido para uso no estabelecimento",
+  "1556":
+    "Compra de combustível ou lubrificante para industrialização subsequente",
+  "1557": "Compra de combustível ou lubrificante para comercialização",
+  "1601": "Recebimento, por transferência, de classificação fiscal",
+  "1602":
+    "Recebimento, por transferência, de classificação fiscal em operação com produto sujeito ao regime de substituição tributária",
+  "1603": "Ressarcimento de ICMS retido por substituição tributária",
+  "1651":
+    "Compra de combustível ou lubrificante de produção do estabelecimento destinado à industrialização na unidade federativa de origem",
+  "1652":
+    "Compra de combustível ou lubrificante de produção do estabelecimento destinado à comercialização",
+  "1653":
+    "Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte",
+  "1658":
+    "Transferência de combustível e lubrificante de produção do estabelecimento",
+  "1659": "Entrada de combustível ou lubrificante para armazenagem",
+  "1660":
+    "Devolução de venda de combustível ou lubrificante destinado à industrialização na unidade federativa de origem",
+  "1661":
+    "Devolução de venda de combustível ou lubrificante destinado à comercialização",
+  "1662":
+    "Devolução de venda de combustível ou lubrificante destinado a não contribuinte",
+  "1663": "Entrada para industrialização por encomenda",
+  "1664":
+    "Retorno de combustível ou lubrificante remetido para venda fora do estabelecimento",
+  "1665": "Retorno de combustível ou lubrificante remetido para armazenagem",
+  "1901": "Entrada para industrialização por encomenda",
+  "1902": "Retorno de mercadoria utilizada na industrialização por encomenda",
+  "1903": "Entrada de mercadoria recebida para conserto ou reparo",
+  "1904": "Retorno de mercadoria remetida para conserto ou reparo",
+  "1905": "Entrada de mercadoria recebida para beneficiamento",
+  "1906": "Retorno de mercadoria remetida para beneficiamento",
+  "1907":
+    "Retorno da mercadoria remetida para industrialização quando vinculada a ordem de produção",
+  "1908":
+    "Entrada de mercadoria recebida para depósito em depósito fechado ou armazém geral",
+  "1909":
+    "Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral",
+  "1910": "Entrada de bonificação, doação ou brinde",
+  "1911": "Entrada de amostra grátis",
+  "1912": "Entrada de mercadoria ou bem recebido para demonstração",
+  "1913": "Retorno de mercadoria ou bem remetido para demonstração",
+  "1914": "Retorno de mercadoria ou bem remetido para exposição ou feira",
+  "1915": "Entrada de mercadoria ou bem recebido para exposição ou feira",
+  "1916":
+    "Entrada de mercadoria ou bem recebido do vendedor remetente, na venda à ordem",
+  "1917":
+    "Entrada de mercadoria ou bem recebido em consignação mercantil ou industrial",
+  "1918": "Entrada de mercadoria ou bem recebido em depósito",
+  "1919": "Entrada para depósito de mercadoria de terceiros",
+  "1920": "Entrada de vasilhame ou sacaria",
+  "1921": "Retorno de vasilhame ou sacaria",
+  "1922":
+    "Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura",
+  "1923":
+    "Entrada de mercadoria recebida do vendedor remetente na venda à ordem",
+  "1924":
+    "Entrada para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente",
+  "1925":
+    "Retorno de mercadoria remetida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente",
+  "1949":
+    "Outra entrada de mercadoria ou prestação de serviço não especificada",
 
   // CFOPs interestaduais (2xxx)
-  '2101': 'Compra para industrialização',
-  '2102': 'Compra para comercialização',
-  '2111': 'Compra para industrialização de mercadoria recebida anteriormente em consignação industrial',
-  '2113': 'Compra para comercialização, de mercadoria recebida anteriormente em consignação mercantil',
-  '2116': 'Compra para industrialização originada de encomenda para recebimento futuro',
-  '2117': 'Compra para comercialização originada de encomenda para recebimento futuro',
-  '2118': 'Compra para industrialização efetuada por terceiros',
-  '2120': 'Compra para industrialização, efetuada para entrega ao adquirente originário, em venda à ordem',
-  '2121': 'Compra para comercialização, efetuada para entrega ao adquirente originário, em venda à ordem',
-  '2122': 'Compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária, efetuada para entrega ao adquirente originário',
-  '2124': 'Industrialização efetuada para outra empresa',
-  '2125': 'Industrialização efetuada para outra empresa quando a mercadoria recebida para utilização no processo de industrialização não transitar pelo estabelecimento adquirente da mercadoria',
-  '2151': 'Transferência para industrialização',
-  '2152': 'Transferência para comercialização',
-  '2153': 'Transferência de energia elétrica',
-  '2154': 'Transferência para transformação',
-  '2201': 'Devolução de venda de produção do estabelecimento',
-  '2202': 'Devolução de venda de mercadoria adquirida ou recebida de terceiros',
-  '2203': 'Devolução de venda de produção do estabelecimento, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio',
-  '2204': 'Devolução de venda de mercadoria adquirida ou recebida de terceiros, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio',
-  '2208': 'Devolução de produção do estabelecimento, remetida em transferência',
-  '2209': 'Devolução de mercadoria adquirida ou recebida de terceiros, remetida em transferência',
-  '2251': 'Compra de energia elétrica para distribuição ou comercialização',
-  '2252': 'Compra de energia elétrica por estabelecimento industrial',
-  '2253': 'Compra de energia elétrica por estabelecimento comercial',
-  '2254': 'Compra de energia elétrica por estabelecimento prestador de serviço de transporte',
-  '2255': 'Compra de energia elétrica por estabelecimento prestador de serviços',
-  '2256': 'Compra de energia elétrica por estabelecimento de produtor rural',
-  '2257': 'Compra de energia elétrica para consumo por demanda contratada',
-  '2401': 'Compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '2403': 'Compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '2406': 'Compra de bem para o ativo imobilizado cuja mercadoria está sujeita ao regime de substituição tributária',
-  '2407': 'Compra de mercadoria para uso ou consumo cuja mercadoria está sujeita ao regime de substituição tributária',
-  '2408': 'Transferência para industrialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '2409': 'Transferência para comercialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '2410': 'Devolução de venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '2411': 'Devolução de venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária',
-  '2414': 'Retorno de produção do estabelecimento, remetida para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '2415': 'Retorno de mercadoria adquirida ou recebida de terceiros, remetida para venda fora do estabelecimento em operação com mercadoria sujeita ao regime de substituição tributária',
-  '2501': 'Entrada de mercadoria recebida com fim específico de exportação',
-  '2503': 'Entrada decorrente de devolução de produto industrializado fora do estabelecimento',
-  '2504': 'Entrada de mercadoria destinada à composição de produto industrializado ou produzido fora do estabelecimento',
-  '2505': 'Entrada de mercadoria destinada à composição de produto industrializado ou produzido pelo próprio estabelecimento remetente',
-  '2551': 'Compra de bem para o ativo imobilizado',
-  '2552': 'Transferência de bem do ativo imobilizado',
-  '2553': 'Devolução de venda de bem do ativo imobilizado',
-  '2554': 'Retorno de bem do ativo imobilizado remetido para uso fora do estabelecimento',
-  '2555': 'Entrada de bem do ativo imobilizado de terceiro, remetido para uso no estabelecimento',
-  '2556': 'Compra de combustível ou lubrificante para industrialização subsequente',
-  '2557': 'Compra de combustível ou lubrificante para comercialização',
-  '2651': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado à industrialização na unidade federativa de origem',
-  '2652': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado à comercialização',
-  '2653': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte',
-  '2658': 'Transferência de combustível e lubrificante de produção do estabelecimento',
-  '2659': 'Entrada de combustível ou lubrificante para armazenagem',
-  '2660': 'Devolução de venda de combustível ou lubrificante destinado à industrialização na unidade federativa de origem',
-  '2661': 'Devolução de venda de combustível ou lubrificante destinado à comercialização',
-  '2662': 'Devolução de venda de combustível ou lubrificante destinado a não contribuinte',
-  '2663': 'Entrada para industrialização por encomenda',
-  '2664': 'Retorno de combustível ou lubrificante remetido para venda fora do estabelecimento',
-  '2665': 'Retorno de combustível ou lubrificante remetido para armazenagem',
-  '2901': 'Entrada para industrialização por encomenda',
-  '2902': 'Retorno de mercadoria utilizada na industrialização por encomenda',
-  '2903': 'Entrada de mercadoria recebida para conserto ou reparo',
-  '2904': 'Retorno de mercadoria remetida para conserto ou reparo',
-  '2905': 'Entrada de mercadoria recebida para beneficiamento',
-  '2906': 'Retorno de mercadoria remetida para beneficiamento',
-  '2908': 'Entrada de mercadoria recebida para depósito em depósito fechado ou armazém geral',
-  '2909': 'Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral',
-  '2910': 'Entrada de bonificação, doação ou brinde',
-  '2911': 'Entrada de amostra grátis',
-  '2912': 'Entrada de mercadoria ou bem recebido para demonstração',
-  '2913': 'Retorno de mercadoria ou bem remetido para demonstração',
-  '2914': 'Retorno de mercadoria ou bem remetido para exposição ou feira',
-  '2915': 'Entrada de mercadoria ou bem recebido para exposição ou feira',
-  '2916': 'Entrada de mercadoria ou bem recebido do vendedor remetente, na venda à ordem',
-  '2917': 'Entrada de mercadoria ou bem recebido em consignação mercantil ou industrial',
-  '2918': 'Entrada de mercadoria ou bem recebido em depósito',
-  '2919': 'Entrada para depósito de mercadoria de terceiros',
-  '2920': 'Entrada de vasilhame ou sacaria',
-  '2921': 'Retorno de vasilhame ou sacaria',
-  '2922': 'Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura',
-  '2923': 'Entrada de mercadoria recebida do vendedor remetente na venda à ordem',
-  '2924': 'Entrada para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente',
-  '2925': 'Retorno de mercadoria remetida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente',
-  '2949': 'Outra entrada de mercadoria ou prestação de serviço não especificada',
+  "2101": "Compra para industrialização",
+  "2102": "Compra para comercialização",
+  "2111":
+    "Compra para industrialização de mercadoria recebida anteriormente em consignação industrial",
+  "2113":
+    "Compra para comercialização, de mercadoria recebida anteriormente em consignação mercantil",
+  "2116":
+    "Compra para industrialização originada de encomenda para recebimento futuro",
+  "2117":
+    "Compra para comercialização originada de encomenda para recebimento futuro",
+  "2118": "Compra para industrialização efetuada por terceiros",
+  "2120":
+    "Compra para industrialização, efetuada para entrega ao adquirente originário, em venda à ordem",
+  "2121":
+    "Compra para comercialização, efetuada para entrega ao adquirente originário, em venda à ordem",
+  "2122":
+    "Compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária, efetuada para entrega ao adquirente originário",
+  "2124": "Industrialização efetuada para outra empresa",
+  "2125":
+    "Industrialização efetuada para outra empresa quando a mercadoria recebida para utilização no processo de industrialização não transitar pelo estabelecimento adquirente da mercadoria",
+  "2151": "Transferência para industrialização",
+  "2152": "Transferência para comercialização",
+  "2153": "Transferência de energia elétrica",
+  "2154": "Transferência para transformação",
+  "2201": "Devolução de venda de produção do estabelecimento",
+  "2202": "Devolução de venda de mercadoria adquirida ou recebida de terceiros",
+  "2203":
+    "Devolução de venda de produção do estabelecimento, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio",
+  "2204":
+    "Devolução de venda de mercadoria adquirida ou recebida de terceiros, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio",
+  "2208": "Devolução de produção do estabelecimento, remetida em transferência",
+  "2209":
+    "Devolução de mercadoria adquirida ou recebida de terceiros, remetida em transferência",
+  "2251": "Compra de energia elétrica para distribuição ou comercialização",
+  "2252": "Compra de energia elétrica por estabelecimento industrial",
+  "2253": "Compra de energia elétrica por estabelecimento comercial",
+  "2254":
+    "Compra de energia elétrica por estabelecimento prestador de serviço de transporte",
+  "2255":
+    "Compra de energia elétrica por estabelecimento prestador de serviços",
+  "2256": "Compra de energia elétrica por estabelecimento de produtor rural",
+  "2257": "Compra de energia elétrica para consumo por demanda contratada",
+  "2401":
+    "Compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "2403":
+    "Compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "2406":
+    "Compra de bem para o ativo imobilizado cuja mercadoria está sujeita ao regime de substituição tributária",
+  "2407":
+    "Compra de mercadoria para uso ou consumo cuja mercadoria está sujeita ao regime de substituição tributária",
+  "2408":
+    "Transferência para industrialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "2409":
+    "Transferência para comercialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "2410":
+    "Devolução de venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "2411":
+    "Devolução de venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária",
+  "2414":
+    "Retorno de produção do estabelecimento, remetida para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "2415":
+    "Retorno de mercadoria adquirida ou recebida de terceiros, remetida para venda fora do estabelecimento em operação com mercadoria sujeita ao regime de substituição tributária",
+  "2501": "Entrada de mercadoria recebida com fim específico de exportação",
+  "2503":
+    "Entrada decorrente de devolução de produto industrializado fora do estabelecimento",
+  "2504":
+    "Entrada de mercadoria destinada à composição de produto industrializado ou produzido fora do estabelecimento",
+  "2505":
+    "Entrada de mercadoria destinada à composição de produto industrializado ou produzido pelo próprio estabelecimento remetente",
+  "2551": "Compra de bem para o ativo imobilizado",
+  "2552": "Transferência de bem do ativo imobilizado",
+  "2553": "Devolução de venda de bem do ativo imobilizado",
+  "2554":
+    "Retorno de bem do ativo imobilizado remetido para uso fora do estabelecimento",
+  "2555":
+    "Entrada de bem do ativo imobilizado de terceiro, remetido para uso no estabelecimento",
+  "2556":
+    "Compra de combustível ou lubrificante para industrialização subsequente",
+  "2557": "Compra de combustível ou lubrificante para comercialização",
+  "2651":
+    "Compra de combustível ou lubrificante de produção do estabelecimento destinado à industrialização na unidade federativa de origem",
+  "2652":
+    "Compra de combustível ou lubrificante de produção do estabelecimento destinado à comercialização",
+  "2653":
+    "Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte",
+  "2658":
+    "Transferência de combustível e lubrificante de produção do estabelecimento",
+  "2659": "Entrada de combustível ou lubrificante para armazenagem",
+  "2660":
+    "Devolução de venda de combustível ou lubrificante destinado à industrialização na unidade federativa de origem",
+  "2661":
+    "Devolução de venda de combustível ou lubrificante destinado à comercialização",
+  "2662":
+    "Devolução de venda de combustível ou lubrificante destinado a não contribuinte",
+  "2663": "Entrada para industrialização por encomenda",
+  "2664":
+    "Retorno de combustível ou lubrificante remetido para venda fora do estabelecimento",
+  "2665": "Retorno de combustível ou lubrificante remetido para armazenagem",
+  "2901": "Entrada para industrialização por encomenda",
+  "2902": "Retorno de mercadoria utilizada na industrialização por encomenda",
+  "2903": "Entrada de mercadoria recebida para conserto ou reparo",
+  "2904": "Retorno de mercadoria remetida para conserto ou reparo",
+  "2905": "Entrada de mercadoria recebida para beneficiamento",
+  "2906": "Retorno de mercadoria remetida para beneficiamento",
+  "2908":
+    "Entrada de mercadoria recebida para depósito em depósito fechado ou armazém geral",
+  "2909":
+    "Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral",
+  "2910": "Entrada de bonificação, doação ou brinde",
+  "2911": "Entrada de amostra grátis",
+  "2912": "Entrada de mercadoria ou bem recebido para demonstração",
+  "2913": "Retorno de mercadoria ou bem remetido para demonstração",
+  "2914": "Retorno de mercadoria ou bem remetido para exposição ou feira",
+  "2915": "Entrada de mercadoria ou bem recebido para exposição ou feira",
+  "2916":
+    "Entrada de mercadoria ou bem recebido do vendedor remetente, na venda à ordem",
+  "2917":
+    "Entrada de mercadoria ou bem recebido em consignação mercantil ou industrial",
+  "2918": "Entrada de mercadoria ou bem recebido em depósito",
+  "2919": "Entrada para depósito de mercadoria de terceiros",
+  "2920": "Entrada de vasilhame ou sacaria",
+  "2921": "Retorno de vasilhame ou sacaria",
+  "2922":
+    "Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura",
+  "2923":
+    "Entrada de mercadoria recebida do vendedor remetente na venda à ordem",
+  "2924":
+    "Entrada para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente",
+  "2925":
+    "Retorno de mercadoria remetida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente",
+  "2949":
+    "Outra entrada de mercadoria ou prestação de serviço não especificada",
 
   // CFOPs do exterior (3xxx)
-  '3101': 'Compra para industrialização',
-  '3102': 'Compra para comercialização',
-  '3126': 'Compra para utilização na prestação de serviço',
-  '3127': 'Compra para industrialização sob o regime de drawback',
-  '3128': 'Compra para comercialização sob o regime de drawback',
-  '3151': 'Transferência para industrialização',
-  '3152': 'Transferência para comercialização',
-  '3201': 'Devolução de venda de produção do estabelecimento',
-  '3202': 'Devolução de venda de mercadoria adquirida ou recebida de terceiros',
-  '3205': 'Anulação de valor relativo à prestação de serviço de comunicação',
-  '3206': 'Anulação de valor relativo à prestação de serviço de transporte',
-  '3207': 'Anulação de valor relativo à venda de energia elétrica',
-  '3211': 'Devolução de venda de produção do estabelecimento sob o regime de drawback',
-  '3212': 'Devolução de venda de mercadoria adquirida ou recebida de terceiros sob o regime de drawback',
-  '3251': 'Compra de energia elétrica para distribuição ou comercialização',
-  '3301': 'Aquisição de serviço de comunicação para execução de serviço da mesma natureza',
-  '3351': 'Aquisição de serviço de transporte',
-  '3352': 'Aquisição de serviço de transporte por estabelecimento industrial',
-  '3353': 'Aquisição de serviço de transporte por estabelecimento comercial',
-  '3354': 'Aquisição de serviço de transporte por estabelecimento de prestador de serviço de comunicação',
-  '3355': 'Aquisição de serviço de transporte por estabelecimento de geradora ou de distribuidora de energia elétrica',
-  '3356': 'Aquisição de serviço de transporte por estabelecimento de produtor rural',
-  '3501': 'Entrada de mercadoria recebida com fim específico de exportação',
-  '3503': 'Entrada decorrente de devolução de produto industrializado fora do estabelecimento',
-  '3551': 'Compra de bem para o ativo imobilizado',
-  '3553': 'Devolução de venda de bem do ativo imobilizado',
-  '3556': 'Compra de combustível ou lubrificante para industrialização subsequente',
-  '3557': 'Compra de combustível ou lubrificante para comercialização',
-  '3651': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado à industrialização na unidade federativa de origem',
-  '3652': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado à comercialização',
-  '3653': 'Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte',
-  '3930': 'Lançamento efetuado a título de entrada de bem sob amparo de regime especial aduaneiro de admissão temporária',
-  '3949': 'Outra entrada de mercadoria ou prestação de serviço não especificada',
+  "3101": "Compra para industrialização",
+  "3102": "Compra para comercialização",
+  "3126": "Compra para utilização na prestação de serviço",
+  "3127": "Compra para industrialização sob o regime de drawback",
+  "3128": "Compra para comercialização sob o regime de drawback",
+  "3151": "Transferência para industrialização",
+  "3152": "Transferência para comercialização",
+  "3201": "Devolução de venda de produção do estabelecimento",
+  "3202": "Devolução de venda de mercadoria adquirida ou recebida de terceiros",
+  "3205": "Anulação de valor relativo à prestação de serviço de comunicação",
+  "3206": "Anulação de valor relativo à prestação de serviço de transporte",
+  "3207": "Anulação de valor relativo à venda de energia elétrica",
+  "3211":
+    "Devolução de venda de produção do estabelecimento sob o regime de drawback",
+  "3212":
+    "Devolução de venda de mercadoria adquirida ou recebida de terceiros sob o regime de drawback",
+  "3251": "Compra de energia elétrica para distribuição ou comercialização",
+  "3301":
+    "Aquisição de serviço de comunicação para execução de serviço da mesma natureza",
+  "3351": "Aquisição de serviço de transporte",
+  "3352": "Aquisição de serviço de transporte por estabelecimento industrial",
+  "3353": "Aquisição de serviço de transporte por estabelecimento comercial",
+  "3354":
+    "Aquisição de serviço de transporte por estabelecimento de prestador de serviço de comunicação",
+  "3355":
+    "Aquisição de serviço de transporte por estabelecimento de geradora ou de distribuidora de energia elétrica",
+  "3356":
+    "Aquisição de serviço de transporte por estabelecimento de produtor rural",
+  "3501": "Entrada de mercadoria recebida com fim específico de exportação",
+  "3503":
+    "Entrada decorrente de devolução de produto industrializado fora do estabelecimento",
+  "3551": "Compra de bem para o ativo imobilizado",
+  "3553": "Devolução de venda de bem do ativo imobilizado",
+  "3556":
+    "Compra de combustível ou lubrificante para industrialização subsequente",
+  "3557": "Compra de combustível ou lubrificante para comercialização",
+  "3651":
+    "Compra de combustível ou lubrificante de produção do estabelecimento destinado à industrialização na unidade federativa de origem",
+  "3652":
+    "Compra de combustível ou lubrificante de produção do estabelecimento destinado à comercialização",
+  "3653":
+    "Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte",
+  "3930":
+    "Lançamento efetuado a título de entrada de bem sob amparo de regime especial aduaneiro de admissão temporária",
+  "3949":
+    "Outra entrada de mercadoria ou prestação de serviço não especificada",
 
   // CFOPs de SAÍDA (5xxx, 6xxx, 7xxx)
-  '5101': 'Venda de produção do estabelecimento',
-  '5102': 'Venda de mercadoria adquirida ou recebida de terceiros',
-  '5103': 'Venda de produção do estabelecimento, efetuada fora do estabelecimento',
-  '5104': 'Venda de mercadoria adquirida ou recebida de terceiros, efetuada fora do estabelecimento',
-  '5105': 'Venda de produção do estabelecimento que não deva por ela transitar',
-  '5106': 'Venda de mercadoria adquirida ou recebida de terceiros, que não deva por ela transitar',
-  '5109': 'Venda de produção do estabelecimento, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio',
-  '5110': 'Venda de mercadoria adquirida ou recebida de terceiros, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio',
-  '5111': 'Venda de produção do estabelecimento remetida anteriormente em consignação industrial',
-  '5112': 'Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consignação industrial',
-  '5113': 'Venda de produção do estabelecimento remetida anteriormente em consignação mercantil',
-  '5114': 'Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consignação mercantil',
-  '5115': 'Venda de mercadoria adquirida ou recebida de terceiros, recebida anteriormente em consignação mercantil',
-  '5116': 'Venda de produção do estabelecimento originada de encomenda para entrega futura',
-  '5117': 'Venda de mercadoria adquirida ou recebida de terceiros originada de encomenda para entrega futura',
-  '5118': 'Venda de produção do estabelecimento entregue ao destinatário por conta e ordem do adquirente originário, em venda à ordem',
-  '5119': 'Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinatário por conta e ordem do adquirente originário, em venda à ordem',
-  '5120': 'Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinatário pelo vendedor remetente, em venda à ordem',
-  '5122': 'Venda de produção do estabelecimento remetida para industrialização, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente',
-  '5123': 'Venda de mercadoria adquirida ou recebida de terceiros remetida para industrialização, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente',
-  '5124': 'Industrialização efetuada para outra empresa',
-  '5125': 'Industrialização efetuada para outra empresa quando a mercadoria remetida para utilização no processo de industrialização não transitou pelo estabelecimento adquirente da mercadoria',
-  '5151': 'Transferência de produção do estabelecimento',
-  '5152': 'Transferência de mercadoria adquirida ou recebida de terceiros',
-  '5153': 'Transferência de energia elétrica',
-  '5155': 'Transferência de produção do estabelecimento, que não deva por ele transitar',
-  '5156': 'Transferência de mercadoria adquirida ou recebida de terceiros, que não deva por ele transitar',
-  '5201': 'Devolução de compra para industrialização',
-  '5202': 'Devolução de compra para comercialização',
-  '5208': 'Devolução de mercadoria recebida em transferência para industrialização',
-  '5209': 'Devolução de mercadoria recebida em transferência para comercialização',
-  '5210': 'Devolução de compra para utilização na prestação de serviço',
-  '5251': 'Venda de energia elétrica para distribuição ou comercialização',
-  '5252': 'Venda de energia elétrica para estabelecimento industrial',
-  '5253': 'Venda de energia elétrica para estabelecimento comercial',
-  '5254': 'Venda de energia elétrica para estabelecimento prestador de serviço de transporte',
-  '5255': 'Venda de energia elétrica para estabelecimento prestador de serviços',
-  '5256': 'Venda de energia elétrica para estabelecimento de produtor rural',
-  '5257': 'Venda de energia elétrica para consumo por demanda contratada',
-  '5258': 'Venda de energia elétrica a não contribuinte',
-  '5301': 'Prestação de serviço de comunicação para execução de serviço da mesma natureza',
-  '5302': 'Prestação de serviço de comunicação a estabelecimento industrial',
-  '5303': 'Prestação de serviço de comunicação a estabelecimento comercial',
-  '5304': 'Prestação de serviço de comunicação a estabelecimento de prestador de serviço de transporte',
-  '5305': 'Prestação de serviço de comunicação a estabelecimento de geradora ou de distribuidora de energia elétrica',
-  '5306': 'Prestação de serviço de comunicação a estabelecimento de produtor rural',
-  '5307': 'Prestação de serviço de comunicação a não contribuinte',
-  '5351': 'Prestação de serviço de transporte',
-  '5352': 'Prestação de serviço de transporte a estabelecimento industrial',
-  '5353': 'Prestação de serviço de transporte a estabelecimento comercial',
-  '5354': 'Prestação de serviço de transporte a estabelecimento de prestador de serviço de comunicação',
-  '5355': 'Prestação de serviço de transporte a estabelecimento de geradora ou de distribuidora de energia elétrica',
-  '5356': 'Prestação de serviço de transporte a estabelecimento de produtor rural',
-  '5357': 'Prestação de serviço de transporte a não contribuinte',
-  '5359': 'Prestação de serviço de transporte a contribuinte ou a não contribuinte quando a mercadoria transportada está dispensada de emissão de nota fiscal',
-  '5401': 'Venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '5402': 'Venda de produção do estabelecimento de produto sujeito ao regime de substituição tributária, em operação entre contribuintes substitutos do mesmo produto',
-  '5403': 'Venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária',
-  '5405': 'Venda de bem do ativo imobilizado',
-  '5408': 'Transferência de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '5409': 'Transferência de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária',
-  '5410': 'Devolução de compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '5411': 'Devolução de compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '5412': 'Devolução de bem do ativo imobilizado',
-  '5413': 'Devolução de mercadoria destinada ao uso ou consumo',
-  '5414': 'Remessa de produção do estabelecimento para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '5415': 'Remessa de mercadoria adquirida ou recebida de terceiros para venda fora do estabelecimento, em operação com mercadoria sujeita ao regime de substituição tributária',
-  '5501': 'Remessa de produção do estabelecimento, com fim específico de exportação',
-  '5502': 'Remessa de mercadoria adquirida ou recebida de terceiros, com fim específico de exportação',
-  '5503': 'Remessa de produção do estabelecimento para industrialização fora do estabelecimento',
-  '5504': 'Remessa de mercadoria para formação de lote de exportação, de produto industrializado ou produzido pelo próprio estabelecimento',
-  '5505': 'Remessa de mercadoria para formação de lote de exportação, de produto industrializado ou produzido pelo estabelecimento remetente',
-  '5551': 'Venda de bem do ativo imobilizado',
-  '5552': 'Transferência de bem do ativo imobilizado',
-  '5553': 'Devolução de compra de bem para o ativo imobilizado',
-  '5554': 'Remessa de bem do ativo imobilizado para uso fora do estabelecimento',
-  '5555': 'Devolução de bem do ativo imobilizado de terceiro, recebido para uso no estabelecimento',
-  '5556': 'Devolução de compra de combustível ou lubrificante adquirido para industrialização subsequente',
-  '5557': 'Devolução de compra de combustível ou lubrificante adquirido para comercialização',
-  '5601': 'Transferência de crédito de ICMS acumulado',
-  '5602': 'Transferência de saldo credor de ICMS para outro estabelecimento da mesma empresa, destinado à compensação de saldo devedor de ICMS',
-  '5603': 'Ressarcimento de ICMS retido por substituição tributária',
-  '5605': 'Transferência de saldo devedor de ICMS de outro estabelecimento da mesma empresa',
-  '5606': 'Utilização de saldo credor de ICMS para extinção por compensação de débitos fiscais',
-  '5651': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado à industrialização',
-  '5652': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado à comercialização',
-  '5653': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte',
-  '5654': 'Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à industrialização',
-  '5655': 'Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à comercialização',
-  '5656': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado a consumidor ou usuário final',
-  '5657': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado a distribuidor',
-  '5658': 'Transferência de combustível e lubrificante de produção do estabelecimento',
-  '5659': 'Saída de combustível ou lubrificante para armazenagem',
-  '5660': 'Devolução de compra de combustível ou lubrificante adquirido para industrialização',
-  '5661': 'Devolução de compra de combustível ou lubrificante adquirido para comercialização',
-  '5662': 'Devolução de compra de combustível ou lubrificante adquirido por não contribuinte',
-  '5663': 'Remessa para industrialização por encomenda',
-  '5664': 'Remessa de combustível ou lubrificante para venda fora do estabelecimento',
-  '5665': 'Retorno de combustível ou lubrificante remetido para armazenagem',
-  '5901': 'Remessa para industrialização por encomenda',
-  '5902': 'Retorno de mercadoria utilizada na industrialização por encomenda',
-  '5903': 'Remessa de mercadoria para conserto ou reparo',
-  '5904': 'Retorno de mercadoria remetida para conserto ou reparo',
-  '5905': 'Remessa de mercadoria para beneficiamento',
-  '5906': 'Retorno de mercadoria remetida para beneficiamento',
-  '5907': 'Retorno da mercadoria remetida para industrialização quando vinculada a ordem de produção',
-  '5908': 'Remessa de mercadoria para depósito em depósito fechado ou armazém geral',
-  '5909': 'Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral',
-  '5910': 'Bonificação, doação ou brinde',
-  '5911': 'Amostra grátis',
-  '5912': 'Remessa de mercadoria ou bem para demonstração',
-  '5913': 'Retorno de mercadoria ou bem recebido para demonstração',
-  '5914': 'Remessa de mercadoria ou bem para exposição ou feira',
-  '5915': 'Devolução de mercadoria ou bem recebido para exposição ou feira',
-  '5916': 'Remessa de mercadoria ou bem para o adquirente originário, entregue pelo vendedor remetente',
-  '5917': 'Remessa de mercadoria ou bem em consignação mercantil ou industrial',
-  '5918': 'Devolução de mercadoria ou bem recebido em consignação mercantil ou industrial',
-  '5919': 'Devolução simbólica de mercadoria vendida ou utilizada em processo industrial, quando da saída física da mercadoria',
-  '5920': 'Devolução de vasilhame ou sacaria',
-  '5921': 'Remessa de vasilhame ou sacaria',
-  '5922': 'Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura',
-  '5923': 'Remessa de mercadoria por conta e ordem de terceiros, em venda à ordem',
-  '5924': 'Remessa para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente',
-  '5925': 'Retorno de mercadoria recebida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente',
-  '5929': 'Lançamento efetuado em decorrência de emissão de documento fiscal relativo a operação ou prestação também registrada em equipamento Emissor de Cupom Fiscal - ECF',
-  '5931': 'Lançamento efetuado em decorrência da responsabilidade de retenção do imposto por substituição tributária, atribuída ao remetente ou alienante',
-  '5932': 'Prestação de serviço de transporte iniciada em Unidade da Federação diversa daquela onde inscrito o prestador',
-  '5933': 'Prestação de serviço tributado pelo ISSQN',
-  '5949': 'Outra saída de mercadoria ou prestação de serviço não especificada',
+  "5101": "Venda de produção do estabelecimento",
+  "5102": "Venda de mercadoria adquirida ou recebida de terceiros",
+  "5103":
+    "Venda de produção do estabelecimento, efetuada fora do estabelecimento",
+  "5104":
+    "Venda de mercadoria adquirida ou recebida de terceiros, efetuada fora do estabelecimento",
+  "5105": "Venda de produção do estabelecimento que não deva por ela transitar",
+  "5106":
+    "Venda de mercadoria adquirida ou recebida de terceiros, que não deva por ela transitar",
+  "5109":
+    "Venda de produção do estabelecimento, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio",
+  "5110":
+    "Venda de mercadoria adquirida ou recebida de terceiros, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio",
+  "5111":
+    "Venda de produção do estabelecimento remetida anteriormente em consignação industrial",
+  "5112":
+    "Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consignação industrial",
+  "5113":
+    "Venda de produção do estabelecimento remetida anteriormente em consignação mercantil",
+  "5114":
+    "Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consignação mercantil",
+  "5115":
+    "Venda de mercadoria adquirida ou recebida de terceiros, recebida anteriormente em consignação mercantil",
+  "5116":
+    "Venda de produção do estabelecimento originada de encomenda para entrega futura",
+  "5117":
+    "Venda de mercadoria adquirida ou recebida de terceiros originada de encomenda para entrega futura",
+  "5118":
+    "Venda de produção do estabelecimento entregue ao destinatário por conta e ordem do adquirente originário, em venda à ordem",
+  "5119":
+    "Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinatário por conta e ordem do adquirente originário, em venda à ordem",
+  "5120":
+    "Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinatário pelo vendedor remetente, em venda à ordem",
+  "5122":
+    "Venda de produção do estabelecimento remetida para industrialização, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente",
+  "5123":
+    "Venda de mercadoria adquirida ou recebida de terceiros remetida para industrialização, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente",
+  "5124": "Industrialização efetuada para outra empresa",
+  "5125":
+    "Industrialização efetuada para outra empresa quando a mercadoria remetida para utilização no processo de industrialização não transitou pelo estabelecimento adquirente da mercadoria",
+  "5151": "Transferência de produção do estabelecimento",
+  "5152": "Transferência de mercadoria adquirida ou recebida de terceiros",
+  "5153": "Transferência de energia elétrica",
+  "5155":
+    "Transferência de produção do estabelecimento, que não deva por ele transitar",
+  "5156":
+    "Transferência de mercadoria adquirida ou recebida de terceiros, que não deva por ele transitar",
+  "5201": "Devolução de compra para industrialização",
+  "5202": "Devolução de compra para comercialização",
+  "5208":
+    "Devolução de mercadoria recebida em transferência para industrialização",
+  "5209":
+    "Devolução de mercadoria recebida em transferência para comercialização",
+  "5210": "Devolução de compra para utilização na prestação de serviço",
+  "5251": "Venda de energia elétrica para distribuição ou comercialização",
+  "5252": "Venda de energia elétrica para estabelecimento industrial",
+  "5253": "Venda de energia elétrica para estabelecimento comercial",
+  "5254":
+    "Venda de energia elétrica para estabelecimento prestador de serviço de transporte",
+  "5255":
+    "Venda de energia elétrica para estabelecimento prestador de serviços",
+  "5256": "Venda de energia elétrica para estabelecimento de produtor rural",
+  "5257": "Venda de energia elétrica para consumo por demanda contratada",
+  "5258": "Venda de energia elétrica a não contribuinte",
+  "5301":
+    "Prestação de serviço de comunicação para execução de serviço da mesma natureza",
+  "5302": "Prestação de serviço de comunicação a estabelecimento industrial",
+  "5303": "Prestação de serviço de comunicação a estabelecimento comercial",
+  "5304":
+    "Prestação de serviço de comunicação a estabelecimento de prestador de serviço de transporte",
+  "5305":
+    "Prestação de serviço de comunicação a estabelecimento de geradora ou de distribuidora de energia elétrica",
+  "5306":
+    "Prestação de serviço de comunicação a estabelecimento de produtor rural",
+  "5307": "Prestação de serviço de comunicação a não contribuinte",
+  "5351": "Prestação de serviço de transporte",
+  "5352": "Prestação de serviço de transporte a estabelecimento industrial",
+  "5353": "Prestação de serviço de transporte a estabelecimento comercial",
+  "5354":
+    "Prestação de serviço de transporte a estabelecimento de prestador de serviço de comunicação",
+  "5355":
+    "Prestação de serviço de transporte a estabelecimento de geradora ou de distribuidora de energia elétrica",
+  "5356":
+    "Prestação de serviço de transporte a estabelecimento de produtor rural",
+  "5357": "Prestação de serviço de transporte a não contribuinte",
+  "5359":
+    "Prestação de serviço de transporte a contribuinte ou a não contribuinte quando a mercadoria transportada está dispensada de emissão de nota fiscal",
+  "5401":
+    "Venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "5402":
+    "Venda de produção do estabelecimento de produto sujeito ao regime de substituição tributária, em operação entre contribuintes substitutos do mesmo produto",
+  "5403":
+    "Venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária",
+  "5405": "Venda de bem do ativo imobilizado",
+  "5408":
+    "Transferência de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "5409":
+    "Transferência de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária",
+  "5410":
+    "Devolução de compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "5411":
+    "Devolução de compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "5412": "Devolução de bem do ativo imobilizado",
+  "5413": "Devolução de mercadoria destinada ao uso ou consumo",
+  "5414":
+    "Remessa de produção do estabelecimento para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "5415":
+    "Remessa de mercadoria adquirida ou recebida de terceiros para venda fora do estabelecimento, em operação com mercadoria sujeita ao regime de substituição tributária",
+  "5501":
+    "Remessa de produção do estabelecimento, com fim específico de exportação",
+  "5502":
+    "Remessa de mercadoria adquirida ou recebida de terceiros, com fim específico de exportação",
+  "5503":
+    "Remessa de produção do estabelecimento para industrialização fora do estabelecimento",
+  "5504":
+    "Remessa de mercadoria para formação de lote de exportação, de produto industrializado ou produzido pelo próprio estabelecimento",
+  "5505":
+    "Remessa de mercadoria para formação de lote de exportação, de produto industrializado ou produzido pelo estabelecimento remetente",
+  "5551": "Venda de bem do ativo imobilizado",
+  "5552": "Transferência de bem do ativo imobilizado",
+  "5553": "Devolução de compra de bem para o ativo imobilizado",
+  "5554":
+    "Remessa de bem do ativo imobilizado para uso fora do estabelecimento",
+  "5555":
+    "Devolução de bem do ativo imobilizado de terceiro, recebido para uso no estabelecimento",
+  "5556":
+    "Devolução de compra de combustível ou lubrificante adquirido para industrialização subsequente",
+  "5557":
+    "Devolução de compra de combustível ou lubrificante adquirido para comercialização",
+  "5601": "Transferência de crédito de ICMS acumulado",
+  "5602":
+    "Transferência de saldo credor de ICMS para outro estabelecimento da mesma empresa, destinado à compensação de saldo devedor de ICMS",
+  "5603": "Ressarcimento de ICMS retido por substituição tributária",
+  "5605":
+    "Transferência de saldo devedor de ICMS de outro estabelecimento da mesma empresa",
+  "5606":
+    "Utilização de saldo credor de ICMS para extinção por compensação de débitos fiscais",
+  "5651":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado à industrialização",
+  "5652":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado à comercialização",
+  "5653":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte",
+  "5654":
+    "Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à industrialização",
+  "5655":
+    "Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à comercialização",
+  "5656":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado a consumidor ou usuário final",
+  "5657":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado a distribuidor",
+  "5658":
+    "Transferência de combustível e lubrificante de produção do estabelecimento",
+  "5659": "Saída de combustível ou lubrificante para armazenagem",
+  "5660":
+    "Devolução de compra de combustível ou lubrificante adquirido para industrialização",
+  "5661":
+    "Devolução de compra de combustível ou lubrificante adquirido para comercialização",
+  "5662":
+    "Devolução de compra de combustível ou lubrificante adquirido por não contribuinte",
+  "5663": "Remessa para industrialização por encomenda",
+  "5664":
+    "Remessa de combustível ou lubrificante para venda fora do estabelecimento",
+  "5665": "Retorno de combustível ou lubrificante remetido para armazenagem",
+  "5901": "Remessa para industrialização por encomenda",
+  "5902": "Retorno de mercadoria utilizada na industrialização por encomenda",
+  "5903": "Remessa de mercadoria para conserto ou reparo",
+  "5904": "Retorno de mercadoria remetida para conserto ou reparo",
+  "5905": "Remessa de mercadoria para beneficiamento",
+  "5906": "Retorno de mercadoria remetida para beneficiamento",
+  "5907":
+    "Retorno da mercadoria remetida para industrialização quando vinculada a ordem de produção",
+  "5908":
+    "Remessa de mercadoria para depósito em depósito fechado ou armazém geral",
+  "5909":
+    "Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral",
+  "5910": "Bonificação, doação ou brinde",
+  "5911": "Amostra grátis",
+  "5912": "Remessa de mercadoria ou bem para demonstração",
+  "5913": "Retorno de mercadoria ou bem recebido para demonstração",
+  "5914": "Remessa de mercadoria ou bem para exposição ou feira",
+  "5915": "Devolução de mercadoria ou bem recebido para exposição ou feira",
+  "5916":
+    "Remessa de mercadoria ou bem para o adquirente originário, entregue pelo vendedor remetente",
+  "5917": "Remessa de mercadoria ou bem em consignação mercantil ou industrial",
+  "5918":
+    "Devolução de mercadoria ou bem recebido em consignação mercantil ou industrial",
+  "5919":
+    "Devolução simbólica de mercadoria vendida ou utilizada em processo industrial, quando da saída física da mercadoria",
+  "5920": "Devolução de vasilhame ou sacaria",
+  "5921": "Remessa de vasilhame ou sacaria",
+  "5922":
+    "Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura",
+  "5923":
+    "Remessa de mercadoria por conta e ordem de terceiros, em venda à ordem",
+  "5924":
+    "Remessa para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente",
+  "5925":
+    "Retorno de mercadoria recebida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente",
+  "5929":
+    "Lançamento efetuado em decorrência de emissão de documento fiscal relativo a operação ou prestação também registrada em equipamento Emissor de Cupom Fiscal - ECF",
+  "5931":
+    "Lançamento efetuado em decorrência da responsabilidade de retenção do imposto por substituição tributária, atribuída ao remetente ou alienante",
+  "5932":
+    "Prestação de serviço de transporte iniciada em Unidade da Federação diversa daquela onde inscrito o prestador",
+  "5933": "Prestação de serviço tributado pelo ISSQN",
+  "5949": "Outra saída de mercadoria ou prestação de serviço não especificada",
 
   // CFOPs interestaduais de saída (6xxx)
-  '6101': 'Venda de produção do estabelecimento',
-  '6102': 'Venda de mercadoria adquirida ou recebida de terceiros',
-  '6103': 'Venda de produção do estabelecimento, efetuada fora do estabelecimento',
-  '6104': 'Venda de mercadoria adquirida ou recebida de terceiros, efetuada fora do estabelecimento',
-  '6105': 'Venda de produção do estabelecimento que não deva por ela transitar',
-  '6106': 'Venda de mercadoria adquirida ou recebida de terceiros, que não deva por ela transitar',
-  '6107': 'Venda de produção do estabelecimento, destinada a não contribuinte',
-  '6108': 'Venda de mercadoria adquirida ou recebida de terceiros, destinada a não contribuinte',
-  '6109': 'Venda de produção do estabelecimento, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio',
-  '6110': 'Venda de mercadoria adquirida ou recebida de terceiros, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio',
-  '6111': 'Venda de produção do estabelecimento remetida anteriormente em consignação industrial',
-  '6112': 'Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consignação industrial',
-  '6113': 'Venda de produção do estabelecimento remetida anteriormente em consignação mercantil',
-  '6114': 'Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consignação mercantil',
-  '6115': 'Venda de mercadoria adquirida ou recebida de terceiros, recebida anteriormente em consignação mercantil',
-  '6116': 'Venda de produção do estabelecimento originada de encomenda para entrega futura',
-  '6117': 'Venda de mercadoria adquirida ou recebida de terceiros originada de encomenda para entrega futura',
-  '6118': 'Venda de produção do estabelecimento entregue ao destinatário por conta e ordem do adquirente originário, em venda à ordem',
-  '6119': 'Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinatário por conta e ordem do adquirente originário, em venda à ordem',
-  '6120': 'Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinatário pelo vendedor remetente, em venda à ordem',
-  '6122': 'Venda de produção do estabelecimento remetida para industrialização, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente',
-  '6123': 'Venda de mercadoria adquirida ou recebida de terceiros remetida para industrialização, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente',
-  '6124': 'Industrialização efetuada para outra empresa',
-  '6125': 'Industrialização efetuada para outra empresa quando a mercadoria remetida para utilização no processo de industrialização não transitou pelo estabelecimento adquirente da mercadoria',
-  '6151': 'Transferência de produção do estabelecimento',
-  '6152': 'Transferência de mercadoria adquirida ou recebida de terceiros',
-  '6153': 'Transferência de energia elétrica',
-  '6155': 'Transferência de produção do estabelecimento, que não deva por ele transitar',
-  '6156': 'Transferência de mercadoria adquirida ou recebida de terceiros, que não deva por ele transitar',
-  '6201': 'Devolução de compra para industrialização',
-  '6202': 'Devolução de compra para comercialização',
-  '6208': 'Devolução de mercadoria recebida em transferência para industrialização',
-  '6209': 'Devolução de mercadoria recebida em transferência para comercialização',
-  '6210': 'Devolução de compra para utilização na prestação de serviço',
-  '6251': 'Venda de energia elétrica para distribuição ou comercialização',
-  '6252': 'Venda de energia elétrica para estabelecimento industrial',
-  '6253': 'Venda de energia elétrica para estabelecimento comercial',
-  '6254': 'Venda de energia elétrica para estabelecimento prestador de serviço de transporte',
-  '6255': 'Venda de energia elétrica para estabelecimento prestador de serviços',
-  '6256': 'Venda de energia elétrica para estabelecimento de produtor rural',
-  '6257': 'Venda de energia elétrica para consumo por demanda contratada',
-  '6258': 'Venda de energia elétrica a não contribuinte',
-  '6301': 'Prestação de serviço de comunicação para execução de serviço da mesma natureza',
-  '6302': 'Prestação de serviço de comunicação a estabelecimento industrial',
-  '6303': 'Prestação de serviço de comunicação a estabelecimento comercial',
-  '6304': 'Prestação de serviço de comunicação a estabelecimento de prestador de serviço de transporte',
-  '6305': 'Prestação de serviço de comunicação a estabelecimento de geradora ou de distribuidora de energia elétrica',
-  '6306': 'Prestação de serviço de comunicação a estabelecimento de produtor rural',
-  '6307': 'Prestação de serviço de comunicação a não contribuinte',
-  '6351': 'Prestação de serviço de transporte',
-  '6352': 'Prestação de serviço de transporte a estabelecimento industrial',
-  '6353': 'Prestação de serviço de transporte a estabelecimento comercial',
-  '6354': 'Prestação de serviço de transporte a estabelecimento de prestador de serviço de comunicação',
-  '6355': 'Prestação de serviço de transporte a estabelecimento de geradora ou de distribuidora de energia elétrica',
-  '6356': 'Prestação de serviço de transporte a estabelecimento de produtor rural',
-  '6357': 'Prestação de serviço de transporte a não contribuinte',
-  '6359': 'Prestação de serviço de transporte a contribuinte ou a não contribuinte quando a mercadoria transportada está dispensada de emissão de nota fiscal',
-  '6401': 'Venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '6402': 'Venda de produção do estabelecimento de produto sujeito ao regime de substituição tributária, em operação entre contribuintes substitutos do mesmo produto',
-  '6403': 'Venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária',
-  '6404': 'Venda de mercadoria sujeita ao regime de substituição tributária, cujo imposto já foi retido anteriormente',
-  '6408': 'Transferência de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '6409': 'Transferência de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária',
-  '6410': 'Devolução de compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '6411': 'Devolução de compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária',
-  '6412': 'Devolução de bem do ativo imobilizado',
-  '6413': 'Devolução de mercadoria destinada ao uso ou consumo',
-  '6414': 'Remessa de produção do estabelecimento para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária',
-  '6415': 'Remessa de mercadoria adquirida ou recebida de terceiros para venda fora do estabelecimento, em operação com mercadoria sujeita ao regime de substituição tributária',
-  '6501': 'Remessa de produção do estabelecimento, com fim específico de exportação',
-  '6502': 'Remessa de mercadoria adquirida ou recebida de terceiros, com fim específico de exportação',
-  '6503': 'Remessa de produção do estabelecimento para industrialização fora do estabelecimento',
-  '6504': 'Remessa de mercadoria para formação de lote de exportação, de produto industrializado ou produzido pelo próprio estabelecimento',
-  '6505': 'Remessa de mercadoria para formação de lote de exportação, de produto industrializado ou produzido pelo estabelecimento remetente',
-  '6551': 'Venda de bem do ativo imobilizado',
-  '6552': 'Transferência de bem do ativo imobilizado',
-  '6553': 'Devolução de compra de bem para o ativo imobilizado',
-  '6554': 'Remessa de bem do ativo imobilizado para uso fora do estabelecimento',
-  '6555': 'Devolução de bem do ativo imobilizado de terceiro, recebido para uso no estabelecimento',
-  '6556': 'Devolução de compra de combustível ou lubrificante adquirido para industrialização subsequente',
-  '6557': 'Devolução de compra de combustível ou lubrificante adquirido para comercialização',
-  '6651': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado à industrialização',
-  '6652': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado à comercialização',
-  '6653': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte',
-  '6654': 'Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à industrialização',
-  '6655': 'Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à comercialização',
-  '6656': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado a consumidor ou usuário final',
-  '6657': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado a distribuidor',
-  '6658': 'Transferência de combustível e lubrificante de produção do estabelecimento',
-  '6659': 'Saída de combustível ou lubrificante para armazenagem',
-  '6660': 'Devolução de compra de combustível ou lubrificante adquirido para industrialização',
-  '6661': 'Devolução de compra de combustível ou lubrificante adquirido para comercialização',
-  '6662': 'Devolução de compra de combustível ou lubrificante adquirido por não contribuinte',
-  '6663': 'Remessa para industrialização por encomenda',
-  '6664': 'Remessa de combustível ou lubrificante para venda fora do estabelecimento',
-  '6665': 'Retorno de combustível ou lubrificante remetido para armazenagem',
-  '6901': 'Remessa para industrialização por encomenda',
-  '6902': 'Retorno de mercadoria utilizada na industrialização por encomenda',
-  '6903': 'Remessa de mercadoria para conserto ou reparo',
-  '6904': 'Retorno de mercadoria remetida para conserto ou reparo',
-  '6905': 'Remessa de mercadoria para beneficiamento',
-  '6906': 'Retorno de mercadoria remetida para beneficiamento',
-  '6907': 'Retorno da mercadoria remetida para industrialização quando vinculada a ordem de produção',
-  '6908': 'Remessa de mercadoria para depósito em depósito fechado ou armazém geral',
-  '6909': 'Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral',
-  '6910': 'Bonificação, doação ou brinde',
-  '6911': 'Amostra grátis',
-  '6912': 'Remessa de mercadoria ou bem para demonstração',
-  '6913': 'Retorno de mercadoria ou bem recebido para demonstração',
-  '6914': 'Remessa de mercadoria ou bem para exposição ou feira',
-  '6915': 'Devolução de mercadoria ou bem recebido para exposição ou feira',
-  '6916': 'Remessa de mercadoria ou bem para o adquirente originário, entregue pelo vendedor remetente',
-  '6917': 'Remessa de mercadoria ou bem em consignação mercantil ou industrial',
-  '6918': 'Devolução de mercadoria ou bem recebido em consignação mercantil ou industrial',
-  '6919': 'Devolução simbólica de mercadoria vendida ou utilizada em processo industrial, quando da saída física da mercadoria',
-  '6920': 'Devolução de vasilhame ou sacaria',
-  '6921': 'Remessa de vasilhame ou sacaria',
-  '6922': 'Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura',
-  '6923': 'Remessa de mercadoria por conta e ordem de terceiros, em venda à ordem',
-  '6924': 'Remessa para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente',
-  '6925': 'Retorno de mercadoria recebida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente',
-  '6929': 'Lançamento efetuado em decorrência de emissão de documento fiscal relativo a operação ou prestação também registrada em equipamento Emissor de Cupom Fiscal - ECF',
-  '6931': 'Lançamento efetuado em decorrência da responsabilidade de retenção do imposto por substituição tributária, atribuída ao remetente ou alienante',
-  '6932': 'Prestação de serviço de transporte iniciada em Unidade da Federação diversa daquela onde inscrito o prestador',
-  '6933': 'Prestação de serviço tributado pelo ISSQN',
-  '6949': 'Outra saída de mercadoria ou prestação de serviço não especificada',
+  "6101": "Venda de produção do estabelecimento",
+  "6102": "Venda de mercadoria adquirida ou recebida de terceiros",
+  "6103":
+    "Venda de produção do estabelecimento, efetuada fora do estabelecimento",
+  "6104":
+    "Venda de mercadoria adquirida ou recebida de terceiros, efetuada fora do estabelecimento",
+  "6105": "Venda de produção do estabelecimento que não deva por ela transitar",
+  "6106":
+    "Venda de mercadoria adquirida ou recebida de terceiros, que não deva por ela transitar",
+  "6107": "Venda de produção do estabelecimento, destinada a não contribuinte",
+  "6108":
+    "Venda de mercadoria adquirida ou recebida de terceiros, destinada a não contribuinte",
+  "6109":
+    "Venda de produção do estabelecimento, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio",
+  "6110":
+    "Venda de mercadoria adquirida ou recebida de terceiros, destinada à Zona Franca de Manaus ou Áreas de Livre Comércio",
+  "6111":
+    "Venda de produção do estabelecimento remetida anteriormente em consignação industrial",
+  "6112":
+    "Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consignação industrial",
+  "6113":
+    "Venda de produção do estabelecimento remetida anteriormente em consignação mercantil",
+  "6114":
+    "Venda de mercadoria adquirida ou recebida de terceiros remetida anteriormente em consignação mercantil",
+  "6115":
+    "Venda de mercadoria adquirida ou recebida de terceiros, recebida anteriormente em consignação mercantil",
+  "6116":
+    "Venda de produção do estabelecimento originada de encomenda para entrega futura",
+  "6117":
+    "Venda de mercadoria adquirida ou recebida de terceiros originada de encomenda para entrega futura",
+  "6118":
+    "Venda de produção do estabelecimento entregue ao destinatário por conta e ordem do adquirente originário, em venda à ordem",
+  "6119":
+    "Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinatário por conta e ordem do adquirente originário, em venda à ordem",
+  "6120":
+    "Venda de mercadoria adquirida ou recebida de terceiros entregue ao destinatário pelo vendedor remetente, em venda à ordem",
+  "6122":
+    "Venda de produção do estabelecimento remetida para industrialização, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente",
+  "6123":
+    "Venda de mercadoria adquirida ou recebida de terceiros remetida para industrialização, por conta e ordem do adquirente, sem transitar pelo estabelecimento do adquirente",
+  "6124": "Industrialização efetuada para outra empresa",
+  "6125":
+    "Industrialização efetuada para outra empresa quando a mercadoria remetida para utilização no processo de industrialização não transitou pelo estabelecimento adquirente da mercadoria",
+  "6151": "Transferência de produção do estabelecimento",
+  "6152": "Transferência de mercadoria adquirida ou recebida de terceiros",
+  "6153": "Transferência de energia elétrica",
+  "6155":
+    "Transferência de produção do estabelecimento, que não deva por ele transitar",
+  "6156":
+    "Transferência de mercadoria adquirida ou recebida de terceiros, que não deva por ele transitar",
+  "6201": "Devolução de compra para industrialização",
+  "6202": "Devolução de compra para comercialização",
+  "6208":
+    "Devolução de mercadoria recebida em transferência para industrialização",
+  "6209":
+    "Devolução de mercadoria recebida em transferência para comercialização",
+  "6210": "Devolução de compra para utilização na prestação de serviço",
+  "6251": "Venda de energia elétrica para distribuição ou comercialização",
+  "6252": "Venda de energia elétrica para estabelecimento industrial",
+  "6253": "Venda de energia elétrica para estabelecimento comercial",
+  "6254":
+    "Venda de energia elétrica para estabelecimento prestador de serviço de transporte",
+  "6255":
+    "Venda de energia elétrica para estabelecimento prestador de serviços",
+  "6256": "Venda de energia elétrica para estabelecimento de produtor rural",
+  "6257": "Venda de energia elétrica para consumo por demanda contratada",
+  "6258": "Venda de energia elétrica a não contribuinte",
+  "6301":
+    "Prestação de serviço de comunicação para execução de serviço da mesma natureza",
+  "6302": "Prestação de serviço de comunicação a estabelecimento industrial",
+  "6303": "Prestação de serviço de comunicação a estabelecimento comercial",
+  "6304":
+    "Prestação de serviço de comunicação a estabelecimento de prestador de serviço de transporte",
+  "6305":
+    "Prestação de serviço de comunicação a estabelecimento de geradora ou de distribuidora de energia elétrica",
+  "6306":
+    "Prestação de serviço de comunicação a estabelecimento de produtor rural",
+  "6307": "Prestação de serviço de comunicação a não contribuinte",
+  "6351": "Prestação de serviço de transporte",
+  "6352": "Prestação de serviço de transporte a estabelecimento industrial",
+  "6353": "Prestação de serviço de transporte a estabelecimento comercial",
+  "6354":
+    "Prestação de serviço de transporte a estabelecimento de prestador de serviço de comunicação",
+  "6355":
+    "Prestação de serviço de transporte a estabelecimento de geradora ou de distribuidora de energia elétrica",
+  "6356":
+    "Prestação de serviço de transporte a estabelecimento de produtor rural",
+  "6357": "Prestação de serviço de transporte a não contribuinte",
+  "6359":
+    "Prestação de serviço de transporte a contribuinte ou a não contribuinte quando a mercadoria transportada está dispensada de emissão de nota fiscal",
+  "6401":
+    "Venda de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "6402":
+    "Venda de produção do estabelecimento de produto sujeito ao regime de substituição tributária, em operação entre contribuintes substitutos do mesmo produto",
+  "6403":
+    "Venda de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária",
+  "6404":
+    "Venda de mercadoria sujeita ao regime de substituição tributária, cujo imposto já foi retido anteriormente",
+  "6408":
+    "Transferência de produção do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "6409":
+    "Transferência de mercadoria adquirida ou recebida de terceiros em operação com mercadoria sujeita ao regime de substituição tributária",
+  "6410":
+    "Devolução de compra para industrialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "6411":
+    "Devolução de compra para comercialização em operação com mercadoria sujeita ao regime de substituição tributária",
+  "6412": "Devolução de bem do ativo imobilizado",
+  "6413": "Devolução de mercadoria destinada ao uso ou consumo",
+  "6414":
+    "Remessa de produção do estabelecimento para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
+  "6415":
+    "Remessa de mercadoria adquirida ou recebida de terceiros para venda fora do estabelecimento, em operação com mercadoria sujeita ao regime de substituição tributária",
+  "6501":
+    "Remessa de produção do estabelecimento, com fim específico de exportação",
+  "6502":
+    "Remessa de mercadoria adquirida ou recebida de terceiros, com fim específico de exportação",
+  "6503":
+    "Remessa de produção do estabelecimento para industrialização fora do estabelecimento",
+  "6504":
+    "Remessa de mercadoria para formação de lote de exportação, de produto industrializado ou produzido pelo próprio estabelecimento",
+  "6505":
+    "Remessa de mercadoria para formação de lote de exportação, de produto industrializado ou produzido pelo estabelecimento remetente",
+  "6551": "Venda de bem do ativo imobilizado",
+  "6552": "Transferência de bem do ativo imobilizado",
+  "6553": "Devolução de compra de bem para o ativo imobilizado",
+  "6554":
+    "Remessa de bem do ativo imobilizado para uso fora do estabelecimento",
+  "6555":
+    "Devolução de bem do ativo imobilizado de terceiro, recebido para uso no estabelecimento",
+  "6556":
+    "Devolução de compra de combustível ou lubrificante adquirido para industrialização subsequente",
+  "6557":
+    "Devolução de compra de combustível ou lubrificante adquirido para comercialização",
+  "6651":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado à industrialização",
+  "6652":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado à comercialização",
+  "6653":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte",
+  "6654":
+    "Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à industrialização",
+  "6655":
+    "Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à comercialização",
+  "6656":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado a consumidor ou usuário final",
+  "6657":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado a distribuidor",
+  "6658":
+    "Transferência de combustível e lubrificante de produção do estabelecimento",
+  "6659": "Saída de combustível ou lubrificante para armazenagem",
+  "6660":
+    "Devolução de compra de combustível ou lubrificante adquirido para industrialização",
+  "6661":
+    "Devolução de compra de combustível ou lubrificante adquirido para comercialização",
+  "6662":
+    "Devolução de compra de combustível ou lubrificante adquirido por não contribuinte",
+  "6663": "Remessa para industrialização por encomenda",
+  "6664":
+    "Remessa de combustível ou lubrificante para venda fora do estabelecimento",
+  "6665": "Retorno de combustível ou lubrificante remetido para armazenagem",
+  "6901": "Remessa para industrialização por encomenda",
+  "6902": "Retorno de mercadoria utilizada na industrialização por encomenda",
+  "6903": "Remessa de mercadoria para conserto ou reparo",
+  "6904": "Retorno de mercadoria remetida para conserto ou reparo",
+  "6905": "Remessa de mercadoria para beneficiamento",
+  "6906": "Retorno de mercadoria remetida para beneficiamento",
+  "6907":
+    "Retorno da mercadoria remetida para industrialização quando vinculada a ordem de produção",
+  "6908":
+    "Remessa de mercadoria para depósito em depósito fechado ou armazém geral",
+  "6909":
+    "Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral",
+  "6910": "Bonificação, doação ou brinde",
+  "6911": "Amostra grátis",
+  "6912": "Remessa de mercadoria ou bem para demonstração",
+  "6913": "Retorno de mercadoria ou bem recebido para demonstração",
+  "6914": "Remessa de mercadoria ou bem para exposição ou feira",
+  "6915": "Devolução de mercadoria ou bem recebido para exposição ou feira",
+  "6916":
+    "Remessa de mercadoria ou bem para o adquirente originário, entregue pelo vendedor remetente",
+  "6917": "Remessa de mercadoria ou bem em consignação mercantil ou industrial",
+  "6918":
+    "Devolução de mercadoria ou bem recebido em consignação mercantil ou industrial",
+  "6919":
+    "Devolução simbólica de mercadoria vendida ou utilizada em processo industrial, quando da saída física da mercadoria",
+  "6920": "Devolução de vasilhame ou sacaria",
+  "6921": "Remessa de vasilhame ou sacaria",
+  "6922":
+    "Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura",
+  "6923":
+    "Remessa de mercadoria por conta e ordem de terceiros, em venda à ordem",
+  "6924":
+    "Remessa para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente",
+  "6925":
+    "Retorno de mercadoria recebida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente",
+  "6929":
+    "Lançamento efetuado em decorrência de emissão de documento fiscal relativo a operação ou prestação também registrada em equipamento Emissor de Cupom Fiscal - ECF",
+  "6931":
+    "Lançamento efetuado em decorrência da responsabilidade de retenção do imposto por substituição tributária, atribuída ao remetente ou alienante",
+  "6932":
+    "Prestação de serviço de transporte iniciada em Unidade da Federação diversa daquela onde inscrito o prestador",
+  "6933": "Prestação de serviço tributado pelo ISSQN",
+  "6949": "Outra saída de mercadoria ou prestação de serviço não especificada",
 
   // CFOPs do exterior (7xxx)
-  '7101': 'Venda de produção do estabelecimento',
-  '7102': 'Venda de mercadoria adquirida ou recebida de terceiros',
-  '7105': 'Venda de produção do estabelecimento, que não deva por ela transitar',
-  '7106': 'Venda de mercadoria adquirida ou recebida de terceiros, que não deva por ela transitar',
-  '7127': 'Venda de produção do estabelecimento sob o regime de drawback',
-  '7129': 'Venda de mercadoria adquirida ou recebida de terceiros sob o regime de drawback',
-  '7151': 'Transferência de produção do estabelecimento',
-  '7152': 'Transferência de mercadoria adquirida ou recebida de terceiros',
-  '7201': 'Devolução de compra para industrialização',
-  '7202': 'Devolução de compra para comercialização',
-  '7205': 'Anulação de valor relativo à prestação de serviço de comunicação',
-  '7206': 'Anulação de valor relativo à prestação de serviço de transporte',
-  '7207': 'Anulação de valor relativo à venda de energia elétrica',
-  '7210': 'Devolução de compra para utilização na prestação de serviço',
-  '7211': 'Devolução de compra para industrialização sob o regime de drawback',
-  '7212': 'Devolução de compra para comercialização sob o regime de drawback',
-  '7251': 'Venda de energia elétrica para o exterior',
-  '7301': 'Prestação de serviço de comunicação para execução de serviços da mesma natureza',
-  '7358': 'Prestação de serviço de transporte',
-  '7501': 'Exportação de mercadorias recebidas com fim específico de exportação',
-  '7504': 'Exportação de mercadorias para formação de lote no exterior',
-  '7551': 'Venda de bem do ativo imobilizado',
-  '7553': 'Devolução de compra de bem para o ativo imobilizado',
-  '7556': 'Devolução de compra de combustível ou lubrificante adquirido para industrialização subsequente',
-  '7557': 'Devolução de compra de combustível ou lubrificante adquirido para comercialização',
-  '7651': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado à industrialização',
-  '7652': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado à comercialização',
-  '7654': 'Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à industrialização',
-  '7655': 'Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à comercialização',
-  '7656': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado a consumidor ou usuário final',
-  '7657': 'Venda de combustível ou lubrificante de produção do estabelecimento destinado a distribuidor',
-  '7930': 'Lançamento efetuado a título de devolução de bem cuja entrada tenha ocorrido sob amparo de regime especial aduaneiro de admissão temporária',
-  '7949': 'Outra saída de mercadoria ou prestação de serviço não especificada'
+  "7101": "Venda de produção do estabelecimento",
+  "7102": "Venda de mercadoria adquirida ou recebida de terceiros",
+  "7105":
+    "Venda de produção do estabelecimento, que não deva por ela transitar",
+  "7106":
+    "Venda de mercadoria adquirida ou recebida de terceiros, que não deva por ela transitar",
+  "7127": "Venda de produção do estabelecimento sob o regime de drawback",
+  "7129":
+    "Venda de mercadoria adquirida ou recebida de terceiros sob o regime de drawback",
+  "7151": "Transferência de produção do estabelecimento",
+  "7152": "Transferência de mercadoria adquirida ou recebida de terceiros",
+  "7201": "Devolução de compra para industrialização",
+  "7202": "Devolução de compra para comercialização",
+  "7205": "Anulação de valor relativo à prestação de serviço de comunicação",
+  "7206": "Anulação de valor relativo à prestação de serviço de transporte",
+  "7207": "Anulação de valor relativo à venda de energia elétrica",
+  "7210": "Devolução de compra para utilização na prestação de serviço",
+  "7211": "Devolução de compra para industrialização sob o regime de drawback",
+  "7212": "Devolução de compra para comercialização sob o regime de drawback",
+  "7251": "Venda de energia elétrica para o exterior",
+  "7301":
+    "Prestação de serviço de comunicação para execução de serviços da mesma natureza",
+  "7358": "Prestação de serviço de transporte",
+  "7501":
+    "Exportação de mercadorias recebidas com fim específico de exportação",
+  "7504": "Exportação de mercadorias para formação de lote no exterior",
+  "7551": "Venda de bem do ativo imobilizado",
+  "7553": "Devolução de compra de bem para o ativo imobilizado",
+  "7556":
+    "Devolução de compra de combustível ou lubrificante adquirido para industrialização subsequente",
+  "7557":
+    "Devolução de compra de combustível ou lubrificante adquirido para comercialização",
+  "7651":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado à industrialização",
+  "7652":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado à comercialização",
+  "7654":
+    "Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à industrialização",
+  "7655":
+    "Venda de combustível ou lubrificante adquirido ou recebido de terceiros destinado à comercialização",
+  "7656":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado a consumidor ou usuário final",
+  "7657":
+    "Venda de combustível ou lubrificante de produção do estabelecimento destinado a distribuidor",
+  "7930":
+    "Lançamento efetuado a título de devolução de bem cuja entrada tenha ocorrido sob amparo de regime especial aduaneiro de admissão temporária",
+  "7949": "Outra saída de mercadoria ou prestação de serviço não especificada",
 };
 
 export function getDescricaoCfop(cfop: string): string {
   return CFOPS_ESTATICOS[cfop] || `CFOP ${cfop}`;
 }
 
-export function getTipoCfop(cfop: string): 'entrada' | 'saida' {
+export function getTipoCfop(cfop: string): "entrada" | "saida" {
   const numero = parseInt(cfop, 10);
-  if (numero >= 1000 && numero <= 3999) return 'entrada';
-  if (numero >= 5000 && numero <= 7999) return 'saida';
-  return 'saida';
+  if (numero >= 1000 && numero <= 3999) return "entrada";
+  if (numero >= 5000 && numero <= 7999) return "saida";
+  return "saida";
 }
 
 export function filtrarCfopsPorTipo(
   cfops: Array<{ cfop: number | string; descricao: string }>,
-  tipo: 'entrada' | 'saida'
+  tipo: "entrada" | "saida"
 ) {
-  return cfops.filter(cf => getTipoCfop(String(cf.cfop)) === tipo);
+  return cfops.filter((cf) => getTipoCfop(String(cf.cfop)) === tipo);
 }
 
 export function getCfopsEntrada(): CfopInfo[] {
   return Object.entries(CFOPS_ESTATICOS)
-    .filter(([cf]) => getTipoCfop(cf) === 'entrada')
-    .map(([cf, descricao]) => ({ cfop: parseInt(cf, 10), descricao: String(descricao) }));
+    .filter(([cf]) => getTipoCfop(cf) === "entrada")
+    .map(([cf, descricao]) => ({
+      cfop: parseInt(cf, 10),
+      descricao: String(descricao),
+    }));
 }
 
 export function getCfopsSaida(): CfopInfo[] {
   return Object.entries(CFOPS_ESTATICOS)
-    .filter(([cf]) => getTipoCfop(cf) === 'saida')
-    .map(([cf, descricao]) => ({ cfop: parseInt(cf, 10), descricao: String(descricao) }));
+    .filter(([cf]) => getTipoCfop(cf) === "saida")
+    .map(([cf, descricao]) => ({
+      cfop: parseInt(cf, 10),
+      descricao: String(descricao),
+    }));
 }

@@ -1,4 +1,4 @@
-export type IndicadorOperacao = "0" | "1"; // 0 = Entrada, 1 = Saída
+export type IndicadorOperacao = "0" | "1";
 
 export interface NotaItem {
   cfop: string;
@@ -17,18 +17,17 @@ export interface Nota {
   valorDocumento: number;
   valorMercadoria: number;
   indicadorOperacao: IndicadorOperacao;
-  situacao: string; // COD_SIT
+  situacao: string;
   itens: NotaItem[];
 }
 
 export interface Periodo {
-  // Mantemos Date | string para compatibilidade com filtros (yyyy-MM-dd)
   inicio: Date | string | null;
   fim: Date | string | null;
 }
 
 export interface DiaValor {
-  data: string; // yyyy-MM-dd
+  data: string;
   valor: number;
 }
 
@@ -39,7 +38,7 @@ export interface CfopValor {
 }
 
 export interface DiaCfopValor {
-  data: string; // yyyy-MM-dd
+  data: string;
   cfop: string;
   valor: number;
 }
@@ -62,29 +61,45 @@ export interface ItemDetalhado {
 export interface ProcessedData {
   entradas: Nota[];
   saidas: Nota[];
-  // Agregações como arrays já ordenadas
   entradasPorDiaArray?: DiaValor[];
   saidasPorDiaArray?: DiaValor[];
   entradasPorCfopArray?: CfopValor[];
   saidasPorCfopArray?: CfopValor[];
   entradasPorDiaCfopArray?: DiaCfopValor[];
   saidasPorDiaCfopArray?: DiaCfopValor[];
-  // Índice serializado para abrir detalhes de CFOP instantaneamente
   itensPorCfopIndex?: Record<string, ItemDetalhado[]>;
-  // Totais e período
   totalEntradas: number;
   totalSaidas: number;
   totalGeral: number;
   periodo: Periodo;
-  // Compat/aliases usados em algumas partes da UI
-  vendas?: Nota[]; // alias de saidas
+  vendas?: Nota[];
   vendasPorDia?: Map<string, number> | undefined;
   vendasPorCfop?: Map<string, number> | undefined;
   vendasPorDiaArray?: DiaValor[];
   vendasPorCfopArray?: CfopValor[];
 }
 
-// Tipos simplificados de dataset para gráficos do Chart.js
+export type FilteredProcessedData = Omit<
+  ProcessedData,
+  | "entradasPorDiaArray"
+  | "saidasPorDiaArray"
+  | "entradasPorDiaCfopArray"
+  | "saidasPorDiaCfopArray"
+  | "entradasPorCfopArray"
+  | "saidasPorCfopArray"
+  | "vendasPorDiaArray"
+  | "vendasPorCfopArray"
+> & {
+  entradasPorDiaArray: DiaValor[];
+  saidasPorDiaArray: DiaValor[];
+  entradasPorDiaCfopArray: DiaCfopValor[];
+  saidasPorDiaCfopArray: DiaCfopValor[];
+  entradasPorCfopArray: CfopValor[];
+  saidasPorCfopArray: CfopValor[];
+  vendasPorDiaArray: DiaValor[];
+  vendasPorCfopArray: CfopValor[];
+};
+
 export interface BasicDataset {
   label: string;
   data: number[];

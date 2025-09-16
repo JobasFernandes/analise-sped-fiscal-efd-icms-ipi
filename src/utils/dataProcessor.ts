@@ -4,8 +4,8 @@ import type {
   ChartDataShape,
   BasicDataset,
   DiaValor,
-  CfopValor,
   ProcessedData,
+  FilteredProcessedData,
   ResumoExecutivo,
 } from "./types";
 
@@ -97,7 +97,7 @@ export function agruparPorPeriodo(
 }
 
 export function filtrarPorPeriodo(
-  dados: Array<{ data?: string; periodo?: string }> ,
+  dados: Array<{ data?: string; periodo?: string }>,
   dataInicio?: string,
   dataFim?: string
 ): Array<{ data?: string; periodo?: string }> {
@@ -401,7 +401,9 @@ export function prepararDadosDistribuicaoCfopSaida(
   };
 }
 
-export function gerarResumoExecutivo(dadosProcessados: ProcessedData | null): ResumoExecutivo {
+export function gerarResumoExecutivo(
+  dadosProcessados: ProcessedData | null
+): ResumoExecutivo {
   if (!dadosProcessados) {
     return {
       totalVendas: 0,
@@ -456,7 +458,10 @@ export function gerarResumoExecutivo(dadosProcessados: ProcessedData | null): Re
       ? `${formatarData(periodo.inicio)} a ${formatarData(periodo.fim)}`
       : null;
   const tendencia = calcularTendencia(
-    (vendasPorDiaArray as DiaValor[] | undefined) || (saidasPorDiaArray as DiaValor[] | undefined) || (entradasPorDiaArray as DiaValor[] | undefined) || []
+    (vendasPorDiaArray as DiaValor[] | undefined) ||
+      (saidasPorDiaArray as DiaValor[] | undefined) ||
+      (entradasPorDiaArray as DiaValor[] | undefined) ||
+      []
   );
   return {
     totalVendas: totalGeral || 0,
@@ -474,13 +479,24 @@ export function gerarResumoExecutivo(dadosProcessados: ProcessedData | null): Re
   };
 }
 
-// Filtra e re-agrega os dados processados pelo parser dentro do período informado (strings yyyy-MM-dd)
 export function filtrarDadosProcessadosPorPeriodo(
   dados: ProcessedData,
   dataInicio?: string,
   dataFim?: string
-) {
-  if (!dados || (!dataInicio && !dataFim)) return dados;
+): FilteredProcessedData {
+  if (!dados || (!dataInicio && !dataFim)) {
+    return {
+      ...dados,
+      entradasPorDiaArray: dados.entradasPorDiaArray || [],
+      saidasPorDiaArray: dados.saidasPorDiaArray || [],
+      entradasPorDiaCfopArray: dados.entradasPorDiaCfopArray || [],
+      saidasPorDiaCfopArray: dados.saidasPorDiaCfopArray || [],
+      entradasPorCfopArray: dados.entradasPorCfopArray || [],
+      saidasPorCfopArray: dados.saidasPorCfopArray || [],
+      vendasPorDiaArray: dados.vendasPorDiaArray || [],
+      vendasPorCfopArray: dados.vendasPorCfopArray || [],
+    } as FilteredProcessedData;
+  }
 
   const inRange = (dateStr?: string) => {
     if (!dateStr) return false;
@@ -489,15 +505,13 @@ export function filtrarDadosProcessadosPorPeriodo(
     return true;
   };
 
-  // Filtrar arrays por dia
-  const entradasPorDiaArray = (dados.entradasPorDiaArray || []).filter(
-    (d) => inRange(d.data)
+  const entradasPorDiaArray = (dados.entradasPorDiaArray || []).filter((d) =>
+    inRange(d.data)
   );
   const saidasPorDiaArray = (dados.saidasPorDiaArray || []).filter((d) =>
     inRange(d.data)
   );
 
-  // Filtrar arrays dia+cfop
   const entradasPorDiaCfopArray = (dados.entradasPorDiaCfopArray || []).filter(
     (d) => inRange(d.data)
   );
@@ -505,7 +519,6 @@ export function filtrarDadosProcessadosPorPeriodo(
     (d) => inRange(d.data)
   );
 
-  // Re-agrupar CFOPs com base nas versões filtradas por dia
   const agruparCfop = (arr: Array<{ cfop: string; valor: number }>) => {
     const mapa = new Map<string, number>();
     for (const item of arr) {
@@ -519,25 +532,24 @@ export function filtrarDadosProcessadosPorPeriodo(
   const entradasPorCfopArray = agruparCfop(entradasPorDiaCfopArray);
   const saidasPorCfopArray = agruparCfop(saidasPorDiaCfopArray);
 
-  // Filtrar notas por data de referência: usa dataEntradaSaida se existir, senão dataDocumento
-  // Mantém notas sem data (não exclui) para evitar perdas de contagem quando o arquivo tem falhas
-  const filtrarNotas = (notas: Array<{
-    dataEntradaSaida?: Date | null;
-    dataDocumento?: Date | null;
-  }>) =>
+  const filtrarNotas = (
+    notas: Array<{
+      dataEntradaSaida?: Date | null;
+      dataDocumento?: Date | null;
+    }>
+  ) =>
     (notas || []).filter((n) => {
       const refDate: Date | null | undefined =
         n?.dataEntradaSaida || n?.dataDocumento;
-      if (!refDate) return true; // não descarta notas sem data
+      if (!refDate) return true;
       const ref = format(refDate, "yyyy-MM-dd");
       return inRange(ref);
     });
 
   const entradas = filtrarNotas(dados.entradas || []);
   const saidas = filtrarNotas(dados.saidas || []);
-  const vendas = saidas; // alias
+  const vendas = saidas;
 
-  // Totais
   const totalEntradas = entradasPorDiaArray.reduce(
     (acc: number, i: any) => acc + (i.valor || 0),
     0
@@ -548,7 +560,6 @@ export function filtrarDadosProcessadosPorPeriodo(
   );
   const totalGeral = totalEntradas + totalSaidas;
 
-  // Período efetivo
   const periodo = {
     inicio: dataInicio || dados.periodo?.inicio || null,
     fim: dataFim || dados.periodo?.fim || null,
@@ -569,8 +580,7 @@ export function filtrarDadosProcessadosPorPeriodo(
     totalSaidas,
     totalGeral,
     periodo,
-    // Compat: aliases usados na UI original
     vendasPorDiaArray: saidasPorDiaArray,
     vendasPorCfopArray: saidasPorCfopArray,
-  };
+  } as FilteredProcessedData;
 }

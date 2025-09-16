@@ -1,16 +1,20 @@
 import React, { useRef } from "react";
 import { Chart as ChartJS, ArcElement, Tooltip, Legend } from "chart.js";
 import { Doughnut } from "react-chartjs-2";
-import { prepararDadosDistribuicaoCfop, formatarMoeda } from "../../utils/dataProcessor";
-import { downloadChartImage } from '../../utils/chartExport';
+import {
+  prepararDadosDistribuicaoCfop,
+  formatarMoeda,
+} from "../../utils/dataProcessor";
+import { downloadChartImage } from "../../utils/chartExport";
 
-// Registra os componentes necessários do Chart.js
 ChartJS.register(ArcElement, Tooltip, Legend);
 
-/**
- * Componente de gráfico de rosca para distribuição por CFOP
- */
-const DistribuicaoCfopChart = ({ dados, limite = 8, exportFilename = 'distribuicao_cfop', title = 'Distribuição CFOP' }) => {
+const DistribuicaoCfopChart = ({
+  dados,
+  limite = 8,
+  exportFilename = "distribuicao_cfop",
+  title = "Distribuição CFOP",
+}) => {
   const chartRef = useRef(null);
   if (!dados || dados.length === 0) {
     return (
@@ -23,7 +27,6 @@ const DistribuicaoCfopChart = ({ dados, limite = 8, exportFilename = 'distribuic
   const chartData = prepararDadosDistribuicaoCfop(dados, limite);
   const total = dados.reduce((acc, item) => acc + item.valor, 0);
 
-  // Configurações do gráfico
   const options = {
     responsive: true,
     maintainAspectRatio: false,
@@ -95,46 +98,64 @@ const DistribuicaoCfopChart = ({ dados, limite = 8, exportFilename = 'distribuic
     },
   };
 
-  // Centro do gráfico com total
   const centerTextPlugin = {
     id: "centerText",
-    beforeDraw: function (chart) {
-      const { width, height, ctx } = chart;
-      ctx.restore();
+    afterDraw: function (chart) {
+      const { ctx } = chart;
+      ctx.save();
 
-      const centerX = width / 2;
-      const centerY = height / 2;
+      let centerX;
+      let centerY;
+      const meta = chart.getDatasetMeta(0);
+      if (meta && meta.data && meta.data.length) {
+        centerX = meta.data[0].x;
+        centerY = meta.data[0].y;
+      } else if (chart.chartArea) {
+        const { left, top, width, height } = chart.chartArea;
+        centerX = left + width / 2;
+        centerY = top + height / 2;
+      } else {
+        centerX = chart.width / 2;
+        centerY = chart.height / 2;
+      }
 
       ctx.textAlign = "center";
       ctx.textBaseline = "middle";
 
-      // Texto principal
       ctx.font = "bold 16px Arial";
       ctx.fillStyle = "#374151";
       ctx.fillText("Total", centerX, centerY - 10);
 
-      // Valor
       ctx.font = "bold 14px Arial";
       ctx.fillStyle = "#059669";
       ctx.fillText(formatarMoeda(total), centerX, centerY + 10);
 
-      ctx.save();
+      ctx.restore();
     },
   };
 
   return (
     <div className="h-64 w-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-700 tracking-tight">{title}</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">
+          {title}
+        </h3>
         <div className="flex space-x-2">
           <button
             onClick={() => downloadChartImage(chartRef.current, exportFilename)}
-            className="px-2 py-1 text-xs rounded bg-white border border-gray-300 hover:bg-gray-50 shadow-sm"
-          >PNG</button>
+            className="px-2 py-1 text-xs rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm text-gray-700 dark:text-gray-200"
+          >
+            PNG
+          </button>
         </div>
       </div>
       <div className="h-[calc(100%-1.25rem)]">
-        <Doughnut ref={chartRef} data={chartData} options={options} plugins={[centerTextPlugin]} />
+        <Doughnut
+          ref={chartRef}
+          data={chartData}
+          options={options}
+          plugins={[centerTextPlugin]}
+        />
       </div>
     </div>
   );

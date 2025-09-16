@@ -22,18 +22,19 @@ Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsi
 
 ## Visão geral do que a aplicação faz
 
-1) Você faz o upload de um arquivo SPED Fiscal (.txt). 
-2) O parser lê linha a linha e interpreta:
-	- C100: notas fiscais (data, número, situação, valores, entrada/saída)
-	- C190: resumo por CFOP (CST, CFOP, alíquota, bases e valores)
-3) Apenas documentos com situação “00” e valores > 0 entram no cálculo.
-4) O app agrega os dados em Maps e depois em Arrays:
-	- Entradas/saídas por dia (YYYY-MM-DD)
-	- Entradas/saídas por CFOP (com descrição via mapa estático)
-	- Totais de entradas, saídas e geral, e período analisado
-5) A UI exibe cards de KPIs, gráficos por dia/CFOP e uma tabela detalhada por CFOP com filtro, ordenação e exportação CSV. Há um filtro por período (data início/fim) aplicado a todos os gráficos/tabelas. No Dashboard existem botões de “Exportar Todos (CSV)” para gerar um CSV consolidado de todos os CFOPs de Entradas e de Saídas.
+1. Você faz o upload de um arquivo SPED Fiscal (.txt).
+2. O parser lê linha a linha e interpreta:
+   - C100: notas fiscais (data, número, situação, valores, entrada/saída)
+   - C190: resumo por CFOP (CST, CFOP, alíquota, bases e valores)
+3. Apenas documentos com situação “00” e valores > 0 entram no cálculo.
+4. O app agrega os dados em Maps e depois em Arrays:
+   - Entradas/saídas por dia (YYYY-MM-DD)
+   - Entradas/saídas por CFOP (com descrição via mapa estático)
+   - Totais de entradas, saídas e geral, e período analisado
+5. A UI exibe cards de KPIs, gráficos por dia/CFOP e uma tabela detalhada por CFOP com filtro, ordenação e exportação CSV. Há um filtro por período (data início/fim) aplicado a todos os gráficos/tabelas. No Dashboard existem botões de “Exportar Todos (CSV)” para gerar um CSV consolidado de todos os CFOPs de Entradas e de Saídas.
 
 Principais arquivos envolvidos:
+
 - `src/utils/spedParser.ts`: classe SpedParser (parsing C100/C190, agregações, totais, período, índice `itensPorCfopIndex` para detalhes instantâneos)
 - `src/utils/cfopService.ts`: mapa estático de CFOPs e utilitários (descrição, tipo entrada/saída)
 - `src/utils/dataProcessor.ts`: formatações (moeda/data), preparação de datasets para Chart.js, resumo executivo e filtragem por período
@@ -64,25 +65,30 @@ Principais arquivos envolvidos:
 
 ## Como rodar
 
-1) Instalação de dependências
+1. Instalação de dependências
+
 ```bash
 npm install
 ```
 
-2) Ambiente de desenvolvimento
+2. Ambiente de desenvolvimento
+
 ```bash
 npm run dev
 ```
 
 • O Vite está configurado para abrir em `http://localhost:3001`.
 
-3) Build de produção
+3. Build de produção
+
 ```bash
 npm run build
 ```
+
 • Saída gerada em `dist/`.
 
-4) Preview do build
+4. Preview do build
+
 ```bash
 npm run preview
 ```
@@ -91,25 +97,26 @@ npm run preview
 
 ## Uso da aplicação
 
-1) Gere um arquivo SPED Fiscal (.txt) do seu sistema fiscal contendo os blocos C com registros C100 e C190.
-2) Faça o upload pela área “Arraste um arquivo SPED aqui” ou clique para selecionar.
-3) Aguarde o processamento (local) e navegue pelo dashboard:
-	- Saídas por dia (linha)
-	- Distribuição de CFOPs de saída (rosca)
-	- Entradas por dia/CFOP (se presentes no arquivo)
-	- Tabelas detalhadas por CFOP com filtro/ordenação e exportação CSV
-4) Ajuste o período no topo do dashboard, se necessário:
-	- As datas vêm preenchidas automaticamente com o período do arquivo (lido do registro 0000)
-	- Ao alterar as datas, todo o dashboard é recalculado (resumo, gráficos e tabelas)
-	- O estado do filtro é persistido na URL (facilita compartilhamento e reload)
-5) Use a seleção de visão para alternar:
-	- Saídas: foco em vendas/saídas
-	- Entradas: foco em notas de entrada
-	- Comparativo: gráfico de linhas Entradas vs Saídas
-6) Exporte imagens de gráficos clicando no botão “PNG” no canto do card.
-7) Durante o upload de arquivos grandes, acompanhe a barra de progresso (processamento feito em Web Worker).
+1. Gere um arquivo SPED Fiscal (.txt) do seu sistema fiscal contendo os blocos C com registros C100 e C190.
+2. Faça o upload pela área “Arraste um arquivo SPED aqui” ou clique para selecionar.
+3. Aguarde o processamento (local) e navegue pelo dashboard:
+   - Saídas por dia (linha)
+   - Distribuição de CFOPs de saída (rosca)
+   - Entradas por dia/CFOP (se presentes no arquivo)
+   - Tabelas detalhadas por CFOP com filtro/ordenação e exportação CSV
+4. Ajuste o período no topo do dashboard, se necessário:
+   - As datas vêm preenchidas automaticamente com o período do arquivo (lido do registro 0000)
+   - Ao alterar as datas, todo o dashboard é recalculado (resumo, gráficos e tabelas)
+   - O estado do filtro é persistido na URL (facilita compartilhamento e reload)
+5. Use a seleção de visão para alternar:
+   - Saídas: foco em vendas/saídas
+   - Entradas: foco em notas de entrada
+   - Comparativo: gráfico de linhas Entradas vs Saídas
+6. Exporte imagens de gráficos clicando no botão “PNG” no canto do card.
+7. Durante o upload de arquivos grandes, acompanhe a barra de progresso (processamento feito em Web Worker).
 
 Escopo/limites atuais do parser:
+
 - Considera somente situação normal (COD_SIT = '00')
 - Valores menores/iguais a 0 são desconsiderados
 - Datas em DDMMAAAA (C100) são convertidas para Date e padronizadas para YYYY-MM-DD na agregação
@@ -139,6 +146,7 @@ src/
 ```
 
 Arquitetura e fluxo de dados (alto nível):
+
 - FileUpload lê o .txt e entrega o conteúdo para `parseSpedFile`
 - SpedParser (executado dentro de um Web Worker) consolida entradas/saídas por dia e CFOP e calcula totais/período sem bloquear a thread principal
 - Dashboard consome `dadosProcessados` e usa `dataProcessor` para preparar os gráficos; possui botões “Exportar Todos (CSV)” em Entradas e Saídas
@@ -156,6 +164,7 @@ Para evitar travamentos ao processar arquivos grandes (dezenas de MB com centena
 6. Se o worker falhar (ex: ambiente não suporta), há fallback síncrono com callback de progresso.
 
 Benefícios:
+
 - UI permanece responsiva (sem congelar inputs/scroll)
 - Feedback contínuo do andamento (percentual de linhas processadas)
 - Escalável para arquivos muito maiores sem alterar a API de alto nível
@@ -167,10 +176,11 @@ Fallback: caso o worker não inicialize (erro de construção em algum ambiente)
 ## Contribuição
 
 Sinta-se à vontade para abrir issues e PRs. Sugestão de fluxo:
-1) Abra uma issue descrevendo a melhoria/bug
-2) Crie uma branch: `git checkout -b feat/minha-melhoria`
-3) Commits pequenos e objetivos
-4) PR com descrição e prints/gifs quando possível
+
+1. Abra uma issue descrevendo a melhoria/bug
+2. Crie uma branch: `git checkout -b feat/minha-melhoria`
+3. Commits pequenos e objetivos
+4. PR com descrição e prints/gifs quando possível
 
 ## Licença
 

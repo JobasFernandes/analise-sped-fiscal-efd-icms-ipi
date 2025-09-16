@@ -24,7 +24,6 @@ export class SpedParser {
     totalSaidas: number;
     totalGeral: number;
     periodo: { inicio: Date | null; fim: Date | null };
-    // aliases de compat
     vendas?: Nota[];
     vendasPorDia?: Map<string, number>;
     vendasPorCfop?: Map<string, number>;
@@ -41,9 +40,8 @@ export class SpedParser {
   }
 
   /**
-   * Faz o parsing completo do conteúdo do arquivo.
-   * @param fileContent Conteúdo textual do arquivo SPED
-   * @param onProgress Callback opcional (current, total) para reporte de progresso
+   * @param fileContent
+   * @param onProgress
    */
   parse(
     fileContent: string,
@@ -54,7 +52,6 @@ export class SpedParser {
     let currentNota: Nota | null = null;
     const total = lines.length;
     let processed = 0;
-    // Intervalo mínimo entre callbacks para evitar overhead (linhas)
     const STEP = 200;
     for (const line of lines) {
       try {
@@ -73,7 +70,7 @@ export class SpedParser {
           try {
             onProgress(processed, total);
           } catch {
-            /* silencia erros de callback */
+            // ignora
           }
         }
       }
@@ -101,7 +98,6 @@ export class SpedParser {
   }
   process0000(registro: any) {
     const campos = registro.campos;
-    // |0000|...|DT_INI|DT_FIN|...
     try {
       const dtIniStr = campos[3];
       const dtFimStr = campos[4];
@@ -110,7 +106,7 @@ export class SpedParser {
       if (dtIni) this.data.periodo.inicio = dtIni;
       if (dtFim) this.data.periodo.fim = dtFim;
     } catch {
-      // ignora erros de header
+      // ignora
     }
   }
 
@@ -148,7 +144,6 @@ export class SpedParser {
     if (valorDoc > 0 && situacao === "00") {
       if (indicadorOperacao === "0") this.data.entradas.push(nota);
       else if (indicadorOperacao === "1") this.data.saidas.push(nota);
-      // Se não vier do header 0000, usa datas de documento para derivar período
       if (dataDoc && (!this.data.periodo.inicio || !this.data.periodo.fim)) {
         if (!this.data.periodo.inicio || dataDoc < this.data.periodo.inicio)
           this.data.periodo.inicio = dataDoc;
@@ -174,7 +169,6 @@ export class SpedParser {
         valorIcms: this.parseValor(campos[6]),
       };
       nota.itens.push(item);
-      // Indexa item por CFOP com metadados da nota para consultas rápidas no UI
       if (!this.data.itensPorCfop.has(cfop))
         this.data.itensPorCfop.set(cfop, []);
       this.data.itensPorCfop.get(cfop)!.push({
@@ -230,22 +224,34 @@ export class SpedParser {
   acumularEntradaPorDia(dataKey: string, valor: number) {
     if (!this.data.entradasPorDia.has(dataKey))
       this.data.entradasPorDia.set(dataKey, 0);
-    this.data.entradasPorDia.set(dataKey, (this.data.entradasPorDia.get(dataKey) || 0) + valor);
+    this.data.entradasPorDia.set(
+      dataKey,
+      (this.data.entradasPorDia.get(dataKey) || 0) + valor
+    );
   }
   acumularSaidaPorDia(dataKey: string, valor: number) {
     if (!this.data.saidasPorDia.has(dataKey))
       this.data.saidasPorDia.set(dataKey, 0);
-    this.data.saidasPorDia.set(dataKey, (this.data.saidasPorDia.get(dataKey) || 0) + valor);
+    this.data.saidasPorDia.set(
+      dataKey,
+      (this.data.saidasPorDia.get(dataKey) || 0) + valor
+    );
   }
   acumularEntradaPorCfop(cfop: string, valor: number) {
     if (!this.data.entradasPorCfop.has(cfop))
       this.data.entradasPorCfop.set(cfop, 0);
-    this.data.entradasPorCfop.set(cfop, (this.data.entradasPorCfop.get(cfop) || 0) + valor);
+    this.data.entradasPorCfop.set(
+      cfop,
+      (this.data.entradasPorCfop.get(cfop) || 0) + valor
+    );
   }
   acumularSaidaPorCfop(cfop: string, valor: number) {
     if (!this.data.saidasPorCfop.has(cfop))
       this.data.saidasPorCfop.set(cfop, 0);
-    this.data.saidasPorCfop.set(cfop, (this.data.saidasPorCfop.get(cfop) || 0) + valor);
+    this.data.saidasPorCfop.set(
+      cfop,
+      (this.data.saidasPorCfop.get(cfop) || 0) + valor
+    );
   }
   acumularEntradaPorDiaCfop(dataKey: string, cfop: string, valor: number) {
     const key = `${dataKey}-${cfop}`;
@@ -314,7 +320,6 @@ export class SpedParser {
     this.data.vendasPorDia = this.data.saidasPorDia;
     this.data.vendasPorCfop = this.data.saidasPorCfop;
 
-    // Converte índice Map para objeto serializável (cfop -> itens[])
     const itensIndexObj: Record<string, ItemDetalhado[]> = {};
     for (const [cfop, itens] of this.data.itensPorCfop.entries() as Iterable<
       [string, ItemDetalhado[]]

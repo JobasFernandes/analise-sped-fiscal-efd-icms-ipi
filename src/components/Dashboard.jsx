@@ -19,17 +19,16 @@ import EntradasSaidasComparativoChart from "./charts/EntradasSaidasComparativoCh
 import VendasPorDiaChart from "./charts/VendasPorDiaChart";
 import DistribuicaoCfopChart from "./charts/DistribuicaoCfopChart";
 import CfopDetalhes from "./CfopDetalhes";
+import Card from "./ui/card";
+import Button from "./ui/button";
+import DateInput from "./ui/date-input";
 
-/**
- * Dashboard principal com resumo executivo e visualizações
- */
 const Dashboard = ({ dados, arquivo }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
-  const [visao, setVisao] = useState("saidas"); // 'saidas' | 'entradas' | 'ambas'
+  const [visao, setVisao] = useState("saidas");
 
-  // Define automaticamente o período do arquivo nos filtros quando os dados mudarem
   useEffect(() => {
     if (dados?.periodo?.inicio && dados?.periodo?.fim) {
       const ini = formatarData(dados.periodo.inicio, "yyyy-MM-dd");
@@ -43,7 +42,7 @@ const Dashboard = ({ dados, arquivo }) => {
     return (
       <div className="text-center py-12">
         <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">
+        <h3 className="text-sm font-medium text-muted-foreground mb-2">
           Nenhum arquivo carregado
         </h3>
         <p className="text-gray-500">
@@ -66,7 +65,6 @@ const Dashboard = ({ dados, arquivo }) => {
     ? formatarData(dados.periodo.fim, "yyyy-MM-dd")
     : "";
 
-  // Utilitário local: normaliza item para linha CSV
   const formatarValorCSV = (valor) => {
     if (valor === undefined || valor === null) return "";
     return Number(valor).toFixed(2).replace(".", ",");
@@ -106,11 +104,9 @@ const Dashboard = ({ dados, arquivo }) => {
   };
 
   const gerarCsvGeral = (tipo) => {
-    // tipo: 'entradas' | 'saidas'
     const indice = dadosFiltrados.itensPorCfopIndex;
     let itens = [];
     if (indice) {
-      // Usa índice já agrupado
       for (const cfopChave of Object.keys(indice)) {
         for (const item of indice[cfopChave]) {
           const isEntrada = parseInt(cfopChave, 10) < 4000;
@@ -123,7 +119,6 @@ const Dashboard = ({ dados, arquivo }) => {
         }
       }
     } else {
-      // Fallback: reconstruir a partir das notas completas
       itens = coletarItensDeNotas(
         [
           ...dadosFiltrados.entradas,
@@ -136,18 +131,18 @@ const Dashboard = ({ dados, arquivo }) => {
 
     if (!itens.length) return;
 
-    // Tenta exportação via Web Worker (streaming de chunks); fallback para método síncrono
     let worker;
     try {
       // @ts-ignore
-      worker = new Worker(new URL("../workers/csvExportWorker.ts", import.meta.url), { type: "module" });
+      worker = new Worker(
+        new URL("../workers/csvExportWorker.ts", import.meta.url),
+        { type: "module" }
+      );
     } catch (e) {
       worker = null;
     }
 
     if (!worker) {
-      // Fallback: método anterior síncrono
-      // Cabeçalho
       const headers = [
         "Tipo",
         "CFOP",
@@ -177,7 +172,8 @@ const Dashboard = ({ dados, arquivo }) => {
         .join("\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
-      const periodoTag = resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
+      const periodoTag =
+        resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
       link.href = URL.createObjectURL(blob);
       link.download = `cfops_${tipo}_${periodoTag}.csv`;
       link.click();
@@ -185,8 +181,9 @@ const Dashboard = ({ dados, arquivo }) => {
     }
 
     const encoder = new TextEncoder();
-    const partes = []; // Uint8Array[]
-    const periodoTag = resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
+    const partes = [];
+    const periodoTag =
+      resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
     const filename = `cfops_${tipo}_${periodoTag}.csv`;
 
     const onMessage = (e) => {
@@ -213,138 +210,139 @@ const Dashboard = ({ dados, arquivo }) => {
   };
 
   return (
-    <div className="space-y-8">
-      {/* Cabeçalho */}
-      <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Análise SPED Fiscal
-            </h1>
-            <p className="text-sm text-gray-500 mt-1">
+    <div className="space-y-3">
+      <Card className="py-4">
+        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+          <div className="flex-shrink-0">
+            <h1 className="text-2xl font-bold">Análise SPED Fiscal</h1>
+            <p className="text-sm text-muted-foreground mt-1">
               Arquivo: {arquivo?.name || "Não identificado"}
             </p>
           </div>
-          <div className="flex items-end space-x-3">
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">Visão</label>
+
+          <div className="flex flex-wrap items-end gap-3">
+            <div className="min-w-[120px]">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
+                Visão
+              </label>
               <select
                 value={visao}
                 onChange={(e) => setVisao(e.target.value)}
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                className="w-full h-9 px-3 py-2 text-sm border border-input bg-background rounded-md focus:ring-2 focus:ring-ring focus:border-transparent transition-colors"
               >
                 <option value="saidas">Saídas</option>
                 <option value="entradas">Entradas</option>
                 <option value="ambas">Comparativo</option>
               </select>
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
+
+            <div className="min-w-[130px]">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Data início
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={dataInicio}
-                onChange={(e) => setDataInicio(e.target.value)}
+                onChange={setDataInicio}
                 min={minPeriodo}
                 max={dataFim || maxPeriodo}
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                placeholder="Data início"
               />
             </div>
-            <div>
-              <label className="block text-xs text-gray-500 mb-1">
+
+            <div className="min-w-[130px]">
+              <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Data fim
               </label>
-              <input
-                type="date"
+              <DateInput
                 value={dataFim}
-                onChange={(e) => setDataFim(e.target.value)}
+                onChange={setDataFim}
                 min={dataInicio || minPeriodo}
                 max={maxPeriodo}
-                className="border border-gray-300 rounded px-2 py-1 text-sm"
+                placeholder="Data fim"
               />
             </div>
-            <div className="text-right ml-2">
-              <p className="text-sm text-gray-500">Período</p>
-              <p className="text-lg font-medium text-gray-900">
+
+            <div className="min-w-[140px] text-right">
+              <p className="text-xs font-medium text-muted-foreground mb-1">
+                Período
+              </p>
+              <p className="text-sm font-semibold text-foreground h-9 flex items-center justify-end">
                 {resumo.periodoAnalise || "Não identificado"}
               </p>
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
-      {/* Cards de Resumo */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        {/* Total de Entradas */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3">
+        <Card>
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <ArrowDownCircle className="h-8 w-8 text-green-500" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">
+              <p className="text-sm font-medium text-muted-foreground">
                 Total de Entradas
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold">
                 {formatarMoeda(resumo.totalEntradas)}
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Total de Saídas */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <Card>
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <ArrowUpCircle className="h-8 w-8 text-blue-500" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">
+              <p className="text-sm font-medium text-muted-foreground">
                 Total de Saídas
               </p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-2xl font-bold">
                 {formatarMoeda(resumo.totalSaidas)}
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Notas de Entrada */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <Card>
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <TrendingDown className="h-8 w-8 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">NFe Entrada</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-muted-foreground">
+                NFe Entrada
+              </p>
+              <p className="text-2xl font-bold">
                 {formatarNumero(resumo.numeroNotasEntrada, 0)}
               </p>
             </div>
           </div>
-        </div>
+        </Card>
 
-        {/* Notas de Saída */}
-        <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <Card>
           <div className="flex items-center">
             <div className="flex-shrink-0">
               <TrendingUp className="h-8 w-8 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-gray-500">NFe Saída</p>
-              <p className="text-2xl font-bold text-gray-900">
+              <p className="text-sm font-medium text-muted-foreground">
+                NFe Saída
+              </p>
+              <p className="text-2xl font-bold">
                 {formatarNumero(resumo.numeroNotasSaida, 0)}
               </p>
             </div>
           </div>
-        </div>
+        </Card>
       </div>
 
-      {/* Gráficos Dinâmicos conforme visão */}
       {visao === "saidas" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <Card>
             <VendasPorDiaChart
               title="Saídas por Dia"
               labelOverride="Saídas"
@@ -354,8 +352,8 @@ const Dashboard = ({ dados, arquivo }) => {
                 dadosFiltrados.vendasPorDiaArray
               }
             />
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          </Card>
+          <Card>
             <DistribuicaoCfopChart
               title="Distribuição CFOPs de Saída"
               dados={
@@ -363,30 +361,30 @@ const Dashboard = ({ dados, arquivo }) => {
                 dadosFiltrados.vendasPorCfopArray
               }
             />
-          </div>
+          </Card>
         </div>
       )}
       {visao === "entradas" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          <Card>
             <VendasPorDiaChart
               title="Entradas por Dia"
               labelOverride="Entradas"
               tooltipPrefix="Entradas"
               dados={dadosFiltrados.entradasPorDiaArray}
             />
-          </div>
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          </Card>
+          <Card>
             <DistribuicaoCfopChart
               title="Distribuição CFOPs de Entrada"
               dados={dadosFiltrados.entradasPorCfopArray}
             />
-          </div>
+          </Card>
         </div>
       )}
       {visao === "ambas" && (
         <div className="grid grid-cols-1 gap-8">
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <Card>
             <EntradasSaidasComparativoChart
               title="Comparativo Entradas vs Saídas"
               entradas={dadosFiltrados.entradasPorDiaArray}
@@ -395,53 +393,52 @@ const Dashboard = ({ dados, arquivo }) => {
                 dadosFiltrados.vendasPorDiaArray
               }
             />
-          </div>
+          </Card>
         </div>
       )}
 
-      {/* bloco antigo removido */}
-
-      {/* Tabela de Detalhes por CFOP - Saídas */}
       {visao !== "entradas" &&
         dadosFiltrados.saidasPorCfopArray &&
         dadosFiltrados.saidasPorCfopArray.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <Card>
             <div className="flex items-start justify-between mb-4 gap-4 flex-col sm:flex-row">
-              <h2 className="text-lg font-medium text-gray-900">
+              <h2 className="text-sm font-medium text-muted-foreground">
                 Detalhes por CFOP - Saídas
               </h2>
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   onClick={() => gerarCsvGeral("saidas")}
                   disabled={!dadosFiltrados.saidasPorCfopArray?.length}
-                  className="px-3 py-2 text-xs rounded-md border border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  variant="outline"
+                  className="text-blue-600 border-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  size="sm"
                 >
                   Exportar Todos (CSV)
-                </button>
+                </Button>
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted/40">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       CFOP
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Descrição
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Valor
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       % do Total
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-background divide-y divide-border">
                   {dadosFiltrados.saidasPorCfopArray?.map((item, index) => {
                     const percentual =
                       resumo.totalSaidas > 0
@@ -451,28 +448,31 @@ const Dashboard = ({ dados, arquivo }) => {
                     return (
                       <tr
                         key={item.cfop}
-                        className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        className={
+                          index % 2 === 0 ? "bg-background" : "bg-muted/20"
+                        }
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           {item.cfop}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
                           {item.descricao}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                           {formatarMoeda(item.valor)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
                           {formatarNumero(percentual, 1)}%
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
+                          <Button
                             onClick={() => setCfopSelecionado(item)}
-                            className="inline-flex items-center space-x-2 px-3 py-2 bg-blue-600 text-white text-sm rounded-md hover:bg-blue-700 transition-colors"
+                            className="inline-flex items-center gap-2"
+                            size="sm"
                           >
                             <Eye className="h-4 w-4" />
                             <span>Ver Detalhes</span>
-                          </button>
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -480,50 +480,51 @@ const Dashboard = ({ dados, arquivo }) => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
 
-      {/* Tabela de Detalhes por CFOP - Entradas */}
       {visao !== "saidas" &&
         dadosFiltrados.entradasPorCfopArray &&
         dadosFiltrados.entradasPorCfopArray.length > 0 && (
-          <div className="bg-white rounded-lg border border-gray-200 shadow-sm p-6">
+          <Card>
             <div className="flex items-start justify-between mb-4 gap-4 flex-col sm:flex-row">
-              <h2 className="text-lg font-medium text-gray-900">
+              <h2 className="text-sm font-medium text-muted-foreground">
                 Detalhes por CFOP - Entradas
               </h2>
               <div className="flex items-center gap-2">
-                <button
+                <Button
                   onClick={() => gerarCsvGeral("entradas")}
                   disabled={!dadosFiltrados.entradasPorCfopArray?.length}
-                  className="px-3 py-2 text-xs rounded-md border border-green-600 text-green-600 hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  variant="outline"
+                  className="text-green-600 border-green-600 hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                  size="sm"
                 >
                   Exportar Todos (CSV)
-                </button>
+                </Button>
               </div>
             </div>
             <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+              <table className="min-w-full divide-y divide-border">
+                <thead className="bg-muted/40">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       CFOP
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Descrição
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Valor
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       % do Total
                     </th>
-                    <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-6 py-3 text-center text-xs font-medium text-muted-foreground uppercase tracking-wider">
                       Ações
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody className="bg-background divide-y divide-border">
                   {dadosFiltrados.entradasPorCfopArray?.map((item, index) => {
                     const percentual =
                       resumo.totalEntradas > 0
@@ -533,28 +534,31 @@ const Dashboard = ({ dados, arquivo }) => {
                     return (
                       <tr
                         key={item.cfop}
-                        className={index % 2 === 0 ? "bg-white" : "bg-gray-50"}
+                        className={
+                          index % 2 === 0 ? "bg-background" : "bg-muted/20"
+                        }
                       >
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           {item.cfop}
                         </td>
-                        <td className="px-6 py-4 text-sm text-gray-500">
+                        <td className="px-6 py-4 text-sm text-muted-foreground">
                           {item.descricao}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                           {formatarMoeda(item.valor)}
                         </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                        <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
                           {formatarNumero(percentual, 1)}%
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-center">
-                          <button
+                          <Button
                             onClick={() => setCfopSelecionado(item)}
-                            className="inline-flex items-center space-x-2 px-3 py-2 bg-green-600 text-white text-sm rounded-md hover:bg-green-700 transition-colors"
+                            className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700"
+                            size="sm"
                           >
                             <Eye className="h-4 w-4" />
                             <span>Ver Detalhes</span>
-                          </button>
+                          </Button>
                         </td>
                       </tr>
                     );
@@ -562,11 +566,10 @@ const Dashboard = ({ dados, arquivo }) => {
                 </tbody>
               </table>
             </div>
-          </div>
+          </Card>
         )}
 
-      {/* Rodapé com Informações */}
-      <div className="bg-gray-50 rounded-lg p-4 text-xs text-gray-500">
+      <div className="bg-muted/40 rounded-lg p-4 text-xs text-muted-foreground">
         <p>
           <strong>Dados processados:</strong> {resumo.numeroNotasEntrada} NFe de
           entrada e {resumo.numeroNotasSaida} NFe de saída |
@@ -580,7 +583,6 @@ const Dashboard = ({ dados, arquivo }) => {
         </p>
       </div>
 
-      {/* Modal de Detalhes do CFOP */}
       {cfopSelecionado && (
         <CfopDetalhes
           cfop={cfopSelecionado}

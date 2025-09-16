@@ -1,11 +1,4 @@
 /// <reference lib="webworker" />
-// Worker para exportação CSV em chunks.
-// Mensagens recebidas:
-//  { type: 'exportCsvAll', items: ItemDetalhado[], filename?: string }
-// Mensagens enviadas:
-//  { type: 'chunk', chunk: string }
-//  { type: 'done', rows: number, durationMs: number }
-//  { type: 'error', error: string }
 
 import type { ItemDetalhado } from "../utils/types";
 import { formatarData } from "../utils/dataProcessor";
@@ -16,7 +9,6 @@ type ExportMsg = {
   filename?: string;
 };
 
-// eslint-disable-next-line no-restricted-globals
 self.onmessage = function (e: MessageEvent<ExportMsg>) {
   const msg = e.data;
   if (!msg || msg.type !== "exportCsvAll") return;
@@ -43,13 +35,14 @@ self.onmessage = function (e: MessageEvent<ExportMsg>) {
       (n ?? 0).toFixed(2).replace(".", ",");
     const isEntrada = (cfop: string) => parseInt(cfop, 10) < 4000;
 
-    // Envia o header primeiro
-    // eslint-disable-next-line no-restricted-globals
-    (self as any).postMessage({ type: "chunk", chunk: header.map((h) => `"${h}"`).join(";") + "\n" });
+    (self as any).postMessage({
+      type: "chunk",
+      chunk: header.map((h) => `"${h}"`).join(";") + "\n",
+    });
 
     let buffer = "";
     let rows = 0;
-    const FLUSH_AT = 2000; // linhas por flush
+    const FLUSH_AT = 2000;
     for (let i = 0; i < items.length; i++) {
       const it = items[i];
       const linha = [
@@ -69,20 +62,19 @@ self.onmessage = function (e: MessageEvent<ExportMsg>) {
       buffer += linha + "\n";
       rows++;
       if (rows % FLUSH_AT === 0) {
-        // eslint-disable-next-line no-restricted-globals
         (self as any).postMessage({ type: "chunk", chunk: buffer });
         buffer = "";
       }
     }
     if (buffer.length > 0) {
-      // eslint-disable-next-line no-restricted-globals
       (self as any).postMessage({ type: "chunk", chunk: buffer });
     }
     const end = performance.now();
-    // eslint-disable-next-line no-restricted-globals
     (self as any).postMessage({ type: "done", rows, durationMs: end - start });
   } catch (err: any) {
-    // eslint-disable-next-line no-restricted-globals
-    (self as any).postMessage({ type: "error", error: err?.message || "Erro ao gerar CSV" });
+    (self as any).postMessage({
+      type: "error",
+      error: err?.message || "Erro ao gerar CSV",
+    });
   }
 };

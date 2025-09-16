@@ -1,21 +1,21 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { Download, Filter, Search, FileText, DollarSign } from "lucide-react";
 import {
-  X,
-  Download,
-  Filter,
-  Search,
-  FileText,
-  DollarSign,
-} from "lucide-react";
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogBody,
+  DialogFooter,
+  DialogTitle,
+  DialogDescription,
+} from "./ui/dialog";
+import Button from "./ui/button";
 import {
   formatarMoeda,
   formatarData,
   formatarNumero,
 } from "../utils/dataProcessor";
 
-/**
- * Função para remover acentos e caracteres especiais
- */
 const removerAcentos = (texto) => {
   if (!texto) return "";
   return texto
@@ -24,28 +24,21 @@ const removerAcentos = (texto) => {
     .replace(/[^a-zA-Z0-9\s\-_.,;/]/g, "");
 };
 
-/**
- * Função para formatar valor com vírgula
- */
 const formatarValorCSV = (valor) => {
   if (!valor && valor !== 0) return "";
   return valor.toFixed(2).replace(".", ",");
 };
 
-/**
- * Componente para exibir detalhes das notas fiscais de um CFOP específico
- */
 const CfopDetalhes = ({ cfop, dados, onFechar }) => {
   const [filtroTextoInput, setFiltroTextoInput] = useState("");
   const [filtroTextoDebounced, setFiltroTextoDebounced] = useState("");
   const [ordenacao, setOrdenacao] = useState({
     campo: "dataDocumento",
-    direcao: "desc",
+    direcao: "asc",
   });
   const [page, setPage] = useState(1);
-  const [pageSize, setPageSize] = useState(200); // renderiza 200 linhas por página
+  const [pageSize, setPageSize] = useState(200);
 
-  // Debounce para filtro de texto (200ms)
   useEffect(() => {
     const t = setTimeout(
       () => setFiltroTextoDebounced(filtroTextoInput.trim()),
@@ -56,48 +49,12 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
 
   if (!cfop || !dados) return null;
 
-  // Estilos inline para garantir renderização limpa
-  const modalOverlayStyle = {
-    position: "fixed",
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    width: "100vw",
-    height: "100vh",
-    zIndex: 10000,
-    backgroundColor: "rgba(0, 0, 0, 0.5)",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    padding: "16px",
-    margin: 0,
-    boxSizing: "border-box",
-    backdropFilter: "none",
-    WebkitBackdropFilter: "none",
-  };
+  const [open, setOpen] = useState(true);
 
-  const modalContentStyle = {
-    backgroundColor: "white",
-    borderRadius: "8px",
-    boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.25)",
-    width: "100%",
-    maxWidth: "95vw",
-    maxHeight: "90vh",
-    height: "auto",
-    overflow: "hidden",
-    margin: "auto",
-    display: "flex",
-    flexDirection: "column",
-    position: "relative",
-  };
-
-  // Usa índice pré-computado pelo parser (no Worker) para abrir instantaneamente
   const itensDetalhados = useMemo(() => {
     let base =
       (dados.itensPorCfopIndex && dados.itensPorCfopIndex[cfop.cfop]) || null;
     if (!base) {
-      // Fallback compatibilidade
       const todasNotas = [
         ...(dados.entradas || []),
         ...(dados.saidas || []),
@@ -125,12 +82,10 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     return base;
   }, [dados, cfop]);
 
-  // Reset de página ao mudar filtro ou CFOP
   useEffect(() => {
     setPage(1);
   }, [filtroTextoDebounced, cfop]);
 
-  // Aplica filtro de texto - apenas por número da NF, data, valor e chave
   const itensFiltrados = useMemo(() => {
     const texto = filtroTextoDebounced.toLowerCase();
     if (!texto) return itensDetalhados;
@@ -145,21 +100,48 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     });
   }, [itensDetalhados, filtroTextoDebounced]);
 
-  // Aplica ordenação
   const itensOrdenados = useMemo(() => {
     const { campo, direcao } = ordenacao;
+    const mult = direcao === "asc" ? 1 : -1;
     return [...itensFiltrados].sort((a, b) => {
       let valorA = a[campo];
       let valorB = b[campo];
+
       if (campo === "dataDocumento" || campo === "dataEntradaSaida") {
-        valorA = new Date(valorA || 0);
-        valorB = new Date(valorB || 0);
+        const ta = valorA
+          ? new Date(valorA).getTime()
+          : Number.NEGATIVE_INFINITY;
+        const tb = valorB
+          ? new Date(valorB).getTime()
+          : Number.NEGATIVE_INFINITY;
+        if (ta !== tb) return (ta - tb) * mult;
+        return 0;
       }
+
+      if (campo === "numeroDoc") {
+        const na = parseInt((valorA ?? "").toString().replace(/\D+/g, ""), 10);
+        const nb = parseInt((valorB ?? "").toString().replace(/\D+/g, ""), 10);
+        if (!Number.isNaN(na) && !Number.isNaN(nb) && na !== nb)
+          return (na - nb) * mult;
+        const sa = (valorA ?? "").toString();
+        const sb = (valorB ?? "").toString();
+        return (
+          sa.localeCompare(sb, undefined, {
+            numeric: true,
+            sensitivity: "base",
+          }) * mult
+        );
+      }
+
       if (typeof valorA === "number" && typeof valorB === "number") {
-        return direcao === "asc" ? valorA - valorB : valorB - valorA;
+        if (valorA !== valorB) return (valorA - valorB) * mult;
+        return 0;
       }
-      const result = String(valorA || "").localeCompare(String(valorB || ""));
-      return direcao === "asc" ? result : -result;
+
+      const sa = (valorA ?? "").toString();
+      const sb = (valorB ?? "").toString();
+      if (sa === sb) return 0;
+      return sa.localeCompare(sb) * mult;
     });
   }, [itensFiltrados, ordenacao]);
 
@@ -190,7 +172,6 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
       "Valor ICMS",
     ];
 
-    // Ordena por número da nota de forma crescente para exportação
     const itensParaExportar = [...itensOrdenados].sort((a, b) => {
       const numA = parseInt(a.numeroDoc) || 0;
       const numB = parseInt(b.numeroDoc) || 0;
@@ -230,7 +211,6 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     [itensOrdenados]
   );
 
-  // Determina o tipo de operação baseado no CFOP
   const getTipoOperacao = (cfop) => {
     const numero = parseInt(cfop);
     if (numero >= 1000 && numero <= 3999) {
@@ -244,31 +224,26 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
   const tipoOperacao = getTipoOperacao(cfop.cfop);
 
   return (
-    <div
-      style={modalOverlayStyle}
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          onFechar();
-        }
+    <Dialog
+      open={open}
+      onOpenChange={(v) => {
+        setOpen(v);
+        if (!v) onFechar();
       }}
     >
-      <div style={modalContentStyle} onClick={(e) => e.stopPropagation()}>
-        {/* Cabeçalho */}
-        <div
-          style={{
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "space-between",
-            padding: "24px",
-            borderBottom: "1px solid #e5e7eb",
-            backgroundColor: "white",
-          }}
-        >
+      <DialogContent className="flex flex-col min-h-[70vh] max-h-[92vh] overflow-hidden p-0 w-[98vw] max-w-[1400px]">
+        <DialogHeader className="pr-16">
+          <div className="sr-only">
+            <DialogTitle>Detalhes do CFOP {cfop.cfop}</DialogTitle>
+            <DialogDescription>
+              {cfop.descricao || "Detalhes das notas por CFOP."}
+            </DialogDescription>
+          </div>
           <div className="flex items-center space-x-4">
             <FileText className="h-8 w-8 text-blue-500" />
             <div>
               <div className="flex items-center space-x-2 mb-1">
-                <h2 className="text-xl font-bold text-gray-900">
+                <h2 className="text-xl font-bold">
                   Detalhes do CFOP {cfop.cfop}
                 </h2>
                 <span
@@ -277,42 +252,33 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                   {tipoOperacao.tipo}
                 </span>
               </div>
-              <p className="text-sm text-gray-500">{cfop.descricao}</p>
+              <p className="text-sm text-muted-foreground">{cfop.descricao}</p>
             </div>
           </div>
           <div className="flex items-center space-x-3">
-            <button
+            <Button
               onClick={exportarCSV}
-              className="flex items-center space-x-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
+              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700"
             >
               <Download className="h-4 w-4" />
               <span>Exportar CSV</span>
-            </button>
-            <button
-              onClick={onFechar}
-              className="flex items-center justify-center w-10 h-10 bg-gray-100 text-gray-500 rounded-lg hover:bg-gray-200 transition-colors"
-            >
-              <X className="h-5 w-5" />
-            </button>
+            </Button>
           </div>
-        </div>
+        </DialogHeader>
 
-        {/* Resumo */}
         <div
+          className="grid gap-4 p-6 border-b bg-muted/40"
           style={{
-            display: "grid",
             gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-            gap: "16px",
-            padding: "24px",
-            backgroundColor: "#f9fafb",
-            borderBottom: "1px solid #e5e7eb",
           }}
         >
           <div className="flex items-center space-x-3">
             <FileText className="h-6 w-6 text-blue-500" />
             <div>
-              <p className="text-sm text-gray-500">Total de Registros</p>
-              <p className="text-lg font-bold text-gray-900">
+              <p className="text-sm text-muted-foreground">
+                Total de Registros
+              </p>
+              <p className="text-lg font-bold">
                 {formatarNumero(totalItens, 0)}
               </p>
             </div>
@@ -320,8 +286,8 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
           <div className="flex items-center space-x-3">
             <DollarSign className="h-6 w-6 text-green-500" />
             <div>
-              <p className="text-sm text-gray-500">Valor Total</p>
-              <p className="text-lg font-bold text-gray-900">
+              <p className="text-sm text-muted-foreground">Valor Total</p>
+              <p className="text-lg font-bold">
                 {formatarMoeda(valorTotalFiltrado)}
               </p>
             </div>
@@ -329,34 +295,25 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
           <div className="flex items-center space-x-3">
             <DollarSign className="h-6 w-6 text-purple-500" />
             <div>
-              <p className="text-sm text-gray-500">Total de ICMS</p>
-              <p className="text-lg font-bold text-gray-900">
-                {formatarMoeda(totalIcms)}
-              </p>
+              <p className="text-sm text-muted-foreground">Total de ICMS</p>
+              <p className="text-lg font-bold">{formatarMoeda(totalIcms)}</p>
             </div>
           </div>
         </div>
 
-        {/* Filtros */}
-        <div
-          style={{
-            padding: "16px",
-            borderBottom: "1px solid #e5e7eb",
-            backgroundColor: "white",
-          }}
-        >
-          <div className="flex items-center space-x-4">
-            <div className="flex-1 relative">
+        <div className="p-4 border-b bg-card">
+          <div className="flex items-center gap-4 flex-wrap">
+            <div className="flex-1 min-w-[260px] relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Pesquisar por número da NF, chave NFe, data ou valor..."
                 value={filtroTextoInput}
                 onChange={(e) => setFiltroTextoInput(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                className="w-full pl-10 pr-4 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
-            <div className="flex items-center space-x-2 text-sm text-gray-500">
+            <div className="flex items-center space-x-2 text-sm text-muted-foreground shrink-0">
               <Filter className="h-4 w-4" />
               <span>
                 {itensFiltrados.length} de {totalItens} registros
@@ -365,13 +322,12 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
           </div>
         </div>
 
-        {/* Tabela */}
-        <div style={{ flex: 1, overflow: "auto", backgroundColor: "white" }}>
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50 sticky top-0">
+        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto bg-card custom-scroll">
+          <table className="min-w-[1000px] w-full divide-y divide-border">
+            <thead className="sticky top-[-1px] z-10 bg-card border-b border-border">
               <tr>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
                   onClick={() => handleOrdenacao("numeroDoc")}
                 >
                   <div className="flex items-center space-x-1">
@@ -384,7 +340,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
                   onClick={() => handleOrdenacao("dataDocumento")}
                 >
                   <div className="flex items-center space-x-1">
@@ -396,11 +352,11 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                   CST ICMS
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
                   onClick={() => handleOrdenacao("valorOperacao")}
                 >
                   <div className="flex items-center justify-end space-x-1">
@@ -413,7 +369,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
                   onClick={() => handleOrdenacao("aliqIcms")}
                 >
                   <div className="flex items-center justify-end space-x-1">
@@ -426,7 +382,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
                   onClick={() => handleOrdenacao("valorBcIcms")}
                 >
                   <div className="flex items-center justify-end space-x-1">
@@ -439,7 +395,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                   </div>
                 </th>
                 <th
-                  className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100"
+                  className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
                   onClick={() => handleOrdenacao("valorIcms")}
                 >
                   <div className="flex items-center justify-end space-x-1">
@@ -451,12 +407,12 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                     )}
                   </div>
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
                   Chave NFe
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody className="bg-background divide-y divide-border">
               {paginaAtualItens.map((item, index) => (
                 <tr
                   key={`${item.numeroDoc}-${item.cfop}-${
@@ -464,29 +420,29 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                   }`}
                   className={
                     ((page - 1) * pageSize + index) % 2 === 0
-                      ? "bg-white"
-                      : "bg-gray-50"
+                      ? "bg-background"
+                      : "bg-muted/20"
                   }
                 >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {item.numeroDoc}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {formatarData(item.dataDocumento)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
                     {item.cstIcms}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium text-gray-900">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
                     {formatarMoeda(item.valorOperacao)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
                     {formatarNumero(item.aliqIcms, 2)}%
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
                     {formatarMoeda(item.valorBcIcms)}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
                     {formatarMoeda(item.valorIcms)}
                   </td>
                   <td className="px-6 py-4 text-gray-500 font-mono text-xs">
@@ -499,14 +455,13 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
             </tbody>
           </table>
 
-          {/* Mensagem quando não há dados */}
           {itensOrdenados.length === 0 && (
             <div className="text-center py-12">
               <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
+              <h3 className="text-lg font-medium mb-2">
                 Nenhum registro encontrado
               </h3>
-              <p className="text-gray-500">
+              <p className="text-muted-foreground">
                 {filtroTextoDebounced
                   ? "Tente ajustar os filtros de pesquisa"
                   : "Não há registros para este CFOP"}
@@ -515,42 +470,35 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
           )}
         </div>
 
-        {/* Paginação */}
-        <div className="px-4 py-3 border-t border-gray-200 bg-white flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="text-xs text-gray-500">
+        <div className="px-4 py-3 border-t border-border bg-card flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+          <div className="text-xs text-muted-foreground">
             Página {page} de {pageCount} • Exibindo {paginaAtualItens.length} de{" "}
             {totalItens}
           </div>
           <div className="flex items-center gap-2">
-            <button
+            <Button
               onClick={() => setPage((p) => Math.max(1, p - 1))}
               disabled={page === 1}
-              className={`px-3 py-1 text-xs rounded border ${
-                page === 1
-                  ? "text-gray-300 border-gray-200"
-                  : "text-gray-600 hover:bg-gray-50 border-gray-300"
-              }`}
+              variant="outline"
+              size="sm"
             >
               Anterior
-            </button>
-            <button
+            </Button>
+            <Button
               onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
               disabled={page === pageCount}
-              className={`px-3 py-1 text-xs rounded border ${
-                page === pageCount
-                  ? "text-gray-300 border-gray-200"
-                  : "text-gray-600 hover:bg-gray-50 border-gray-300"
-              }`}
+              variant="outline"
+              size="sm"
             >
               Próxima
-            </button>
+            </Button>
             <select
               value={pageSize}
               onChange={(e) => {
                 setPageSize(Number(e.target.value));
                 setPage(1);
               }}
-              className="text-xs border-gray-300 rounded px-2 py-1"
+              className="text-xs border border-input bg-background rounded px-2 py-1"
             >
               {[50, 100, 200, 500].map((sz) => (
                 <option key={sz} value={sz}>
@@ -561,15 +509,8 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
           </div>
         </div>
 
-        {/* Rodapé */}
-        <div
-          style={{
-            padding: "16px",
-            backgroundColor: "#f9fafb",
-            borderTop: "1px solid #e5e7eb",
-          }}
-        >
-          <div className="flex items-center justify-between text-xs text-gray-500">
+        <DialogFooter>
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <div>
               Exibindo {itensFiltrados.length} de {totalItens} registros •
               Total: {formatarMoeda(valorTotalFiltrado)}
@@ -578,9 +519,9 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
               CFOP {cfop.cfop} • {cfop.descricao}
             </div>
           </div>
-        </div>
-      </div>
-    </div>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 };
 

@@ -15,20 +15,16 @@ describe("SpedParser", () => {
     const content = readFixture("sample_sped_minimo.txt");
     const dados = parseSpedFile(content);
 
-    // Totais
-  expect(dados.totalGeral).toBeCloseTo(1500.0, 6);
-  expect(dados.totalSaidas).toBeCloseTo(500.0, 6);
-  expect(dados.totalEntradas).toBeCloseTo(1000.0, 6);
+    expect(dados.totalGeral).toBeCloseTo(1500.0, 6);
+    expect(dados.totalSaidas).toBeCloseTo(500.0, 6);
+    expect(dados.totalEntradas).toBeCloseTo(1000.0, 6);
 
-    // Período (datas do C100)
     expect(dados.periodo.inicio).toBeInstanceOf(Date);
     expect(dados.periodo.fim).toBeInstanceOf(Date);
 
-    // Arrays de agregação
     expect(dados.saidasPorDiaArray.length).toBeGreaterThan(0);
     expect(dados.entradasPorDiaArray.length).toBeGreaterThan(0);
 
-    // CFOPs agregados com descrição
     const cfopSaida = dados.saidasPorCfopArray.find((c) => c.cfop === "5102");
     const cfopEntrada = dados.entradasPorCfopArray.find(
       (c) => c.cfop === "1102"
@@ -42,7 +38,6 @@ describe("SpedParser", () => {
     const content = readFixture("sample_sped_cancelada.txt");
     const dados = parseSpedFile(content);
 
-    // Tudo zerado (nota COD_SIT = 01 não entra)
     expect(dados.totalGeral).toBe(0);
     expect(dados.totalSaidas).toBe(0);
     expect(dados.saidas.length).toBe(0);

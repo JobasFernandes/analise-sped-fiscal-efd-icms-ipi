@@ -1,4 +1,4 @@
-import React, { useRef } from 'react';
+import React, { useRef } from "react";
 import {
   Chart as ChartJS,
   CategoryScale,
@@ -6,13 +6,15 @@ import {
   BarElement,
   Title,
   Tooltip,
-  Legend
-} from 'chart.js';
-import { Bar } from 'react-chartjs-2';
-import { prepararDadosVendasPorCfop, formatarMoeda } from '../../utils/dataProcessor';
-import { downloadChartImage } from '../../utils/chartExport';
+  Legend,
+} from "chart.js";
+import { Bar } from "react-chartjs-2";
+import {
+  prepararDadosVendasPorCfop,
+  formatarMoeda,
+} from "../../utils/dataProcessor";
+import { downloadChartImage } from "../../utils/chartExport";
 
-// Registra os componentes necessários do Chart.js
 ChartJS.register(
   CategoryScale,
   LinearScale,
@@ -22,11 +24,12 @@ ChartJS.register(
   Legend
 );
 
-/**
- * Componente de gráfico de barras para vendas por CFOP
- */
-const VendasPorCfopChart = ({ dados, limite = 10, exportFilename = 'vendas_por_cfop', title = 'Vendas por CFOP' }) => {
-  const chartRef = useRef(null);
+const VendasPorCfopChart = ({
+  dados,
+  limite = 10,
+  exportFilename = "vendas_por_cfop",
+  title = "Vendas por CFOP",
+}) => {
   const chartRef = useRef(null);
   if (!dados || dados.length === 0) {
     return (
@@ -38,102 +41,104 @@ const VendasPorCfopChart = ({ dados, limite = 10, exportFilename = 'vendas_por_c
 
   const chartData = prepararDadosVendasPorCfop(dados, limite);
 
-  // Configurações do gráfico
   const options = {
     responsive: true,
     maintainAspectRatio: false,
     plugins: {
       legend: {
-        display: false
+        display: false,
       },
       title: {
-        display: false
+        display: false,
       },
       tooltip: {
-        backgroundColor: 'rgba(0, 0, 0, 0.8)',
-        titleColor: 'white',
-        bodyColor: 'white',
-        borderColor: 'rgba(0, 0, 0, 0.8)',
+        backgroundColor: "rgba(0, 0, 0, 0.8)",
+        titleColor: "white",
+        bodyColor: "white",
+        borderColor: "rgba(0, 0, 0, 0.8)",
         borderWidth: 1,
         cornerRadius: 6,
         callbacks: {
-          title: function(context) {
+          title: function (context) {
             const index = context[0].dataIndex;
             const cfop = dados[index];
             return `CFOP ${cfop.cfop}`;
           },
-          label: function(context) {
+          label: function (context) {
             return `Vendas: ${formatarMoeda(context.parsed.y)}`;
           },
-          afterLabel: function(context) {
+          afterLabel: function (context) {
             const index = context.dataIndex;
             const cfop = dados[index];
             return cfop.descricao;
-          }
-        }
-      }
+          },
+        },
+      },
     },
     scales: {
       x: {
         grid: {
-          display: false
+          display: false,
         },
         ticks: {
           font: {
-            size: 10
+            size: 10,
           },
           maxRotation: 45,
-          callback: function(value, index) {
+          callback: function (value, index) {
             const cfop = dados[index];
-            return cfop ? cfop.cfop : '';
-          }
-        }
+            return cfop ? cfop.cfop : "";
+          },
+        },
       },
       y: {
         grid: {
           display: true,
-          color: 'rgba(0, 0, 0, 0.05)'
+          color: "rgba(0, 0, 0, 0.05)",
         },
         ticks: {
           font: {
-            size: 11
+            size: 11,
           },
-          callback: function(value) {
+          callback: function (value) {
             return formatarMoeda(value);
-          }
-        }
-      }
+          },
+        },
+      },
     },
     elements: {
       bar: {
         borderRadius: 4,
-        borderSkipped: false
-      }
-    }
+        borderSkipped: false,
+      },
+    },
   };
 
-  // Dados do gráfico com cores gradientes
   const data = {
     ...chartData,
-    datasets: chartData.datasets.map(dataset => ({
+    datasets: chartData.datasets.map((dataset) => ({
       ...dataset,
-      backgroundColor: 'rgba(59, 130, 246, 0.7)',
-      borderColor: '#3B82F6',
+      backgroundColor: "rgba(59, 130, 246, 0.7)",
+      borderColor: "#3B82F6",
       borderWidth: 1,
-      hoverBackgroundColor: 'rgba(59, 130, 246, 0.9)',
-      hoverBorderColor: '#1D4ED8'
-    }))
+      hoverBackgroundColor: "rgba(59, 130, 246, 0.9)",
+      hoverBorderColor: "#1D4ED8",
+    })),
   };
 
   return (
     <div className="h-80 w-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-gray-700 tracking-tight">{title}</h3>
+        <h3 className="text-sm font-medium text-muted-foreground">
+          {title}
+        </h3>
         <div className="flex space-x-2">
           <button
             onClick={() => downloadChartImage(chartRef.current, exportFilename)}
             className="px-2 py-1 text-xs rounded bg-white border border-gray-300 hover:bg-gray-50 shadow-sm"
-          >PNG</button>
+          >
+            PNG
+          </button>
         </div>
       </div>
       <div className="h-[calc(100%-1.25rem)]">
