@@ -4,7 +4,7 @@ import FileUpload from "./components/FileUpload";
 import Dashboard from "./components/Dashboard";
 import { FileText, BarChart3, Upload } from "lucide-react";
 import ThemeToggle from "./components/ThemeToggle";
-import Button from "./components/ui/button";
+import Button from "./components/ui/Button";
 import { addSped } from "./db/daos/spedDao";
 import SpedManager from "./components/SpedManager";
 import { getSped } from "./db/daos/spedDao";
