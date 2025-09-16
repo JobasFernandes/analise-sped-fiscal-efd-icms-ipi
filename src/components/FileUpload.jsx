@@ -1,7 +1,7 @@
 import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
-import { Progress } from "./ui/progress";
+import { Progress } from "./ui/Progress";
 
 const FileUpload = ({
   onFileSelect,

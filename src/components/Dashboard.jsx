@@ -18,9 +18,9 @@ import EntradasSaidasComparativoChart from "./charts/EntradasSaidasComparativoCh
 import VendasPorDiaChart from "./charts/VendasPorDiaChart";
 import DistribuicaoCfopChart from "./charts/DistribuicaoCfopChart";
 import CfopDetalhes from "./CfopDetalhes";
-import Card from "./ui/card";
-import Button from "./ui/button";
-import DateInput from "./ui/date-input";
+import Card from "./ui/Card";
+import Button from "./ui/Button";
+import DateInput from "./ui/date-input"; /* permanece minúsculo */
 
 const Dashboard = ({ dados, arquivo }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);

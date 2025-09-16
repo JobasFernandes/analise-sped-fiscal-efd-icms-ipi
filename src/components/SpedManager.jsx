@@ -7,7 +7,7 @@ import {
   possuiIndicadores,
 } from "../db/daos/spedDao";
 import { exportDbToJson, importDbFromJson } from "../db/backup";
-import Button from "./ui/button";
+import Button from "./ui/Button";
 import {
   Dialog,
   DialogContent,
@@ -16,8 +16,8 @@ import {
   DialogFooter,
   DialogTitle,
 } from "./ui/dialog";
-import { useToast } from "./ui/use-toast";
-import Spinner from "./ui/spinner";
+import { useToast } from "./ui/use-toast"; /* permanece igual (arquivo minúsculo) */
+import Spinner from "./ui/spinner"; /* permanece igual (arquivo minúsculo) */
 import {
   TooltipProvider,
   Tooltip,
