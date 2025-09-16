@@ -9,6 +9,21 @@ export interface NotaItem {
   valorIcms: number;
 }
 
+export interface NotaItemC170 {
+  numItem?: number;
+  codItem?: string;
+  descrCompl?: string;
+  quantidade?: number;
+  unidade?: string;
+  valorItem?: number;
+  valorDesconto?: number;
+  cfop?: string;
+  cstIcms?: string;
+  aliqIcms?: number;
+  valorBcIcms?: number;
+  valorIcms?: number;
+}
+
 export interface Nota {
   numeroDoc: string;
   chaveNfe: string;
@@ -19,6 +34,7 @@ export interface Nota {
   indicadorOperacao: IndicadorOperacao;
   situacao: string;
   itens: NotaItem[];
+  itensC170?: NotaItemC170[];
 }
 
 export interface Periodo {

@@ -10,7 +10,10 @@ Dexie.dependencies.indexedDB = indexedDB as any;
 Dexie.dependencies.IDBKeyRange = IDBKeyRange as any;
 
 let db: any;
-let addSped: any, getSped: any, getSpedProcessed: any, rebuildAggregates: any;
+let addSped: any,
+  getSped: any,
+  getSpedProcessed: any,
+  recalcularIndicadores: any;
 let toProcessedData: any;
 
 function makeSampleData(): any {
@@ -76,7 +79,7 @@ describe("Agregados v2 e getSpedProcessed", () => {
     const procDao = await import("../src/db/daos/spedProcessedDao");
     getSpedProcessed = procDao.getSpedProcessed;
     const dao2 = await import("../src/db/daos/spedDao");
-    rebuildAggregates = dao2.rebuildAggregates;
+    recalcularIndicadores = dao2.recalcularIndicadores;
     const adapter = await import("../src/db/adapters/toProcessedData");
     toProcessedData = adapter.toProcessedData;
     await db.open();
@@ -168,7 +171,7 @@ describe("Agregados v2 e getSpedProcessed", () => {
       }
     );
     // rebuild
-    await rebuildAggregates(spedId);
+    await recalcularIndicadores(spedId);
     const processedByAggs = await getSpedProcessed(spedId);
     const { sped, documents, items } = await getSped(spedId);
     const processedByAdapter = toProcessedData(sped, documents, items);

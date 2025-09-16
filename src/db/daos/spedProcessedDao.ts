@@ -1,17 +1,33 @@
 import { db } from "../index";
+import type { ItemC170Row } from "../index";
 import type { ProcessedData } from "../../utils/types";
 import { getDescricaoCfop } from "../../utils/cfopService";
+import { parse } from "date-fns";
+
+function parseLocalDate(iso?: string | null): Date | null {
+  if (!iso) return null;
+  try {
+    return parse(iso, "yyyy-MM-dd", new Date());
+  } catch {
+    return new Date(iso);
+  }
+}
 
 export async function getSpedProcessed(spedId: number): Promise<ProcessedData> {
   const sped = await db.sped_files.get(spedId);
   if (!sped) throw new Error("SPED não encontrado");
-  const [documents, items, dayAggs, cfopAggs, dayCfopAggs] = await Promise.all([
-    db.documents.where({ spedId }).toArray(),
-    db.items.where({ spedId }).toArray(),
-    db.day_aggs.where({ spedId }).toArray(),
-    db.cfop_aggs.where({ spedId }).toArray(),
-    db.day_cfop_aggs.where({ spedId }).toArray(),
-  ]);
+  const [documents, items, dayAggs, cfopAggs, dayCfopAggs, itemsC170] =
+    await Promise.all([
+      db.documents.where({ spedId }).toArray(),
+      db.items.where({ spedId }).toArray(),
+      db.day_aggs.where({ spedId }).toArray(),
+      db.cfop_aggs.where({ spedId }).toArray(),
+      db.day_cfop_aggs.where({ spedId }).toArray(),
+      db.items_c170
+        .where({ spedId })
+        .toArray()
+        .catch(() => [] as ItemC170Row[]),
+    ]);
 
   const notasMap = new Map<string, any>();
   const entradas: any[] = [];
@@ -20,15 +36,14 @@ export async function getSpedProcessed(spedId: number): Promise<ProcessedData> {
     const nota = {
       numeroDoc: d.numeroDoc,
       chaveNfe: d.chaveNfe,
-      dataDocumento: d.dataDocumento ? new Date(d.dataDocumento) : null,
-      dataEntradaSaida: d.dataEntradaSaida
-        ? new Date(d.dataEntradaSaida)
-        : null,
+      dataDocumento: parseLocalDate(d.dataDocumento),
+      dataEntradaSaida: parseLocalDate(d.dataEntradaSaida),
       valorDocumento: d.valorDocumento || 0,
       valorMercadoria: d.valorMercadoria || 0,
       indicadorOperacao: d.indicadorOperacao,
       situacao: d.situacao,
       itens: [] as any[],
+      itensC170: [] as any[],
     };
     notasMap.set(d.id!, nota);
     if (d.indicadorOperacao === "0") entradas.push(nota);
@@ -45,6 +60,25 @@ export async function getSpedProcessed(spedId: number): Promise<ProcessedData> {
       valorBcIcms: it.valorBcIcms || 0,
       valorIcms: it.valorIcms || 0,
     });
+  }
+
+  for (const ex of itemsC170) {
+    const nota = notasMap.get(ex.documentId);
+    if (!nota) continue;
+    nota.itensC170.push({
+      numItem: ex.numItem,
+      codItem: ex.codItem,
+      descrCompl: ex.descrCompl,
+      quantidade: ex.quantidade,
+      unidade: ex.unidade,
+      valorItem: ex.valorItem,
+      valorDesconto: ex.valorDesconto,
+      cfop: ex.cfop,
+      cstIcms: ex.cstIcms,
+      aliqIcms: ex.aliqIcms,
+      valorBcIcms: ex.valorBcIcms,
+      valorIcms: ex.valorIcms,
+    } as any);
   }
 
   const entradasPorDiaArray = dayAggs
@@ -113,10 +147,8 @@ export async function getSpedProcessed(spedId: number): Promise<ProcessedData> {
       valorIcms: it.valorIcms,
       numeroDoc: d?.numeroDoc,
       chaveNfe: d?.chaveNfe,
-      dataDocumento: d?.dataDocumento ? new Date(d.dataDocumento) : null,
-      dataEntradaSaida: d?.dataEntradaSaida
-        ? new Date(d.dataEntradaSaida)
-        : null,
+      dataDocumento: parseLocalDate(d?.dataDocumento || null),
+      dataEntradaSaida: parseLocalDate(d?.dataEntradaSaida || null),
       valorTotal: d?.valorDocumento,
       situacao: d?.situacao || "00",
     });

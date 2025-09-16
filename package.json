@@ -12,7 +12,6 @@
     "test": "vitest"
   },
   "dependencies": {
-    "dexie": "^4.2.0",
     "@radix-ui/colors": "^3.0.0",
     "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-popover": "^1.1.15",
@@ -21,10 +20,12 @@
     "@radix-ui/react-slot": "^1.2.3",
     "@radix-ui/react-switch": "^1.2.6",
     "@radix-ui/react-toast": "^1.2.15",
+    "@radix-ui/react-tooltip": "^1.2.8",
     "chart.js": "^3.9.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "date-fns": "^2.30.0",
+    "dexie": "^4.2.0",
     "lucide-react": "^0.263.1",
     "react": "^18.2.0",
     "react-chartjs-2": "^4.3.1",
@@ -33,7 +34,6 @@
     "tailwind-merge": "^3.3.1"
   },
   "devDependencies": {
-    "fake-indexeddb": "^6.2.2",
     "@types/node": "^20.11.19",
     "@types/react": "^18.2.15",
     "@types/react-dom": "^18.2.7",
@@ -43,6 +43,7 @@
     "eslint-plugin-react": "^7.32.2",
     "eslint-plugin-react-hooks": "^4.6.0",
     "eslint-plugin-react-refresh": "^0.4.3",
+    "fake-indexeddb": "^6.2.2",
     "postcss": "^8.4.27",
     "tailwindcss": "^3.3.3",
     "typescript": "^5.6.2",

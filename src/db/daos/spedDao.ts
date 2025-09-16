@@ -3,6 +3,7 @@ import {
   type SpedFileRow,
   type DocumentRow,
   type ItemRow,
+  type ItemC170Row,
   type DayAggRow,
   type CfopAggRow,
   type DayCfopAggRow,
@@ -61,6 +62,7 @@ export async function addSped(
       db.sped_files,
       db.documents,
       db.items,
+      db.items_c170,
       db.day_aggs,
       db.cfop_aggs,
       db.day_cfop_aggs,
@@ -105,13 +107,7 @@ export async function addSped(
         }
       };
 
-      const toDateKey = (d?: Date | null) =>
-        d
-          ? `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(
-              2,
-              "0"
-            )}-${String(d.getDate()).padStart(2, "0")}`
-          : null;
+      const toDateKeyFromISO = (iso?: string | null) => (iso ? iso : null);
 
       const saveDoc = async (nota: any, indicador: "0" | "1") => {
         const docId = genId();
@@ -145,10 +141,28 @@ export async function addSped(
             valorIcms: it.valorIcms || 0,
           };
           await db.items.add(item);
-          const dateKey = toDateKey(
-            doc.dataDocumento ? new Date(doc.dataDocumento) : null
-          );
+          const dateKey = toDateKeyFromISO(doc.dataDocumento || null);
           addAgg(indicador, dateKey, item.cfop, item.valorOperacao || 0);
+        }
+        for (const it of nota.itensC170 || []) {
+          const item: ItemC170Row = {
+            id: genId(),
+            spedId,
+            documentId: docId,
+            numItem: it.numItem,
+            codItem: it.codItem,
+            descrCompl: it.descrCompl,
+            quantidade: it.quantidade,
+            unidade: it.unidade,
+            valorItem: it.valorItem,
+            valorDesconto: it.valorDesconto,
+            cfop: it.cfop,
+            cstIcms: it.cstIcms,
+            aliqIcms: it.aliqIcms,
+            valorBcIcms: it.valorBcIcms,
+            valorIcms: it.valorIcms,
+          };
+          await db.items_c170.add(item);
         }
       };
 
@@ -193,6 +207,8 @@ export async function deleteSped(spedId: number): Promise<void> {
       db.sped_files,
       db.documents,
       db.items,
+      db.items_c170,
+      db.items_c170,
       db.day_aggs,
       db.cfop_aggs,
       db.day_cfop_aggs,
@@ -202,6 +218,7 @@ export async function deleteSped(spedId: number): Promise<void> {
       const docIds = docs.map((d: any) => d.id).filter(Boolean);
       if (docIds.length) {
         await db.items.where("documentId").anyOf(docIds).delete();
+        await db.items_c170.where("documentId").anyOf(docIds).delete();
       }
       await db.documents.where({ spedId }).delete();
       await db.day_aggs.where({ spedId }).delete();
@@ -229,7 +246,7 @@ export async function getSped(spedId: number): Promise<LoadedSpedData> {
   return { sped, documents, items };
 }
 
-export async function rebuildAggregates(spedId: number): Promise<void> {
+export async function recalcularIndicadores(spedId: number): Promise<void> {
   const { documents, items } = await getSped(spedId);
   const dayAggMap = new Map<string, number>();
   const cfopAggMap = new Map<string, number>();
@@ -282,14 +299,18 @@ export async function rebuildAggregates(spedId: number): Promise<void> {
   );
 }
 
-export async function rebuildAggregatesForAll(): Promise<void> {
+export async function recalcularIndicadoresTodos(): Promise<void> {
   const speds = await db.sped_files.toArray();
   for (const s of speds) {
-    await rebuildAggregates(s.id!);
+    await recalcularIndicadores(s.id!);
   }
 }
 
-export async function hasAggregates(spedId: number): Promise<boolean> {
+export async function possuiIndicadores(spedId: number): Promise<boolean> {
   const one = await db.day_aggs.where({ spedId }).first();
   return Boolean(one);
 }
+
+export const rebuildAggregates = recalcularIndicadores;
+export const rebuildAggregatesForAll = recalcularIndicadoresTodos;
+export const hasAggregates = possuiIndicadores;

@@ -7,6 +7,7 @@ import type {
   CfopValor,
   DiaCfopValor,
   ProcessedData,
+  NotaItemC170,
 } from "./types";
 
 export class SpedParser {
@@ -62,6 +63,8 @@ export class SpedParser {
           currentNota = this.processC100(registro) as Nota | null;
         else if (registro.tipo === "C190" && currentNota)
           this.processC190(registro, currentNota);
+        else if (registro.tipo === "C170" && currentNota)
+          this.processC170(registro, currentNota);
       } catch (err) {
         console.warn("Linha SPED ignorada por erro de parsing:", err);
       } finally {
@@ -140,6 +143,7 @@ export class SpedParser {
       indicadorOperacao,
       situacao,
       itens: [],
+      itensC170: [],
     };
     if (valorDoc > 0 && situacao === "00") {
       if (indicadorOperacao === "0") this.data.entradas.push(nota);
@@ -201,6 +205,60 @@ export class SpedParser {
       }
       this.data.totalGeral += valorOperacao;
     }
+  }
+
+  processC170(registro: any, nota: Nota) {
+    const c = registro.campos || [];
+    const safe = (i: number) => (i >= 0 && i < c.length ? c[i] : undefined);
+    const numItem = parseInt(safe(1) || "") || undefined;
+    const codItem = safe(2);
+    const descrCompl = safe(3);
+    const quantidade = this.parseValor(safe(4));
+    const unidade = safe(5);
+    const valorItem = this.parseValor(safe(6));
+    const valorDesconto = this.parseValor(safe(7));
+    const rawCst9 = safe(9);
+    const rawCfop10 = safe(10);
+    const rawCst11 = safe(11);
+    const rawBc12 = safe(12);
+    const rawAliq13 = safe(13);
+    const rawIcms14 = safe(14);
+    const rawBc14 = safe(14);
+    const rawIcms15 = safe(15);
+
+    const looksLikeCfop = (s?: string) => !!(s && /^\d{4}$/.test(s));
+    const looksLikeCst = (s?: string) => !!(s && /^\d{2,3}$/.test(s));
+
+    const cfop = looksLikeCfop(rawCfop10)
+      ? rawCfop10
+      : looksLikeCfop(rawCst11)
+      ? rawCst11
+      : rawCfop10 || rawCst11 || "";
+    const cstIcms = looksLikeCst(rawCst11)
+      ? rawCst11
+      : looksLikeCst(rawCst9)
+      ? rawCst9
+      : rawCst11 || rawCst9 || "";
+    const valorBcIcms = this.parseValor(rawBc12 ?? rawBc14);
+    const aliqIcms = this.parseValor(rawAliq13);
+    const valorIcms = this.parseValor(rawIcms15 ?? rawIcms14);
+
+    const item: NotaItemC170 = {
+      numItem,
+      codItem,
+      descrCompl,
+      quantidade: isNaN(quantidade) ? undefined : quantidade,
+      unidade,
+      valorItem: isNaN(valorItem) ? undefined : valorItem,
+      valorDesconto: isNaN(valorDesconto) ? undefined : valorDesconto,
+      cfop,
+      cstIcms,
+      aliqIcms: isNaN(aliqIcms) ? undefined : aliqIcms,
+      valorBcIcms: isNaN(valorBcIcms) ? undefined : valorBcIcms,
+      valorIcms: isNaN(valorIcms) ? undefined : valorIcms,
+    };
+    if (!nota.itensC170) nota.itensC170 = [];
+    nota.itensC170.push(item);
   }
 
   parseDate(dateStr?: string) {

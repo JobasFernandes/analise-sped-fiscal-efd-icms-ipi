@@ -1,4 +1,4 @@
-import type { DocumentRow, ItemRow, SpedFileRow } from "../index";
+import type { DocumentRow, ItemRow, ItemC170Row, SpedFileRow } from "../index";
 import type {
   ProcessedData,
   Nota,
@@ -8,15 +8,26 @@ import type {
   DiaCfopValor,
 } from "../../utils/types";
 import { getDescricaoCfop } from "../../utils/cfopService";
+import { parse } from "date-fns";
 
 function ensureISO(d?: string | null) {
   return d || null;
 }
 
+function parseLocalDate(iso?: string | null): Date | null {
+  if (!iso) return null;
+  try {
+    return parse(iso, "yyyy-MM-dd", new Date());
+  } catch {
+    return new Date(iso);
+  }
+}
+
 export function toProcessedData(
   sped: SpedFileRow,
   documents: DocumentRow[],
-  items: ItemRow[]
+  items: ItemRow[],
+  itemsC170?: ItemC170Row[]
 ): ProcessedData {
   const notasPorId = new Map<string, Nota>();
   const entradas: Nota[] = [];
@@ -26,19 +37,25 @@ export function toProcessedData(
     const nota: Nota = {
       numeroDoc: d.numeroDoc,
       chaveNfe: d.chaveNfe,
-      dataDocumento: d.dataDocumento ? new Date(d.dataDocumento) : null,
-      dataEntradaSaida: d.dataEntradaSaida
-        ? new Date(d.dataEntradaSaida)
-        : null,
+      dataDocumento: parseLocalDate(d.dataDocumento),
+      dataEntradaSaida: parseLocalDate(d.dataEntradaSaida),
       valorDocumento: d.valorDocumento || 0,
       valorMercadoria: d.valorMercadoria || 0,
       indicadorOperacao: d.indicadorOperacao,
       situacao: d.situacao,
       itens: [],
+      itensC170: [],
     };
     notasPorId.set(d.id!, nota);
     if (d.indicadorOperacao === "0") entradas.push(nota);
     else saidas.push(nota);
+  }
+
+  const c170ByDoc = new Map<string, ItemC170Row[]>();
+  for (const it of itemsC170 || []) {
+    const arr = c170ByDoc.get(it.documentId) || [];
+    arr.push(it);
+    c170ByDoc.set(it.documentId, arr);
   }
 
   for (const it of items) {
@@ -53,6 +70,25 @@ export function toProcessedData(
       valorIcms: it.valorIcms || 0,
     };
     nota.itens.push(item);
+    const extras = c170ByDoc.get(it.documentId);
+    if (extras && extras.length && nota.itensC170 && !nota.itensC170.length) {
+      for (const ex of extras) {
+        nota.itensC170.push({
+          numItem: ex.numItem,
+          codItem: ex.codItem,
+          descrCompl: ex.descrCompl,
+          quantidade: ex.quantidade,
+          unidade: ex.unidade,
+          valorItem: ex.valorItem,
+          valorDesconto: ex.valorDesconto,
+          cfop: ex.cfop,
+          cstIcms: ex.cstIcms,
+          aliqIcms: ex.aliqIcms,
+          valorBcIcms: ex.valorBcIcms,
+          valorIcms: ex.valorIcms,
+        } as any);
+      }
+    }
   }
 
   const mapEntradasPorDia = new Map<string, number>();

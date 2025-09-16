@@ -168,7 +168,11 @@ function App() {
       }
 
       const { sped, documents, items } = await getSped(spedId);
-      const dados = toProcessedData(sped, documents, items);
+      const itemsC170 = await db.items_c170
+        .where({ spedId })
+        .toArray()
+        .catch(() => []);
+      const dados = toProcessedData(sped, documents, items, itemsC170);
       setDadosProcessados(dados);
       setArquivoInfo({
         name: sped.filename,

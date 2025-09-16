@@ -1,14 +1,7 @@
-import React, {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-} from "react";
+import React, { useCallback, useMemo, useState } from "react";
+import { ToastCtx } from "./use-toast";
 
-const ToastCtx = createContext(null);
-
-export function ToastProvider({ children }) {
+function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
 
   const remove = useCallback((id) => {
@@ -73,8 +66,4 @@ export function ToastProvider({ children }) {
   );
 }
 
-export function useToast() {
-  const ctx = useContext(ToastCtx);
-  if (!ctx) throw new Error("useToast deve ser usado dentro de ToastProvider");
-  return ctx;
-}
+export default React.memo(ToastProvider);

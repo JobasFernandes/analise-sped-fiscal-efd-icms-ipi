@@ -40,10 +40,29 @@ export interface ItemRow {
   valorIcms: number;
 }
 
+export interface ItemC170Row {
+  id?: string; // uuid
+  spedId: number; // FK
+  documentId: string; // FK -> DocumentRow.id
+  numItem?: number;
+  codItem?: string;
+  descrCompl?: string;
+  quantidade?: number;
+  unidade?: string;
+  valorItem?: number;
+  valorDesconto?: number;
+  cfop?: string;
+  cstIcms?: string;
+  aliqIcms?: number;
+  valorBcIcms?: number;
+  valorIcms?: number;
+}
+
 export class SpedDB extends Dexie {
   sped_files!: Table<SpedFileRow, number>;
   documents!: Table<DocumentRow, string>;
   items!: Table<ItemRow, string>;
+  items_c170!: Table<ItemC170Row, string>;
   day_aggs!: Table<DayAggRow, number>;
   cfop_aggs!: Table<CfopAggRow, number>;
   day_cfop_aggs!: Table<DayCfopAggRow, number>;
@@ -64,6 +83,10 @@ export class SpedDB extends Dexie {
       day_aggs: "++id, [spedId+date+dir], spedId, date, dir",
       cfop_aggs: "++id, [spedId+cfop+dir], spedId, cfop, dir",
       day_cfop_aggs: "++id, [spedId+date+cfop+dir], spedId, date, cfop, dir",
+    });
+    this.version(3).stores({
+      // string PK (uuid). Indexes: spedId, documentId, cfop
+      items_c170: "id, spedId, documentId, cfop, codItem",
     });
   }
 }

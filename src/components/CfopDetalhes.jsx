@@ -47,6 +47,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
   }, [filtroTextoInput]);
 
   const [open, setOpen] = useState(true);
+  const [notaSelecionada, setNotaSelecionada] = useState(null);
 
   const hasData = !!(cfop && dados);
 
@@ -145,6 +146,22 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     });
   }, [itensFiltrados, ordenacao]);
 
+  const notaCompletaSelecionada = useMemo(() => {
+    if (!notaSelecionada || !dados) return null;
+    const todasNotas = [
+      ...(dados.entradas || []),
+      ...(dados.saidas || []),
+      ...(dados.vendas || []),
+    ];
+    return (
+      todasNotas.find(
+        (n) =>
+          n.numeroDoc === notaSelecionada.numeroDoc &&
+          n.chaveNfe === notaSelecionada.chaveNfe
+      ) || null
+    );
+  }, [notaSelecionada, dados]);
+
   const totalItens = itensOrdenados.length;
   const pageCount = Math.max(1, Math.ceil(totalItens / pageSize));
   const paginaAtualItens = useMemo(() => {
@@ -228,304 +245,456 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
   if (!hasData) return null;
 
   return (
-    <Dialog
-      open={open}
-      onOpenChange={(v) => {
-        setOpen(v);
-        if (!v) onFechar();
-      }}
-    >
-      <DialogContent className="flex flex-col min-h-[70vh] max-h-[92vh] overflow-hidden p-0 w-[98vw] max-w-[1400px]">
-        <DialogHeader className="pr-16">
-          <div className="sr-only">
-            <DialogTitle>Detalhes do CFOP {cfop.cfop}</DialogTitle>
-            <DialogDescription>
-              {cfop.descricao || "Detalhes das notas por CFOP."}
-            </DialogDescription>
+    <>
+      <Dialog
+        open={open}
+        onOpenChange={(v) => {
+          setOpen(v);
+          if (!v) onFechar();
+        }}
+      >
+        <DialogContent className="flex flex-col min-h-[70vh] max-h-[92vh] overflow-hidden p-0 w-[98vw] max-w-[1400px]">
+          <DialogHeader className="pr-16">
+            <div className="sr-only">
+              <DialogTitle>Detalhes do CFOP {cfop.cfop}</DialogTitle>
+              <DialogDescription>
+                {cfop.descricao || "Detalhes das notas por CFOP."}
+              </DialogDescription>
+            </div>
+            <div className="flex items-center space-x-4">
+              <FileText className="h-8 w-8 text-blue-500" />
+              <div>
+                <div className="flex items-center space-x-2 mb-1">
+                  <h2 className="text-xl font-bold">
+                    Detalhes do CFOP {cfop.cfop}
+                  </h2>
+                  <span
+                    className={`px-2 py-1 text-xs font-medium rounded-full ${tipoOperacao.bg} ${tipoOperacao.cor}`}
+                  >
+                    {tipoOperacao.tipo}
+                  </span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {cfop.descricao}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <Button
+                onClick={exportarCSV}
+                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700"
+              >
+                <Download className="h-4 w-4" />
+                <span>Exportar CSV</span>
+              </Button>
+            </div>
+          </DialogHeader>
+          <div className="px-6 pb-4 bg-muted/30"></div>
+
+          <div
+            className="grid gap-4 p-6 border-b bg-muted/40"
+            style={{
+              gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+            }}
+          >
+            <div className="flex items-center space-x-3">
+              <FileText className="h-6 w-6 text-blue-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">
+                  Total de Registros
+                </p>
+                <p className="text-lg font-bold">
+                  {formatarNumero(totalItens, 0)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <DollarSign className="h-6 w-6 text-green-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Valor Total</p>
+                <p className="text-lg font-bold">
+                  {formatarMoeda(valorTotalFiltrado)}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-3">
+              <DollarSign className="h-6 w-6 text-purple-500" />
+              <div>
+                <p className="text-sm text-muted-foreground">Total de ICMS</p>
+                <p className="text-lg font-bold">{formatarMoeda(totalIcms)}</p>
+              </div>
+            </div>
           </div>
-          <div className="flex items-center space-x-4">
-            <FileText className="h-8 w-8 text-blue-500" />
-            <div>
-              <div className="flex items-center space-x-2 mb-1">
-                <h2 className="text-xl font-bold">
-                  Detalhes do CFOP {cfop.cfop}
-                </h2>
-                <span
-                  className={`px-2 py-1 text-xs font-medium rounded-full ${tipoOperacao.bg} ${tipoOperacao.cor}`}
-                >
-                  {tipoOperacao.tipo}
+
+          <div className="p-4 border-b bg-card">
+            <div className="flex items-center gap-4 flex-wrap">
+              <div className="flex-1 min-w-[260px] relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Pesquisar por número da NF, chave NFe, data ou valor..."
+                  value={filtroTextoInput}
+                  onChange={(e) => setFiltroTextoInput(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+              <div className="flex items-center space-x-2 text-sm text-muted-foreground shrink-0">
+                <Filter className="h-4 w-4" />
+                <span>
+                  {itensFiltrados.length} de {totalItens} registros
                 </span>
               </div>
-              <p className="text-sm text-muted-foreground">{cfop.descricao}</p>
             </div>
           </div>
-          <div className="flex items-center space-x-3">
-            <Button
-              onClick={exportarCSV}
-              className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700"
-            >
-              <Download className="h-4 w-4" />
-              <span>Exportar CSV</span>
-            </Button>
-          </div>
-        </DialogHeader>
 
-        <div
-          className="grid gap-4 p-6 border-b bg-muted/40"
-          style={{
-            gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-          }}
-        >
-          <div className="flex items-center space-x-3">
-            <FileText className="h-6 w-6 text-blue-500" />
-            <div>
-              <p className="text-sm text-muted-foreground">
-                Total de Registros
-              </p>
-              <p className="text-lg font-bold">
-                {formatarNumero(totalItens, 0)}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <DollarSign className="h-6 w-6 text-green-500" />
-            <div>
-              <p className="text-sm text-muted-foreground">Valor Total</p>
-              <p className="text-lg font-bold">
-                {formatarMoeda(valorTotalFiltrado)}
-              </p>
-            </div>
-          </div>
-          <div className="flex items-center space-x-3">
-            <DollarSign className="h-6 w-6 text-purple-500" />
-            <div>
-              <p className="text-sm text-muted-foreground">Total de ICMS</p>
-              <p className="text-lg font-bold">{formatarMoeda(totalIcms)}</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="p-4 border-b bg-card">
-          <div className="flex items-center gap-4 flex-wrap">
-            <div className="flex-1 min-w-[260px] relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Pesquisar por número da NF, chave NFe, data ou valor..."
-                value={filtroTextoInput}
-                onChange={(e) => setFiltroTextoInput(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              />
-            </div>
-            <div className="flex items-center space-x-2 text-sm text-muted-foreground shrink-0">
-              <Filter className="h-4 w-4" />
-              <span>
-                {itensFiltrados.length} de {totalItens} registros
-              </span>
-            </div>
-          </div>
-        </div>
-
-        <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto bg-card custom-scroll">
-          <table className="min-w-[1000px] w-full divide-y divide-border">
-            <thead className="sticky top-[-1px] z-10 bg-card border-b border-border">
-              <tr>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
-                  onClick={() => handleOrdenacao("numeroDoc")}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Núm. NF</span>
-                    {ordenacao.campo === "numeroDoc" && (
-                      <span className="text-blue-500">
-                        {ordenacao.direcao === "asc" ? "↑" : "↓"}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
-                  onClick={() => handleOrdenacao("dataDocumento")}
-                >
-                  <div className="flex items-center space-x-1">
-                    <span>Data Doc.</span>
-                    {ordenacao.campo === "dataDocumento" && (
-                      <span className="text-blue-500">
-                        {ordenacao.direcao === "asc" ? "↑" : "↓"}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  CST ICMS
-                </th>
-                <th
-                  className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
-                  onClick={() => handleOrdenacao("valorOperacao")}
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Valor Operação</span>
-                    {ordenacao.campo === "valorOperacao" && (
-                      <span className="text-blue-500">
-                        {ordenacao.direcao === "asc" ? "↑" : "↓"}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
-                  onClick={() => handleOrdenacao("aliqIcms")}
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Alíq ICMS (%)</span>
-                    {ordenacao.campo === "aliqIcms" && (
-                      <span className="text-blue-500">
-                        {ordenacao.direcao === "asc" ? "↑" : "↓"}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
-                  onClick={() => handleOrdenacao("valorBcIcms")}
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>BC ICMS</span>
-                    {ordenacao.campo === "valorBcIcms" && (
-                      <span className="text-blue-500">
-                        {ordenacao.direcao === "asc" ? "↑" : "↓"}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <th
-                  className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
-                  onClick={() => handleOrdenacao("valorIcms")}
-                >
-                  <div className="flex items-center justify-end space-x-1">
-                    <span>Valor ICMS</span>
-                    {ordenacao.campo === "valorIcms" && (
-                      <span className="text-blue-500">
-                        {ordenacao.direcao === "asc" ? "↑" : "↓"}
-                      </span>
-                    )}
-                  </div>
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
-                  Chave NFe
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-background divide-y divide-border">
-              {paginaAtualItens.map((item, index) => (
-                <tr
-                  key={`${item.numeroDoc}-${item.cfop}-${
-                    (page - 1) * pageSize + index
-                  }`}
-                  className={
-                    ((page - 1) * pageSize + index) % 2 === 0
-                      ? "bg-background"
-                      : "bg-muted/20"
-                  }
-                >
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {item.numeroDoc}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {formatarData(item.dataDocumento)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
-                    {item.cstIcms}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
-                    {formatarMoeda(item.valorOperacao)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
-                    {formatarNumero(item.aliqIcms, 2)}%
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
-                    {formatarMoeda(item.valorBcIcms)}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
-                    {formatarMoeda(item.valorIcms)}
-                  </td>
-                  <td className="px-6 py-4 text-gray-500 font-mono text-xs">
-                    <div className="max-w-xs truncate" title={item.chaveNfe}>
-                      {item.chaveNfe || "N/A"}
+          <div className="flex-1 min-h-0 overflow-x-auto overflow-y-auto bg-card custom-scroll">
+            <table className="min-w-[1000px] w-full divide-y divide-border">
+              <thead className="sticky top-[-1px] z-10 bg-card border-b border-border">
+                <tr>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
+                    onClick={() => handleOrdenacao("numeroDoc")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Núm. NF</span>
+                      {ordenacao.campo === "numeroDoc" && (
+                        <span className="text-blue-500">
+                          {ordenacao.direcao === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
                     </div>
-                  </td>
+                  </th>
+                  <th
+                    className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
+                    onClick={() => handleOrdenacao("dataDocumento")}
+                  >
+                    <div className="flex items-center space-x-1">
+                      <span>Data Doc.</span>
+                      {ordenacao.campo === "dataDocumento" && (
+                        <span className="text-blue-500">
+                          {ordenacao.direcao === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                    CST ICMS
+                  </th>
+                  <th
+                    className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
+                    onClick={() => handleOrdenacao("valorOperacao")}
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Valor Operação</span>
+                      {ordenacao.campo === "valorOperacao" && (
+                        <span className="text-blue-500">
+                          {ordenacao.direcao === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
+                    onClick={() => handleOrdenacao("aliqIcms")}
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Alíq ICMS (%)</span>
+                      {ordenacao.campo === "aliqIcms" && (
+                        <span className="text-blue-500">
+                          {ordenacao.direcao === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
+                    onClick={() => handleOrdenacao("valorBcIcms")}
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>BC ICMS</span>
+                      {ordenacao.campo === "valorBcIcms" && (
+                        <span className="text-blue-500">
+                          {ordenacao.direcao === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th
+                    className="px-6 py-3 text-right text-xs font-medium text-muted-foreground uppercase tracking-wider cursor-pointer hover:bg-muted whitespace-nowrap"
+                    onClick={() => handleOrdenacao("valorIcms")}
+                  >
+                    <div className="flex items-center justify-end space-x-1">
+                      <span>Valor ICMS</span>
+                      {ordenacao.campo === "valorIcms" && (
+                        <span className="text-blue-500">
+                          {ordenacao.direcao === "asc" ? "↑" : "↓"}
+                        </span>
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider whitespace-nowrap">
+                    Chave NFe
+                  </th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody className="bg-background divide-y divide-border">
+                {paginaAtualItens.map((item, index) => (
+                  <tr
+                    key={`${item.numeroDoc}-${item.cfop}-${
+                      (page - 1) * pageSize + index
+                    }`}
+                    className={
+                      ((page - 1) * pageSize + index) % 2 === 0
+                        ? "bg-background hover:bg-muted cursor-pointer"
+                        : "bg-muted/20 hover:bg-muted cursor-pointer"
+                    }
+                    onClick={() =>
+                      setNotaSelecionada({
+                        numeroDoc: item.numeroDoc,
+                        chaveNfe: item.chaveNfe,
+                      })
+                    }
+                    role="button"
+                    title="Clique para ver os itens (C170) desta nota"
+                  >
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      {item.numeroDoc}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {formatarData(item.dataDocumento)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-muted-foreground">
+                      {item.cstIcms}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right font-medium">
+                      {formatarMoeda(item.valorOperacao)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
+                      {formatarNumero(item.aliqIcms, 2)}%
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
+                      {formatarMoeda(item.valorBcIcms)}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-right text-muted-foreground">
+                      {formatarMoeda(item.valorIcms)}
+                    </td>
+                    <td className="px-6 py-4 text-gray-500 font-mono text-xs">
+                      <div className="max-w-xs truncate" title={item.chaveNfe}>
+                        {item.chaveNfe || "N/A"}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
 
-          {itensOrdenados.length === 0 && (
-            <div className="text-center py-12">
-              <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-              <h3 className="text-lg font-medium mb-2">
-                Nenhum registro encontrado
-              </h3>
-              <p className="text-muted-foreground">
-                {filtroTextoDebounced
-                  ? "Tente ajustar os filtros de pesquisa"
-                  : "Não há registros para este CFOP"}
-              </p>
-            </div>
-          )}
-        </div>
-
-        <div className="px-4 py-3 border-t border-border bg-card flex flex-col md:flex-row md:items-center md:justify-between gap-3">
-          <div className="text-xs text-muted-foreground">
-            Página {page} de {pageCount} • Exibindo {paginaAtualItens.length} de{" "}
-            {totalItens}
+            {itensOrdenados.length === 0 && (
+              <div className="text-center py-12">
+                <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
+                <h3 className="text-lg font-medium mb-2">
+                  Nenhum registro encontrado
+                </h3>
+                <p className="text-muted-foreground">
+                  {filtroTextoDebounced
+                    ? "Tente ajustar os filtros de pesquisa"
+                    : "Não há registros para este CFOP"}
+                </p>
+              </div>
+            )}
           </div>
-          <div className="flex items-center gap-2">
-            <Button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              variant="outline"
-              size="sm"
-            >
-              Anterior
+
+          <div className="px-4 py-3 border-t border-border bg-card flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+            <div className="text-xs text-muted-foreground">
+              Página {page} de {pageCount} • Exibindo {paginaAtualItens.length}{" "}
+              de {totalItens}
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                variant="outline"
+                size="sm"
+              >
+                Anterior
+              </Button>
+              <Button
+                onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                disabled={page === pageCount}
+                variant="outline"
+                size="sm"
+              >
+                Próxima
+              </Button>
+              <select
+                value={pageSize}
+                onChange={(e) => {
+                  setPageSize(Number(e.target.value));
+                  setPage(1);
+                }}
+                className="text-xs border border-input bg-background rounded px-2 py-1"
+              >
+                {[50, 100, 200, 500].map((sz) => (
+                  <option key={sz} value={sz}>
+                    {sz}/pág
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <DialogFooter>
+            <div className="flex items-center justify-between text-xs text-muted-foreground">
+              <div>
+                Exibindo {itensFiltrados.length} de {totalItens} registros •
+                Total: {formatarMoeda(valorTotalFiltrado)}
+              </div>
+              <div>
+                CFOP {cfop.cfop} • {cfop.descricao}
+              </div>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!notaSelecionada}
+        onOpenChange={(v) => {
+          if (!v) setNotaSelecionada(null);
+        }}
+      >
+        <DialogContent className="w-[92vw] max-w-[1300px] max-h-[88vh] p-0 overflow-hidden bg-popover">
+          <DialogHeader className="pr-16">
+            <DialogTitle>Itens da Nota (C170)</DialogTitle>
+            <DialogDescription className="truncate max-w-[65vw] sm:max-w-[70%] pr-8 text-xs sm:text-sm">
+              {notaSelecionada
+                ? `NF ${notaSelecionada.numeroDoc} • ${notaSelecionada.chaveNfe}`
+                : ""}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 pb-4 text-sm text-muted-foreground">
+            {notaCompletaSelecionada ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                <div>
+                  <span className="font-medium">Data:</span>{" "}
+                  {formatarData(notaCompletaSelecionada.dataDocumento)}
+                </div>
+                <div>
+                  <span className="font-medium">Valor Documento:</span>{" "}
+                  {formatarMoeda(notaCompletaSelecionada.valorDocumento || 0)}
+                </div>
+                <div>
+                  <span className="font-medium">Situação:</span>{" "}
+                  {notaCompletaSelecionada.situacao}
+                </div>
+                <div>
+                  <span className="font-medium">Operação:</span>{" "}
+                  {notaCompletaSelecionada.indicadorOperacao === "1"
+                    ? "Saída"
+                    : "Entrada"}
+                </div>
+              </div>
+            ) : (
+              <div>Localizando dados da nota...</div>
+            )}
+          </div>
+          <div className="overflow-x-auto max-h-[60vh]">
+            <table className="min-w-[900px] w-full divide-y divide-border">
+              <thead className="bg-muted/60">
+                <tr>
+                  <th className="px-4 py-2 text-left text-xs uppercase text-muted-foreground">
+                    #
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs uppercase text-muted-foreground">
+                    Código
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs uppercase text-muted-foreground">
+                    Descrição
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs uppercase text-muted-foreground">
+                    Qtd
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs uppercase text-muted-foreground">
+                    Unid
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs uppercase text-muted-foreground">
+                    Valor Item
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs uppercase text-muted-foreground">
+                    Desconto
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs uppercase text-muted-foreground">
+                    CFOP
+                  </th>
+                  <th className="px-4 py-2 text-left text-xs uppercase text-muted-foreground">
+                    CST
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs uppercase text-muted-foreground">
+                    Alíquota
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs uppercase text-muted-foreground">
+                    BC ICMS
+                  </th>
+                  <th className="px-4 py-2 text-right text-xs uppercase text-muted-foreground">
+                    ICMS
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {(notaCompletaSelecionada?.itensC170 || []).map((it, idx) => (
+                  <tr
+                    key={idx}
+                    className={idx % 2 === 0 ? "bg-background" : "bg-muted/20"}
+                  >
+                    <td className="px-4 py-2 text-sm">
+                      {it.numItem || idx + 1}
+                    </td>
+                    <td className="px-4 py-2 text-sm">{it.codItem || ""}</td>
+                    <td className="px-4 py-2 text-sm">{it.descrCompl || ""}</td>
+                    <td className="px-4 py-2 text-sm text-right">
+                      {formatarNumero(it.quantidade || 0, 3)}
+                    </td>
+                    <td className="px-4 py-2 text-sm">{it.unidade || ""}</td>
+                    <td className="px-4 py-2 text-sm text-right">
+                      {formatarMoeda(it.valorItem || 0)}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-right">
+                      {formatarMoeda(it.valorDesconto || 0)}
+                    </td>
+                    <td className="px-4 py-2 text-sm">{it.cfop || ""}</td>
+                    <td className="px-4 py-2 text-sm">{it.cstIcms || ""}</td>
+                    <td className="px-4 py-2 text-sm text-right">
+                      {formatarNumero(it.aliqIcms || 0, 2)}%
+                    </td>
+                    <td className="px-4 py-2 text-sm text-right">
+                      {formatarMoeda(it.valorBcIcms || 0)}
+                    </td>
+                    <td className="px-4 py-2 text-sm text-right">
+                      {formatarMoeda(it.valorIcms || 0)}
+                    </td>
+                  </tr>
+                ))}
+                {(!notaCompletaSelecionada ||
+                  (notaCompletaSelecionada?.itensC170 || []).length === 0) && (
+                  <tr>
+                    <td
+                      colSpan={12}
+                      className="px-4 py-6 text-center text-sm text-muted-foreground"
+                    >
+                      Nenhum item C170 encontrado para esta nota.
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+          </div>
+          <DialogFooter className="px-6 py-3">
+            <Button variant="outline" onClick={() => setNotaSelecionada(null)}>
+              Fechar
             </Button>
-            <Button
-              onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
-              disabled={page === pageCount}
-              variant="outline"
-              size="sm"
-            >
-              Próxima
-            </Button>
-            <select
-              value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPage(1);
-              }}
-              className="text-xs border border-input bg-background rounded px-2 py-1"
-            >
-              {[50, 100, 200, 500].map((sz) => (
-                <option key={sz} value={sz}>
-                  {sz}/pág
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
-
-        <DialogFooter>
-          <div className="flex items-center justify-between text-xs text-muted-foreground">
-            <div>
-              Exibindo {itensFiltrados.length} de {totalItens} registros •
-              Total: {formatarMoeda(valorTotalFiltrado)}
-            </div>
-            <div>
-              CFOP {cfop.cfop} • {cfop.descricao}
-            </div>
-          </div>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
