@@ -1,214 +1,198 @@
-## Analizador SPED Fiscal
+<div align="center">
 
-Aplicação web em React para análise de arquivos SPED Fiscal (.txt), com parsing local de registros C100/C190 e visualizações interativas por dia e por CFOP.
+# Analizador SPED Fiscal
 
-• Upload seguro no navegador (drag-and-drop)
-• Parser dedicado do SPED (C100/C190), filtrando apenas notas em situação normal (00)
-• Dashboards interativos com Chart.js (linhas, barras e rosca)
-• Resumo executivo, ranking por CFOP e detalhes com exportação CSV
-• Exportação CSV em massa de todos os CFOPs (Entradas/Saídas) diretamente do Dashboard
-• Filtro por período (data início/fim) com preenchimento automático a partir do arquivo
-• Persistência de filtros de período via query params (?inicio=YYYY-MM-DD&fim=YYYY-MM-DD)
-• Alternância de visão: Entradas | Saídas | Comparativo Entradas vs Saídas
-• Exportação de gráficos em PNG (botão PNG em cada card de gráfico)
-• Tooltips padronizados com valores monetários e rótulos contextuais
-• Sem backend: todos os dados são processados localmente no browser
-• Persistência local dos SPEDs via IndexedDB com gerenciador para listar/carregar/excluir
-• Carregamento rápido de SPEDs salvos com agregados pré-calculados (v2): somas por dia, por CFOP e dia+CFOP
-• Backup/Restore do banco local (exportar/importar JSON) para migração entre máquinas
-• Parsing assíncrono com Web Worker (UI permanece responsiva e barra de progresso durante arquivos grandes)
-• Detalhes de CFOP abrindo instantaneamente via índice pré-computado e UI otimizada (memoização, paginação, debounce)
+Aplicação web (client-side) para análise exploratória e visualização de dados de arquivos **SPED Fiscal** (Bloco C) inteiramente no navegador: parsing local, agregações, indicadores, gráficos, exportações e persistência offline com **IndexedDB/Dexie**.
 
-> Observação: Há um arquivo de exemplo na raiz do projeto (`MovEstoque_0106_3006_57168607000100.txt`) que pode ser usado para testes rápidos.
+</div>
 
----
+## ✨ Principais funcionalidades
 
-## Visão geral do que a aplicação faz
+- Upload seguro (drag & drop) — o arquivo não sai do seu navegador
+- Parser robusto com suporte aos registros: **0000, C100, C190 e C170**
+- Filtragem automática: somente notas em situação normal (`COD_SIT = 00`) e valores positivos
+- Cálculo de indicadores ("Indicadores") pré‑computados: soma por dia, por CFOP e por dia+CFOP
+- Visualizações interativas (Chart.js + react-chartjs-2):
+   - Entradas por dia
+   - Saídas por dia
+   - Comparativo Entradas vs Saídas
+   - Distribuição de CFOPs (entrada/saída)
+- Drill‑down de CFOP com modal de detalhes (itens e notas relacionadas)
+- Índice rápido (`itensPorCfopIndex`) para abertura instantânea dos detalhes
+- Exportação **CSV** (por CFOP ou consolidado Entradas/Saídas) — com Web Worker para grandes volumes
+- Exportação de gráficos em **PNG** (utilitário em `chartExport.js`)
+- Filtro de período com preenchimento automático (registro 0000) + persistência via query string
+- Modalidade de visualização: Entradas | Saídas | Comparativo
+- Tema claro/escuro com toggle e persistência local
+- **Tooltips Radix UI** padronizados (acessibilidade e consistência)
+- Persistência offline completa (IndexedDB) + carregamento rápido via indicadores
+- Reprocessamento de indicadores sob demanda (por SPED ou todos)
+- Backup/restore do banco local (exporta/importa JSON)
+- Parsing assíncrono com Web Worker (interface permanece responsiva) + fallback síncrono
+- Testes automatizados (Vitest) incluindo regressão de fuso/UTC e parsing de C170
 
-1. Você faz o upload de um arquivo SPED Fiscal (.txt).
-2. O parser lê linha a linha e interpreta:
-   - C100: notas fiscais (data, número, situação, valores, entrada/saída)
-   - C190: resumo por CFOP (CST, CFOP, alíquota, bases e valores)
-3. Apenas documentos com situação “00” e valores > 0 entram no cálculo.
-4. O app agrega os dados em Maps e depois em Arrays:
-   - Entradas/saídas por dia (YYYY-MM-DD)
-   - Entradas/saídas por CFOP (com descrição via mapa estático)
-   - Totais de entradas, saídas e geral, e período analisado
-5. A UI exibe cards de KPIs, gráficos por dia/CFOP e uma tabela detalhada por CFOP com filtro, ordenação e exportação CSV. Há um filtro por período (data início/fim) aplicado a todos os gráficos/tabelas. No Dashboard existem botões de “Exportar Todos (CSV)” para gerar um CSV consolidado de todos os CFOPs de Entradas e de Saídas.
+## 🧬 Arquitetura (alto nível)
 
-Principais arquivos envolvidos:
+```mermaid
+%% Diagrama compacto de fluxo em alto nível
+flowchart TB
+   %% Agrupamentos
+   subgraph Main[Main Thread]
+      FileUpload["FileUpload.jsx\nUpload+Progresso"]
+      Dashboard["Dashboard.jsx\nKPIs+Filtros"]
+      CfopDetalhes["CfopDetalhes.jsx\nDrill‑down+Export"]
+      SpedManager["SpedManager.jsx"]
+      Fallback["parseSpedFile()\n(fallback)"]
+   end
 
-- `src/utils/spedParser.ts`: classe SpedParser (parsing C100/C190, agregações, totais, período, índice `itensPorCfopIndex` para detalhes instantâneos)
-- `src/utils/cfopService.ts`: mapa estático de CFOPs e utilitários (descrição, tipo entrada/saída)
-- `src/utils/dataProcessor.ts`: formatações (moeda/data), preparação de datasets para Chart.js, resumo executivo e filtragem por período
-- `src/components/*`: FileUpload (drag-and-drop), Dashboard, CfopDetalhes (modal com CSV), gráficos
-- `src/workers/spedParserWorker.ts`: Web Worker que processa o arquivo fora da main thread e envia progresso/resultado
+   subgraph Workers[Web Workers]
+      subgraph ParserW[spedParserWorker.ts]
+         Parser["SpedParser\n0000/C100/C190/C170"]
+      end
+      subgraph CSVW[csvExportWorker.ts]
+         CSVExport["CSV Export"]
+      end
+   end
 
----
+   DB[(IndexedDB\nDexie)]
+   ChartExport[chartExport.js]
 
-## Stack técnica
+   %% Fluxos principais
+   FileUpload --> Parser
+   Parser -->|parsed| DB
+   Parser -->|progresso| FileUpload
+   Fallback --> DB
+   SpedManager --> DB
+   Dashboard --> DB
+   Dashboard --> CfopDetalhes
+   CfopDetalhes --> DB
+   Dashboard -->|PNG| ChartExport
+   CfopDetalhes -->|CSV| CSVExport
+   CSVExport -->|Blob| CfopDetalhes
 
-- React 18 + Vite 4 (dev server em `http://localhost:3001`)
-- Tailwind CSS 3 (estilização)
-- Chart.js + react-chartjs-2 (gráficos)
-- date-fns (datas, pt-BR)
-- react-dropzone (upload drag-and-drop)
-- lucide-react (ícones)
-- Vitest (testes unitários)
-- Web Workers (parsing assíncrono com barra de progresso)
-
----
-
-## Requisitos
-
-- Node.js 16+ (recomendado 18+)
-- npm (ou yarn/pnpm, adaptando comandos)
-
----
-
-## Como rodar
-
-1. Instalação de dependências
-
-```bash
-npm install
+   %% Estilos para compactação visual
+   classDef default font-size:11px,fill:#2f2f2f,stroke:#555,color:#f5f5f5;
+   classDef store fill:#1d3557,stroke:#457b9d,color:#f5f5f5;
+   class DB store;
 ```
 
-2. Ambiente de desenvolvimento
+## 🗂 Persistência & Indicadores
+
+Tabelas (Dexie):
+
+- `sped_files` (metadados do arquivo / hash / período)
+- `documents` (notas C100)
+- `items` (itens agregados C190)
+- `items_c170` (itens detalhados C170)
+- `day_aggs` (somas por dia)
+- `cfop_aggs` (somas por CFOP)
+- `day_cfop_aggs` (somas por dia+CFOP)
+
+Carregamento rápido utiliza `getSpedProcessed` que reconstrói um `ProcessedData` diretamente a partir dos agregados. Se ausentes (SPED antigo), faz fallback processando linhas originais (`documents` + `items` / `items_c170`).
+
+Funções de manutenção:
+
+- `recalcularIndicadores(spedId)`
+- `recalcularIndicadoresTodos()`
+- `possuiIndicadores(spedId)`
+
+Aliases de compatibilidade ainda expostos (ex: `rebuildAggregates`).
+
+## 🧪 Testes
+
+Executados com **Vitest** + **fake-indexeddb**.
+
+Cobrem:
+
+- Parsing de datas (regressão contra deslocamento de timezone)
+- Reconstrução de indicadores vs adapter direto
+- Parsing de C170 (itens detalhados)
+- Progresso de parsing (worker / fallback)
+- Funções de filtragem e agregação (`dataProcessor`)
+
+Rodar:
 
 ```bash
+npm test
+```
+
+## 🚀 Quick Start
+
+```bash
+git clone <repo>
+cd sped
+npm install
 npm run dev
 ```
 
-• O Vite está configurado para abrir em `http://localhost:3001`.
+Acesse: http://localhost:3001 (ou porta informada pelo Vite).
 
-3. Build de produção
-
-```bash
-npm run build
-```
-
-• Saída gerada em `dist/`.
-
-4. Preview do build
-
-```bash
-npm run preview
-```
-
----
-
-## Uso da aplicação
-
-1. Gere um arquivo SPED Fiscal (.txt) do seu sistema fiscal contendo os blocos C com registros C100 e C190.
-2. Faça o upload pela área “Arraste um arquivo SPED aqui” ou clique para selecionar.
-3. Aguarde o processamento (local) e navegue pelo dashboard:
-   - Saídas por dia (linha)
-   - Distribuição de CFOPs de saída (rosca)
-   - Entradas por dia/CFOP (se presentes no arquivo)
-   - Tabelas detalhadas por CFOP com filtro/ordenação e exportação CSV
-4. Ajuste o período no topo do dashboard, se necessário:
-   - As datas vêm preenchidas automaticamente com o período do arquivo (lido do registro 0000)
-   - Ao alterar as datas, todo o dashboard é recalculado (resumo, gráficos e tabelas)
-   - O estado do filtro é persistido na URL (facilita compartilhamento e reload)
-5. Use a seleção de visão para alternar:
-   - Saídas: foco em vendas/saídas
-   - Entradas: foco em notas de entrada
-   - Comparativo: gráfico de linhas Entradas vs Saídas
-6. Exporte imagens de gráficos clicando no botão “PNG” no canto do card.
-7. Durante o upload de arquivos grandes, acompanhe a barra de progresso (processamento feito em Web Worker).
-
-Escopo/limites atuais do parser:
-
-- Considera somente situação normal (COD_SIT = '00')
-- Valores menores/iguais a 0 são desconsiderados
-- Datas em DDMMAAAA (C100) são convertidas para Date e padronizadas para YYYY-MM-DD na agregação
-- Descrições de CFOP vêm de um mapa estático (arquivo `cfopService.ts`)
-
----
-
-## Estrutura do projeto
+## 🧾 Estrutura (resumida)
 
 ```
 src/
-  App.jsx                 # Shell principal, orquestra upload e dashboard
-  main.jsx                # Bootstrap React + estilos
-  index.css               # Camadas Tailwind (base, components, utilities)
-  components/
-	 FileUpload.jsx        # Drag-and-drop (react-dropzone)
-	 Dashboard.jsx         # KPIs, gráficos e tabelas
-	 CfopDetalhes.jsx      # Modal com filtro/ordenação e export CSV
-	 charts/
-		VendasPorDiaChart.jsx
-		VendasPorCfopChart.jsx
-		DistribuicaoCfopChart.jsx
-  utils/
-	 spedParser.ts         # Parser C100/C190 e agregações (Maps -> Arrays)
-	 dataProcessor.ts      # Formatações e datasets Chart.js
-	 cfopService.ts        # Descrição e tipo de CFOP (mapa estático)
+   App.jsx                # Shell / Navbar / orquestra fluxo
+   components/
+      FileUpload.jsx       # Upload + progresso
+      Dashboard.jsx        # KPIs, gráficos, filtros
+      CfopDetalhes.jsx     # Modal drill‑down CFOP (C170/C190)
+      SpedManager.jsx      # Gerenciador de SPEDs salvos
+      ui/                  # Button, Card, Tooltip (Radix), Dialog, etc.
+   db/
+      daos/                # spedDao, spedProcessedDao
+      adapters/            # toProcessedData
+      index.ts             # Config Dexie
+   utils/
+      spedParser.ts        # SpedParser (0000/C100/C190/C170)
+      dataProcessor.ts     # Formatação + agregações derivadas
+      cfopService.ts       # Descrições CFOP
+      chartExport.js       # Export PNG
+   workers/
+      spedParserWorker.ts  # Parsing assíncrono
+      csvExportWorker.ts   # Exportação CSV em streaming
+tests/                   # Suite Vitest
+examples/
+   sped_exemplo.txt       # Arquivo SPED fictício para demonstração
 ```
 
-Arquitetura e fluxo de dados (alto nível):
+## 🧪 Arquivo de exemplo
 
-- FileUpload lê o .txt e entrega o conteúdo para `parseSpedFile`
-- SpedParser (executado dentro de um Web Worker) consolida entradas/saídas por dia e CFOP e calcula totais/período sem bloquear a thread principal
-- Dashboard consome `dadosProcessados` e usa `dataProcessor` para preparar os gráficos; possui botões “Exportar Todos (CSV)” em Entradas e Saídas
-- CfopDetalhes utiliza o índice `itensPorCfopIndex` (gerado pelo parser) para abrir instantaneamente os itens de um CFOP; há fallback para reconstrução a partir das notas quando necessário; UI otimizada com memoização, paginação e pesquisa com debounce
-- Após o parsing, o resultado é salvo no IndexedDB; a página “Meus SPEDs” permite listar, carregar e excluir SPEDs.
+Incluímos um arquivo fictício em `examples/sped_exemplo.txt` que cobre:
 
-### Persistência local e Gerenciador de SPEDs
+- Registro 0000 (período)
+- 2 notas de entrada (C100) e 2 de saída (C100) em dias distintos
+- Linhas C190 com CFOPs típicos (1102, 5102, 5405, 1202)
+- Linhas C170 (itens detalhados) com valores e CFOP coerentes
 
-- O app salva automaticamente os SPEDs processados no navegador usando IndexedDB.
-- Acesse “Meus SPEDs” (botão acima do upload) para:
-  - Listar SPEDs salvos, com período e totais
-  - Carregar um SPED salvo no Dashboard
-  - Excluir um SPED e todos os dados relacionados (cascade)
+Use-o para um primeiro teste: abra a aplicação, clique em “Meus SPEDs” para gerenciar ou faça o upload diretamente.
 
-Camada de dados:
+## 🧠 Decisões de design
 
-- Schema v1: `sped_files`, `documents`, `items`
-- Schema v2 (agregados): `day_aggs`, `cfop_aggs`, `day_cfop_aggs`
-- DAO: `addSped`, `listSpeds`, `getSped`, `deleteSped`, `getSpedProcessed`
-- O carregamento pelo gerenciador usa `getSpedProcessed` (agregados) quando disponíveis; há fallback para reconstrução via `documents`/`items` para compatibilidade.
-- Ferramenta de manutenção: na tela “Meus SPEDs”, botões para “Recalcular agregados” (por SPED ou todos). Útil para SPEDs antigos que não tinham agregados.
+| Tema | Decisão |
+|------|---------|
+| Parsing | Linha a linha com streaming lógico em worker para escalabilidade |
+| Datas | Parse local (date-fns) evitando `new Date('yyyy-MM-dd')` e offsets UTC |
+| Performance | Pré-cálculo de indicadores em tabelas auxiliares + fallback compatível |
+| Acessibilidade | Tooltips Radix e foco preservado nos modais (Dialog) |
+| Persistência | Dexie com versionamento transparente e backup JSON |
+| Exportações | Web Worker para CSV grande + Canvas toDataURL para PNG |
 
-#### Backup e migração (JSON)
+## 🛡 Limites atuais
 
-- Exporte um backup completo do IndexedDB clicando em `Exportar backup` em “Meus SPEDs”. Será baixado um arquivo `sped-backup-YYYY-MM-DDTHH-mm-SS.json`.
-- Para importar em outra máquina/navegador, clique em `Importar backup`, selecione o JSON exportado e marque a opção “Limpar banco antes de importar” (recomendado).
-- A importação usa operações em lote e preserva os dados de agregados para carregamento rápido.
-- Duplicidades: se optar por não limpar, pode ocorrer conflito de chaves. A deduplicação por `hash` só é aplicada ao importar via `addSped`; no import de backup o comportamento é de restauração fiel (inclui IDs originais).
+- Não valida assinatura fiscal ou integridade (objetivo analítico, não fiscalizador)
+- Apenas bloco C considerado (foco em movimentações NFe)
+- Não há autenticação (execução local)
+- Cálculos de impostos exibidos conforme aparecem (não recalcula regras fiscais complexas)
 
-### Parsing assíncrono (Web Worker)
+## 🤝 Contribuição
 
-Para evitar travamentos ao processar arquivos grandes (dezenas de MB com centenas de milhares de linhas), o parsing ocorre em um Web Worker:
+Estilo de commits observado: `feat: ...`, `chore: ...`, `feat(db): ...`. Sugestão:
 
-1. O componente `App.jsx` instancia `spedParserWorker.ts` via `new Worker(new URL('./workers/spedParserWorker.ts', import.meta.url), { type: 'module' })`.
-2. O arquivo é lido (FileReader) e seu conteúdo textual é enviado ao worker `{ type: 'parse', content }`.
-3. O worker chama `parseSpedFile(content, onProgress)` e emite eventos intermediários `{ type: 'progress', progress, current, total }`.
-4. A UI exibe uma barra de progresso no `FileUpload` (percentual formatado).
-5. Ao finalizar, o worker envia `{ type: 'result', data, durationMs }` e os gráficos são renderizados.
-6. Se o worker falhar (ex: ambiente não suporta), há fallback síncrono com callback de progresso.
-
-Benefícios:
-
-- UI permanece responsiva (sem congelar inputs/scroll)
-- Feedback contínuo do andamento (percentual de linhas processadas)
-- Escalável para arquivos muito maiores sem alterar a API de alto nível
-
-Fallback: caso o worker não inicialize (erro de construção em algum ambiente), o parser roda no main thread utilizando a mesma API de progresso.
+1. Abra uma issue descrevendo o objetivo
+2. Branch: `feat/<slug>` ou `fix/<slug>`
+3. Commits pequenos e claros
+4. Rodar `npm test` antes do PR
 
 ---
 
-## Contribuição
-
-Sinta-se à vontade para abrir issues e PRs. Sugestão de fluxo:
-
-1. Abra uma issue descrevendo a melhoria/bug
-2. Crie uma branch: `git checkout -b feat/minha-melhoria`
-3. Commits pequenos e objetivos
-4. PR com descrição e prints/gifs quando possível
-
-## Licença
-
-Sem licença definida no repositório. Se desejar, adote MIT ou outra licença compatível.
+Se este projeto ajudou você, considere deixar uma estrela ⭐ ou enviar sugestões!
