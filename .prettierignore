@@ -1,0 +1,8 @@
+dist
+node_modules
+coverage
+*.log
+*.lock
+.DS_Store
+# Build artifacts
+vite.config.ts.timestamp-*

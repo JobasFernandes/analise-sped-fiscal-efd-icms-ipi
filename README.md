@@ -195,7 +195,8 @@ Estilo de commits observado: `feat: ...`, `chore: ...`, `feat(db): ...`. Sugest√
 1. Abra uma issue descrevendo o objetivo
 2. Branch: `feat/<slug>` ou `fix/<slug>`
 3. Commits pequenos e claros
-4. Rodar `npm test` antes do PR
+4. Rodar `npm run lint` e `npm run format` para padronizar o c√≥digo
+5. Rodar `npm test` antes do PR
 
 ---
 
