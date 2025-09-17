@@ -20,7 +20,7 @@ import DistribuicaoCfopChart from "./charts/DistribuicaoCfopChart";
 import CfopDetalhes from "./CfopDetalhes";
 import Card from "./ui/Card";
 import Button from "./ui/Button";
-import DateInput from "./ui/date-input"; /* permanece minúsculo */
+import DateInput from "./ui/date-input";
 
 const Dashboard = ({ dados, arquivo }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);

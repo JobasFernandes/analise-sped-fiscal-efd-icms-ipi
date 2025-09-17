@@ -192,15 +192,23 @@ function App() {
         <div className="w-full px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <BarChart3 className="h-8 w-8 text-primary-800 dark:text-primary-200" />
-              </div>
-              <div className="ml-3">
-                <h1 className="text-xl font-semibold">Analizador SPED</h1>
-                <p className="text-sm text-muted-foreground">
-                  Detalhamento de entradas e saídas de dados fiscais
-                </p>
-              </div>
+              <button
+                onClick={handleReset}
+                className="flex items-center group focus:outline-none"
+                title="Voltar para página inicial"
+              >
+                <img
+                  src="/images/logo.png"
+                  alt="Logo SPED"
+                  className="h-10 w-10 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
+                />
+                <div className="ml-3 text-left">
+                  <h1 className="text-xl font-semibold">Analizador SPED</h1>
+                  <p className="text-sm text-muted-foreground">
+                    Detalhamento de entradas e saídas de dados fiscais
+                  </p>
+                </div>
+              </button>
             </div>
             <div className="flex items-center gap-3">
               <ThemeToggle />
@@ -213,16 +221,15 @@ function App() {
                 <FileText className="h-4 w-4" />
                 Meus SPEDs
               </Button>
-              {dadosProcessados && (
-                <Button
-                  variant="outline"
-                  onClick={handleReset}
-                  className="flex items-center gap-2"
-                >
-                  <Upload className="h-4 w-4" />
-                  Novo Arquivo
-                </Button>
-              )}
+              <Button
+                variant="outline"
+                onClick={handleReset}
+                className="flex items-center gap-2"
+                title="Importar novo arquivo SPED"
+              >
+                <Upload className="h-4 w-4" />
+                Novo Arquivo
+              </Button>
             </div>
           </div>
         </div>
@@ -243,8 +250,8 @@ function App() {
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Faça o upload do seu arquivo SPED fiscal para visualizar
-                análises detalhadas das entradas e saídas por dia e por CFOP de forma
-                interativa e visual.
+                análises detalhadas das entradas e saídas por dia e por CFOP de
+                forma interativa e visual.
               </p>
             </div>
 

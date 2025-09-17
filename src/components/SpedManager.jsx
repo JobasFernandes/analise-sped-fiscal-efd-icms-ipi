@@ -16,8 +16,8 @@ import {
   DialogFooter,
   DialogTitle,
 } from "./ui/dialog";
-import { useToast } from "./ui/use-toast"; /* permanece igual (arquivo minúsculo) */
-import Spinner from "./ui/spinner"; /* permanece igual (arquivo minúsculo) */
+import { useToast } from "./ui/use-toast";
+import Spinner from "./ui/spinner";
 import {
   TooltipProvider,
   Tooltip,
@@ -25,7 +25,7 @@ import {
   TooltipContent,
 } from "./ui/tooltip";
 
-export default function SpedManager({ onLoad }) {
+export default function SpedManager({ onLoad, onBack }) {
   const { toast } = useToast();
   const [speds, setSpeds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -170,6 +170,16 @@ export default function SpedManager({ onLoad }) {
       <div className="mx-auto w-full max-w-6xl flex flex-col border rounded-lg bg-background/60 backdrop-blur-sm min-h-[73vh]">
         <div className="flex flex-wrap gap-3 items-center justify-between px-4 py-3 border-b">
           <h2 className="text-2xl font-bold flex items-center gap-2">
+            {onBack && (
+              <Button
+                variant="ghost"
+                className="-ml-1 px-2 text-sm"
+                onClick={() => onBack?.()}
+                title="Voltar"
+              >
+                ← Voltar
+              </Button>
+            )}
             Meus SPEDs
             <Tooltip>
               <TooltipTrigger asChild>
@@ -262,7 +272,6 @@ export default function SpedManager({ onLoad }) {
           </div>
         </div>
 
-        {/* Lista scrollável */}
         <div className="flex-1 overflow-auto px-2 py-2 space-y-2">
           {loading && <p className="p-4">Carregando...</p>}
           {error && <p className="p-4 text-red-500">{error}</p>}
@@ -372,13 +381,11 @@ export default function SpedManager({ onLoad }) {
           )}
         </div>
 
-        {/* Footer */}
         <div className="border-t px-4 py-3 text-center text-xs text-muted-foreground bg-background/70">
           Analizador SPED - Os dados são processados localmente no seu
           navegador.
         </div>
 
-        {/* Dialogs */}
         <Dialog
           open={Boolean(deleteId)}
           onOpenChange={(o) => !o && setDeleteId(null)}
