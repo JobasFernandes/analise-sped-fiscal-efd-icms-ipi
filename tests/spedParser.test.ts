@@ -1,7 +1,14 @@
 import { describe, it, expect } from "vitest";
 import { parseSpedFile } from "../src/utils/spedParser";
+import { readFileSync } from "node:fs";
+import { join, dirname } from "node:path";
+import { fileURLToPath } from "node:url";
 
 const mkSped = (lines: string[]) => lines.join("\n");
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+const readFixture = (name: string) =>
+  readFileSync(join(__dirname, "fixtures", name), "utf-8");
 
 describe("SpedParser - casos de borda", () => {
   it("ignora documentos com COD_SIT != 00 e valores <= 0, e monta itensPorCfopIndex", () => {
@@ -52,5 +59,34 @@ describe("SpedParser - casos de borda", () => {
     expect(calls.length).toBeGreaterThan(1);
     const last = calls[calls.length - 1];
     expect(last[0]).toBe(last[1]);
+  });
+});
+
+describe("SpedParser - fixtures (happy path + canceladas)", () => {
+  it("deve processar entradas e saídas básicas do SPED (happy path)", () => {
+    const content = readFixture("sample_sped_minimo.txt");
+    const dados: any = parseSpedFile(content);
+    expect(dados.totalGeral).toBeCloseTo(1500.0, 6);
+    expect(dados.totalSaidas).toBeCloseTo(500.0, 6);
+    expect(dados.totalEntradas).toBeCloseTo(1000.0, 6);
+    expect(dados.periodo.inicio).toBeInstanceOf(Date);
+    expect(dados.periodo.fim).toBeInstanceOf(Date);
+    expect(dados.saidasPorDiaArray.length).toBeGreaterThan(0);
+    expect(dados.entradasPorDiaArray.length).toBeGreaterThan(0);
+    const cfopSaida = dados.saidasPorCfopArray.find((c: any) => c.cfop === "5102");
+    const cfopEntrada = dados.entradasPorCfopArray.find((c: any) => c.cfop === "1102");
+    expect(cfopSaida).toBeTruthy();
+    expect(cfopEntrada).toBeTruthy();
+    expect(typeof cfopSaida.descricao).toBe("string");
+  });
+
+  it("deve ignorar notas não normais (canceladas, etc.)", () => {
+    const content = readFixture("sample_sped_cancelada.txt");
+    const dados: any = parseSpedFile(content);
+    expect(dados.totalGeral).toBe(0);
+    expect(dados.totalSaidas).toBe(0);
+    expect(dados.saidas.length).toBe(0);
+    expect(dados.saidasPorDiaArray.length).toBe(0);
+    expect(dados.saidasPorCfopArray.length).toBe(0);
   });
 });
