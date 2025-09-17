@@ -21,9 +21,7 @@ export async function addSped(
   meta: AddSpedMetadata
 ): Promise<number> {
   if (meta.contentHash) {
-    const existing = await db.sped_files
-      .where({ hash: meta.contentHash })
-      .first();
+    const existing = await db.sped_files.where({ hash: meta.contentHash }).first();
     if (existing?.id) return existing.id;
   }
   const periodoInicio = data.periodo?.inicio
@@ -80,6 +78,8 @@ export async function addSped(
         numeroNotasEntrada,
         numeroNotasSaida,
         hash: meta.contentHash || null,
+        companyName: (data as any).companyName || null,
+        cnpj: (data as any).cnpj || null,
       } as SpedFileRow);
 
       const dayAggMap = new Map<string, number>();

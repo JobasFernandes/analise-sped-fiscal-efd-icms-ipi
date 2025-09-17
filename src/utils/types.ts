@@ -93,6 +93,9 @@ export interface ProcessedData {
   vendasPorCfop?: Map<string, number> | undefined;
   vendasPorDiaArray?: DiaValor[];
   vendasPorCfopArray?: CfopValor[];
+  // Metadados do arquivo (registro 0000)
+  companyName?: string;
+  cnpj?: string;
 }
 
 export type FilteredProcessedData = Omit<

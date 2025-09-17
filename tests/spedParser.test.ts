@@ -24,6 +24,17 @@ describe("SpedParser - casos de borda", () => {
     expect(dados.itensPorCfopIndex!["5102"]!.length).toBe(1);
   });
 
+  it("extrai companyName e cnpj do registro 0000", () => {
+    const content = mkSped([
+      "|0000|016|0|01012025|31012025|EMPRESA EXEMPLO LTDA|12345678000199|SP|",
+      "|C100|1|0|00|0|00|55|123|CHAVEA|01012025|01012025|100,00|...|...|...|80,00|",
+      "|C190|000|5102|18,00|100,00|100,00|18,00|",
+    ]);
+    const dados: any = parseSpedFile(content);
+    expect(dados.cnpj).toBe("12345678000199");
+    expect(dados.companyName).toMatch(/EMPRESA EXEMPLO/);
+  });
+
   it("reporta progresso ao processar arquivo grande", () => {
     const linhas = ["|0000|0|0|01012025|31012025|...|"];
     for (let i = 0; i < 300; i++) {

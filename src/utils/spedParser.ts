@@ -35,6 +35,8 @@ export class SpedParser {
     entradasPorDiaCfopArray?: DiaCfopValor[];
     saidasPorDiaCfopArray?: DiaCfopValor[];
     itensPorCfopIndex?: Record<string, ItemDetalhado[]>;
+    companyName?: string;
+    cnpj?: string;
   };
   constructor() {
     this.resetData();
@@ -108,6 +110,24 @@ export class SpedParser {
       const dtFim = this.parseDate(dtFimStr);
       if (dtIni) this.data.periodo.inicio = dtIni;
       if (dtFim) this.data.periodo.fim = dtFim;
+      // Tentativa de extrair CNPJ e Razão Social (layout EFD ICMS IPI)
+      // Estrutura típica: |0000|<COD_VER>|<COD_FIN>|<DT_INI>|<DT_FIN>|<NOME>|<CNPJ>|<...>
+      // Indices podem variar se houver campos vazios, então usamos heurística:
+      // Procurar primeiro campo que parece CNPJ (14 dígitos) após DT_FIN; nome presumido antes dele.
+      const maybeCnpj = campos.find((c: string) => /\d{14}/.test(c));
+      if (maybeCnpj && /\d{14}/.test(maybeCnpj)) {
+        this.data.cnpj = maybeCnpj.padStart(14, "0");
+        // Nome: campo imediatamente anterior ao CNPJ que não é data e contém letras
+        const idx = campos.indexOf(maybeCnpj);
+        if (idx > 0) {
+          const nome = campos[idx - 1];
+          if (nome && /[A-Za-zÀ-ÿ]/.test(nome)) this.data.companyName = nome.trim();
+        }
+      } else {
+        // fallback: posição 5 e 6 conforme layout
+        if (campos[5]) this.data.companyName = campos[5];
+        if (campos[6] && /\d{14}/.test(campos[6])) this.data.cnpj = campos[6];
+      }
     } catch {
       // ignora
     }
@@ -116,9 +136,7 @@ export class SpedParser {
   parseRegistro(line: string) {
     const partes = line.split("|");
     if (!partes || partes.length < 2) return { tipo: null };
-    const campos = partes.filter(
-      (_, index) => index > 0 && index < partes.length - 1
-    );
+    const campos = partes.filter((_, index) => index > 0 && index < partes.length - 1);
     if (campos.length === 0) return { tipo: null };
     const tipo = campos[0];
     return { tipo, campos, linha: line };
@@ -173,8 +191,7 @@ export class SpedParser {
         valorIcms: this.parseValor(campos[6]),
       };
       nota.itens.push(item);
-      if (!this.data.itensPorCfop.has(cfop))
-        this.data.itensPorCfop.set(cfop, []);
+      if (!this.data.itensPorCfop.has(cfop)) this.data.itensPorCfop.set(cfop, []);
       this.data.itensPorCfop.get(cfop)!.push({
         cfop,
         valorOperacao: item.valorOperacao,
@@ -232,13 +249,13 @@ export class SpedParser {
     const cfop = looksLikeCfop(rawCfop10)
       ? rawCfop10
       : looksLikeCfop(rawCst11)
-      ? rawCst11
-      : rawCfop10 || rawCst11 || "";
+        ? rawCst11
+        : rawCfop10 || rawCst11 || "";
     const cstIcms = looksLikeCst(rawCst11)
       ? rawCst11
       : looksLikeCst(rawCst9)
-      ? rawCst9
-      : rawCst11 || rawCst9 || "";
+        ? rawCst9
+        : rawCst11 || rawCst9 || "";
     const valorBcIcms = this.parseValor(rawBc12 ?? rawBc14);
     const aliqIcms = this.parseValor(rawAliq13);
     const valorIcms = this.parseValor(rawIcms15 ?? rawIcms14);
@@ -288,28 +305,22 @@ export class SpedParser {
     );
   }
   acumularSaidaPorDia(dataKey: string, valor: number) {
-    if (!this.data.saidasPorDia.has(dataKey))
-      this.data.saidasPorDia.set(dataKey, 0);
+    if (!this.data.saidasPorDia.has(dataKey)) this.data.saidasPorDia.set(dataKey, 0);
     this.data.saidasPorDia.set(
       dataKey,
       (this.data.saidasPorDia.get(dataKey) || 0) + valor
     );
   }
   acumularEntradaPorCfop(cfop: string, valor: number) {
-    if (!this.data.entradasPorCfop.has(cfop))
-      this.data.entradasPorCfop.set(cfop, 0);
+    if (!this.data.entradasPorCfop.has(cfop)) this.data.entradasPorCfop.set(cfop, 0);
     this.data.entradasPorCfop.set(
       cfop,
       (this.data.entradasPorCfop.get(cfop) || 0) + valor
     );
   }
   acumularSaidaPorCfop(cfop: string, valor: number) {
-    if (!this.data.saidasPorCfop.has(cfop))
-      this.data.saidasPorCfop.set(cfop, 0);
-    this.data.saidasPorCfop.set(
-      cfop,
-      (this.data.saidasPorCfop.get(cfop) || 0) + valor
-    );
+    if (!this.data.saidasPorCfop.has(cfop)) this.data.saidasPorCfop.set(cfop, 0);
+    this.data.saidasPorCfop.set(cfop, (this.data.saidasPorCfop.get(cfop) || 0) + valor);
   }
   acumularEntradaPorDiaCfop(dataKey: string, cfop: string, valor: number) {
     const key = `${dataKey}-${cfop}`;
@@ -347,8 +358,7 @@ export class SpedParser {
         valor: number;
       }>
     ).sort(
-      (a: any, b: any) =>
-        a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
+      (a: any, b: any) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
     );
     this.data.saidasPorDiaArray = Array.from(
       this.data.saidasPorDia.entries() as Iterable<[string, number]>
@@ -371,8 +381,7 @@ export class SpedParser {
         valor: number;
       }>
     ).sort(
-      (a: any, b: any) =>
-        a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
+      (a: any, b: any) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
     );
     this.data.vendas = this.data.saidas;
     this.data.vendasPorDia = this.data.saidasPorDia;

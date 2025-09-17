@@ -13,6 +13,8 @@ export interface SpedFileRow {
   numeroNotasEntrada: number;
   numeroNotasSaida: number;
   hash?: string | null;
+  companyName?: string | null;
+  cnpj?: string | null;
 }
 
 export interface DocumentRow {
@@ -71,11 +73,9 @@ export class SpedDB extends Dexie {
     super("sped-db");
     this.version(1).stores({
       // PK++ for auto-increment
-      sped_files:
-        "++id, importedAt, periodoInicio, periodoFim, totalGeral, hash",
+      sped_files: "++id, importedAt, periodoInicio, periodoFim, totalGeral, hash",
       // string PK (uuid). Indexes: spedId, chaveNfe, dataDocumento
-      documents:
-        "id, spedId, numeroDoc, chaveNfe, dataDocumento, indicadorOperacao",
+      documents: "id, spedId, numeroDoc, chaveNfe, dataDocumento, indicadorOperacao",
       // string PK (uuid). Indexes: spedId, documentId, cfop
       items: "id, spedId, documentId, cfop",
     });
@@ -87,6 +87,10 @@ export class SpedDB extends Dexie {
     this.version(3).stores({
       // string PK (uuid). Indexes: spedId, documentId, cfop
       items_c170: "id, spedId, documentId, cfop, codItem",
+    });
+    // v4: adicionar companyName e cnpj
+    this.version(4).stores({
+      sped_files: "++id, importedAt, periodoInicio, periodoFim, totalGeral, hash, cnpj",
     });
   }
 }

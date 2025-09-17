@@ -18,12 +18,7 @@ import {
 } from "./ui/dialog";
 import { useToast } from "./ui/use-toast";
 import Spinner from "./ui/spinner";
-import {
-  TooltipProvider,
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "./ui/tooltip";
+import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
 
 export default function SpedManager({ onLoad, onBack }) {
   const { toast } = useToast();
@@ -165,6 +160,21 @@ export default function SpedManager({ onLoad, onBack }) {
     }
   };
 
+  const formatBr = (d) => {
+    if (!d) return "?";
+    if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+      const [y, m, dia] = d.split("-");
+      return `${dia}/${m}/${y}`;
+    }
+    try {
+      const dt = new Date(d);
+      if (!isNaN(dt.getTime())) return dt.toLocaleDateString("pt-BR");
+    } catch {
+      /* ignora */
+    }
+    return d;
+  };
+
   return (
     <TooltipProvider delayDuration={150}>
       <div className="mx-auto w-full max-w-6xl flex flex-col border rounded-lg bg-background/60 backdrop-blur-sm min-h-[73vh]">
@@ -192,9 +202,9 @@ export default function SpedManager({ onLoad, onBack }) {
                 </button>
               </TooltipTrigger>
               <TooltipContent side="bottom" align="start" className="max-w-sm">
-                Indicadores = somatórios por dia e por CFOP usados nos gráficos
-                e dashboards. Se algo parecer incorreto ou desatualizado, clique
-                em &quot;Recalcular Indicadores&quot;.
+                Indicadores = somatórios por dia e por CFOP usados nos gráficos e
+                dashboards. Se algo parecer incorreto ou desatualizado, clique em
+                &quot;Recalcular Indicadores&quot;.
               </TooltipContent>
             </Tooltip>
           </h2>
@@ -265,8 +275,8 @@ export default function SpedManager({ onLoad, onBack }) {
                 </span>
               </TooltipTrigger>
               <TooltipContent side="bottom" align="center">
-                Reprocessa os indicadores (totais por dia e CFOP) de todos os
-                SPEDs. Use se notar inconsistências.
+                Reprocessa os indicadores (totais por dia e CFOP) de todos os SPEDs. Use
+                se notar inconsistências.
               </TooltipContent>
             </Tooltip>
           </div>
@@ -276,9 +286,7 @@ export default function SpedManager({ onLoad, onBack }) {
           {loading && <p className="p-4">Carregando...</p>}
           {error && <p className="p-4 text-red-500">{error}</p>}
           {!loading && speds.length === 0 && (
-            <p className="p-4 text-muted-foreground">
-              Nenhum SPED salvo ainda.
-            </p>
+            <p className="p-4 text-muted-foreground">Nenhum SPED salvo ainda.</p>
           )}
           {speds.length > 0 && (
             <div className="divide-y divide-border rounded-md border border-border bg-card/40">
@@ -299,14 +307,35 @@ export default function SpedManager({ onLoad, onBack }) {
                     <div className="flex-1 min-w-0">
                       <div className="font-medium flex items-center gap-2 break-all">
                         <span>{s.filename}</span>
+                        {s.companyName && (
+                          <span
+                            className="text-xs font-normal text-muted-foreground truncate max-w-[220px]"
+                            title={`${s.companyName}`}
+                          >
+                            • {s.companyName}
+                          </span>
+                        )}
+                        {s.cnpj && (
+                          <span
+                            className="text-[10px] px-1 py-0.5 rounded border bg-muted/40"
+                            title="CNPJ"
+                          >
+                            {s.cnpj}
+                          </span>
+                        )}
                         {s._fast && (
                           <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-emerald-600 text-emerald-700 dark:text-emerald-400">
                             Rápido
                           </span>
                         )}
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5">
-                        {importedAtStr}
+                      <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
+                        <div>{importedAtStr}</div>
+                        {(s.periodoInicio || s.periodoFim) && (
+                          <div className="opacity-80">
+                                Período: {formatBr(s.periodoInicio)} → {formatBr(s.periodoFim)}
+                          </div>
+                        )}
                       </div>
                     </div>
                     <div className="flex gap-2 shrink-0 flex-wrap">
@@ -322,9 +351,7 @@ export default function SpedManager({ onLoad, onBack }) {
                             </Button>
                           </span>
                         </TooltipTrigger>
-                        <TooltipContent>
-                          Carrega este SPED para análise.
-                        </TooltipContent>
+                        <TooltipContent>Carrega este SPED para análise.</TooltipContent>
                       </Tooltip>
                       <Tooltip>
                         <TooltipTrigger asChild>
@@ -346,8 +373,8 @@ export default function SpedManager({ onLoad, onBack }) {
                           </span>
                         </TooltipTrigger>
                         <TooltipContent side="left">
-                          Reprocessa os indicadores apenas deste SPED (não
-                          altera as notas).
+                          Reprocessa os indicadores apenas deste SPED (não altera as
+                          notas).
                         </TooltipContent>
                       </Tooltip>
                       <Tooltip>
@@ -382,23 +409,18 @@ export default function SpedManager({ onLoad, onBack }) {
         </div>
 
         <div className="border-t px-4 py-3 text-center text-xs text-muted-foreground bg-background/70">
-          Analizador SPED - Os dados são processados localmente no seu
-          navegador.
+          Analizador SPED - Os dados são processados localmente no seu navegador.
         </div>
 
-        <Dialog
-          open={Boolean(deleteId)}
-          onOpenChange={(o) => !o && setDeleteId(null)}
-        >
+        <Dialog open={Boolean(deleteId)} onOpenChange={(o) => !o && setDeleteId(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Confirmar exclusão</DialogTitle>
             </DialogHeader>
             <DialogBody>
               <p className="text-sm text-muted-foreground">
-                Tem certeza que deseja excluir este SPED e todos os dados
-                relacionados (notas, itens e indicadores)? Essa ação não pode
-                ser desfeita.
+                Tem certeza que deseja excluir este SPED e todos os dados relacionados
+                (notas, itens e indicadores)? Essa ação não pode ser desfeita.
               </p>
             </DialogBody>
             <DialogFooter>
@@ -466,8 +488,8 @@ export default function SpedManager({ onLoad, onBack }) {
                 </label>
                 <p className="text-xs text-muted-foreground">
                   Dica: use &quot;Limpar&quot; para evitar conflitos de chaves e
-                  duplicidades. SPEDs duplicados são evitados quando o backup
-                  possui hashes.
+                  duplicidades. SPEDs duplicados são evitados quando o backup possui
+                  hashes.
                 </p>
               </div>
             </DialogBody>
