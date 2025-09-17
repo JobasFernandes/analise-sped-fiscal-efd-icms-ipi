@@ -10,10 +10,7 @@ Dexie.dependencies.indexedDB = indexedDB as any;
 Dexie.dependencies.IDBKeyRange = IDBKeyRange as any;
 
 let db: any;
-let addSped: any,
-  getSped: any,
-  getSpedProcessed: any,
-  recalcularIndicadores: any;
+let addSped: any, getSped: any, getSpedProcessed: any, recalcularIndicadores: any;
 let toProcessedData: any;
 
 function makeSampleData(): any {
@@ -125,9 +122,7 @@ describe("Agregados v2 e getSpedProcessed", () => {
     const processedByAdapter = toProcessedData(sped, documents, items);
 
     // Totais iguais
-    expect(processedByAggs.totalEntradas).toBe(
-      processedByAdapter.totalEntradas
-    );
+    expect(processedByAggs.totalEntradas).toBe(processedByAdapter.totalEntradas);
     expect(processedByAggs.totalSaidas).toBe(processedByAdapter.totalSaidas);
     expect(processedByAggs.totalGeral).toBe(processedByAdapter.totalGeral);
 

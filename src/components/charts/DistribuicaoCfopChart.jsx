@@ -73,10 +73,7 @@ const DistribuicaoCfopChart = ({
           label: function (context) {
             const value = context.parsed;
             const percentage = ((value / total) * 100).toFixed(1);
-            return [
-              `Valor: ${formatarMoeda(value)}`,
-              `Participação: ${percentage}%`,
-            ];
+            return [`Valor: ${formatarMoeda(value)}`, `Participação: ${percentage}%`];
           },
           afterLabel: function (context) {
             const index = context.dataIndex;
@@ -137,9 +134,7 @@ const DistribuicaoCfopChart = ({
   return (
     <div className="h-64 w-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          {title}
-        </h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         <div className="flex space-x-2">
           <button
             onClick={() => downloadChartImage(chartRef.current, exportFilename)}

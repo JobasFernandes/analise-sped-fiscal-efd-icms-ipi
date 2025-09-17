@@ -33,10 +33,7 @@ const EntradasSaidasComparativoChart = ({
   title = "Comparativo Entradas vs Saídas",
 }) => {
   const chartRef = useRef(null);
-  if (
-    (!entradas || entradas.length === 0) &&
-    (!saidas || saidas.length === 0)
-  ) {
+  if ((!entradas || entradas.length === 0) && (!saidas || saidas.length === 0)) {
     return (
       <div className="flex items-center justify-center h-64 text-gray-500">
         <p>Nenhum dado disponível</p>
@@ -53,8 +50,7 @@ const EntradasSaidasComparativoChart = ({
       },
       tooltip: {
         callbacks: {
-          label: (ctx) =>
-            `${ctx.dataset.label}: ${formatarMoeda(ctx.parsed.y)}`,
+          label: (ctx) => `${ctx.dataset.label}: ${formatarMoeda(ctx.parsed.y)}`,
         },
       },
     },
@@ -64,9 +60,7 @@ const EntradasSaidasComparativoChart = ({
   return (
     <div className="h-64 w-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          {title}
-        </h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         <div className="flex space-x-2">
           <button
             onClick={() => downloadChartImage(chartRef.current, exportFilename)}

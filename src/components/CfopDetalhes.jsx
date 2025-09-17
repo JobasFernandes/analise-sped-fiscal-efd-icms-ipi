@@ -9,11 +9,7 @@ import {
   DialogDescription,
 } from "./ui/dialog";
 import Button from "./ui/Button";
-import {
-  formatarMoeda,
-  formatarData,
-  formatarNumero,
-} from "../utils/dataProcessor";
+import { formatarMoeda, formatarData, formatarNumero } from "../utils/dataProcessor";
 
 const removerAcentos = (texto) => {
   if (!texto) return "";
@@ -39,10 +35,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
   const [pageSize, setPageSize] = useState(200);
 
   useEffect(() => {
-    const t = setTimeout(
-      () => setFiltroTextoDebounced(filtroTextoInput.trim()),
-      200
-    );
+    const t = setTimeout(() => setFiltroTextoDebounced(filtroTextoInput.trim()), 200);
     return () => clearTimeout(t);
   }, [filtroTextoInput]);
 
@@ -53,8 +46,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
 
   const itensDetalhados = useMemo(() => {
     if (!hasData) return [];
-    let base =
-      (dados.itensPorCfopIndex && dados.itensPorCfopIndex[cfop.cfop]) || null;
+    let base = (dados.itensPorCfopIndex && dados.itensPorCfopIndex[cfop.cfop]) || null;
     if (!base) {
       const todasNotas = [
         ...(dados.entradas || []),
@@ -109,12 +101,8 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
       let valorB = b[campo];
 
       if (campo === "dataDocumento" || campo === "dataEntradaSaida") {
-        const ta = valorA
-          ? new Date(valorA).getTime()
-          : Number.NEGATIVE_INFINITY;
-        const tb = valorB
-          ? new Date(valorB).getTime()
-          : Number.NEGATIVE_INFINITY;
+        const ta = valorA ? new Date(valorA).getTime() : Number.NEGATIVE_INFINITY;
+        const tb = valorB ? new Date(valorB).getTime() : Number.NEGATIVE_INFINITY;
         if (ta !== tb) return (ta - tb) * mult;
         return 0;
       }
@@ -219,8 +207,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
   };
 
   const valorTotalFiltrado = useMemo(
-    () =>
-      itensOrdenados.reduce((acc, item) => acc + (item.valorOperacao || 0), 0),
+    () => itensOrdenados.reduce((acc, item) => acc + (item.valorOperacao || 0), 0),
     [itensOrdenados]
   );
   const totalIcms = useMemo(
@@ -265,18 +252,14 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
               <FileText className="h-8 w-8 text-blue-500" />
               <div>
                 <div className="flex items-center space-x-2 mb-1">
-                  <h2 className="text-xl font-bold">
-                    Detalhes do CFOP {cfop.cfop}
-                  </h2>
+                  <h2 className="text-xl font-bold">Detalhes do CFOP {cfop.cfop}</h2>
                   <span
                     className={`px-2 py-1 text-xs font-medium rounded-full ${tipoOperacao.bg} ${tipoOperacao.cor}`}
                   >
                     {tipoOperacao.tipo}
                   </span>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  {cfop.descricao}
-                </p>
+                <p className="text-sm text-muted-foreground">{cfop.descricao}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -300,21 +283,15 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
             <div className="flex items-center space-x-3">
               <FileText className="h-6 w-6 text-blue-500" />
               <div>
-                <p className="text-sm text-muted-foreground">
-                  Total de Registros
-                </p>
-                <p className="text-lg font-bold">
-                  {formatarNumero(totalItens, 0)}
-                </p>
+                <p className="text-sm text-muted-foreground">Total de Registros</p>
+                <p className="text-lg font-bold">{formatarNumero(totalItens, 0)}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
               <DollarSign className="h-6 w-6 text-green-500" />
               <div>
                 <p className="text-sm text-muted-foreground">Valor Total</p>
-                <p className="text-lg font-bold">
-                  {formatarMoeda(valorTotalFiltrado)}
-                </p>
+                <p className="text-lg font-bold">{formatarMoeda(valorTotalFiltrado)}</p>
               </div>
             </div>
             <div className="flex items-center space-x-3">
@@ -491,9 +468,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
             {itensOrdenados.length === 0 && (
               <div className="text-center py-12">
                 <FileText className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-medium mb-2">
-                  Nenhum registro encontrado
-                </h3>
+                <h3 className="text-lg font-medium mb-2">Nenhum registro encontrado</h3>
                 <p className="text-muted-foreground">
                   {filtroTextoDebounced
                     ? "Tente ajustar os filtros de pesquisa"
@@ -505,8 +480,8 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
 
           <div className="px-4 py-3 border-t border-border bg-card flex flex-col md:flex-row md:items-center md:justify-between gap-3">
             <div className="text-xs text-muted-foreground">
-              Página {page} de {pageCount} • Exibindo {paginaAtualItens.length}{" "}
-              de {totalItens}
+              Página {page} de {pageCount} • Exibindo {paginaAtualItens.length} de{" "}
+              {totalItens}
             </div>
             <div className="flex items-center gap-2">
               <Button
@@ -545,8 +520,8 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
           <DialogFooter>
             <div className="flex items-center justify-between text-xs text-muted-foreground">
               <div>
-                Exibindo {itensFiltrados.length} de {totalItens} registros •
-                Total: {formatarMoeda(valorTotalFiltrado)}
+                Exibindo {itensFiltrados.length} de {totalItens} registros • Total:{" "}
+                {formatarMoeda(valorTotalFiltrado)}
               </div>
               <div>
                 CFOP {cfop.cfop} • {cfop.descricao}
@@ -645,9 +620,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                     key={idx}
                     className={idx % 2 === 0 ? "bg-background" : "bg-muted/20"}
                   >
-                    <td className="px-4 py-2 text-sm">
-                      {it.numItem || idx + 1}
-                    </td>
+                    <td className="px-4 py-2 text-sm">{it.numItem || idx + 1}</td>
                     <td className="px-4 py-2 text-sm">{it.codItem || ""}</td>
                     <td className="px-4 py-2 text-sm">{it.descrCompl || ""}</td>
                     <td className="px-4 py-2 text-sm text-right">

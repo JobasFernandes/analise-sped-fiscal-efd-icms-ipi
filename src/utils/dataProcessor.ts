@@ -63,10 +63,7 @@ export function agruparPorPeriodo(
   periodo: "dia" | "semana" | "mes" = "dia"
 ): Array<{ periodo: string; valor: number; count: number }> {
   if (!vendasPorDia || vendasPorDia.length === 0) return [];
-  const grupos = new Map<
-    string,
-    { periodo: string; valor: number; count: number }
-  >();
+  const grupos = new Map<string, { periodo: string; valor: number; count: number }>();
   vendasPorDia.forEach((venda) => {
     let chave: string;
     const data = parseISO(venda.data);
@@ -91,9 +88,7 @@ export function agruparPorPeriodo(
     grupo.valor += venda.valor;
     grupo.count += 1;
   });
-  return Array.from(grupos.values()).sort((a, b) =>
-    a.periodo.localeCompare(b.periodo)
-  );
+  return Array.from(grupos.values()).sort((a, b) => a.periodo.localeCompare(b.periodo));
 }
 
 export function filtrarPorPeriodo(
@@ -171,11 +166,8 @@ export function gerarDataset(
   }
 }
 
-export function prepararDadosVendasPorDia(
-  vendasPorDia: DiaValor[]
-): ChartDataShape {
-  if (!vendasPorDia || vendasPorDia.length === 0)
-    return { labels: [], datasets: [] };
+export function prepararDadosVendasPorDia(vendasPorDia: DiaValor[]): ChartDataShape {
+  if (!vendasPorDia || vendasPorDia.length === 0) return { labels: [], datasets: [] };
   const labels = vendasPorDia.map((item) => formatarData(item.data, "dd/MM"));
   const dataset = gerarDataset(vendasPorDia, "Vendas", "line");
   return { labels, datasets: [dataset] };
@@ -185,8 +177,7 @@ export function prepararDadosVendasPorCfop(
   vendasPorCfop: Array<{ cfop: string; descricao: string; valor: number }>,
   limite: number = 10
 ): ChartDataShape {
-  if (!vendasPorCfop || vendasPorCfop.length === 0)
-    return { labels: [], datasets: [] };
+  if (!vendasPorCfop || vendasPorCfop.length === 0) return { labels: [], datasets: [] };
   const topCfops = vendasPorCfop.slice(0, limite);
   const labels = topCfops.map(
     (item) => `${item.cfop}\n${item.descricao.substring(0, 30)}...`
@@ -199,8 +190,7 @@ export function prepararDadosDistribuicaoCfop(
   vendasPorCfop: Array<{ cfop: string; descricao?: string; valor: number }>,
   limite: number = 8
 ): ChartDataShape {
-  if (!vendasPorCfop || vendasPorCfop.length === 0)
-    return { labels: [], datasets: [] };
+  if (!vendasPorCfop || vendasPorCfop.length === 0) return { labels: [], datasets: [] };
   let dados = [...vendasPorCfop];
   if (dados.length > limite) {
     const principais = dados.slice(0, limite - 1);
@@ -225,8 +215,7 @@ export function calcularTendencia(dados: Array<{ valor: number }>) {
     };
   const primeiro = dados[0].valor;
   const ultimo = dados[dados.length - 1].valor;
-  const percentual =
-    primeiro === 0 ? 0 : ((ultimo - primeiro) / primeiro) * 100;
+  const percentual = primeiro === 0 ? 0 : ((ultimo - primeiro) / primeiro) * 100;
   if (percentual > 5)
     return {
       tendencia: "crescimento",
@@ -264,11 +253,8 @@ export function prepararDadosEntradasPorDia(
   };
 }
 
-export function prepararDadosSaidasPorDia(
-  saidasPorDia: DiaValor[]
-): ChartDataShape {
-  if (!saidasPorDia || saidasPorDia.length === 0)
-    return { labels: [], datasets: [] };
+export function prepararDadosSaidasPorDia(saidasPorDia: DiaValor[]): ChartDataShape {
+  if (!saidasPorDia || saidasPorDia.length === 0) return { labels: [], datasets: [] };
   const labels = saidasPorDia.map((item) => formatarData(item.data));
   const valores = saidasPorDia.map((item) => item.valor);
   return {
@@ -291,8 +277,7 @@ export function prepararDadosEntradasSaidasPorDia(
   saidasPorDia?: DiaValor[]
 ): ChartDataShape {
   const todasDatas = new Set<string>();
-  if (entradasPorDia)
-    entradasPorDia.forEach((item) => todasDatas.add(item.data));
+  if (entradasPorDia) entradasPorDia.forEach((item) => todasDatas.add(item.data));
   if (saidasPorDia) saidasPorDia.forEach((item) => todasDatas.add(item.data));
   const datasOrdenadas = Array.from(todasDatas).sort();
   if (datasOrdenadas.length === 0) return { labels: [], datasets: [] };
@@ -303,9 +288,7 @@ export function prepararDadosEntradasSaidasPorDia(
     entradasPorDia.forEach((item) => entradasMap.set(item.data, item.valor));
   if (saidasPorDia)
     saidasPorDia.forEach((item) => saidasMap.set(item.data, item.valor));
-  const valoresEntradas = datasOrdenadas.map(
-    (data) => entradasMap.get(data) || 0
-  );
+  const valoresEntradas = datasOrdenadas.map((data) => entradasMap.get(data) || 0);
   const valoresSaidas = datasOrdenadas.map((data) => saidasMap.get(data) || 0);
   return {
     labels,
@@ -381,8 +364,7 @@ export function prepararDadosDistribuicaoCfopSaida(
   saidasPorCfop: Array<{ cfop: string; valor: number }>,
   limite: number = 8
 ): ChartDataShape {
-  if (!saidasPorCfop || saidasPorCfop.length === 0)
-    return { labels: [], datasets: [] };
+  if (!saidasPorCfop || saidasPorCfop.length === 0) return { labels: [], datasets: [] };
   const dadosLimitados = saidasPorCfop.slice(0, limite);
   const labels = dadosLimitados.map((item) => `CFOP ${item.cfop}`);
   const valores = dadosLimitados.map((item) => item.valor);
@@ -437,22 +419,16 @@ export function gerarResumoExecutivo(
   } = dadosProcessados;
   const numeroNotasEntrada = entradas ? entradas.length : 0;
   const numeroNotasSaida = saidas ? saidas.length : 0;
-  const numeroNotas = vendas
-    ? vendas.length
-    : numeroNotasEntrada + numeroNotasSaida;
+  const numeroNotas = vendas ? vendas.length : numeroNotasEntrada + numeroNotasSaida;
   const ticketMedio = numeroNotas > 0 ? (totalGeral || 0) / numeroNotas : 0;
   const cfopPrincipal =
-    vendasPorCfopArray && vendasPorCfopArray.length > 0
-      ? vendasPorCfopArray[0]
-      : null;
+    vendasPorCfopArray && vendasPorCfopArray.length > 0 ? vendasPorCfopArray[0] : null;
   const cfopPrincipalEntrada =
     entradasPorCfopArray && entradasPorCfopArray.length > 0
       ? entradasPorCfopArray[0]
       : null;
   const cfopPrincipalSaida =
-    saidasPorCfopArray && saidasPorCfopArray.length > 0
-      ? saidasPorCfopArray[0]
-      : null;
+    saidasPorCfopArray && saidasPorCfopArray.length > 0 ? saidasPorCfopArray[0] : null;
   const periodoAnalise =
     periodo && periodo.inicio && periodo.fim
       ? `${formatarData(periodo.inicio)} a ${formatarData(periodo.fim)}`
@@ -512,11 +488,11 @@ export function filtrarDadosProcessadosPorPeriodo(
     inRange(d.data)
   );
 
-  const entradasPorDiaCfopArray = (dados.entradasPorDiaCfopArray || []).filter(
-    (d) => inRange(d.data)
+  const entradasPorDiaCfopArray = (dados.entradasPorDiaCfopArray || []).filter((d) =>
+    inRange(d.data)
   );
-  const saidasPorDiaCfopArray = (dados.saidasPorDiaCfopArray || []).filter(
-    (d) => inRange(d.data)
+  const saidasPorDiaCfopArray = (dados.saidasPorDiaCfopArray || []).filter((d) =>
+    inRange(d.data)
   );
 
   const agruparCfop = (arr: Array<{ cfop: string; valor: number }>) => {
@@ -539,8 +515,7 @@ export function filtrarDadosProcessadosPorPeriodo(
     }>
   ) =>
     (notas || []).filter((n) => {
-      const refDate: Date | null | undefined =
-        n?.dataEntradaSaida || n?.dataDocumento;
+      const refDate: Date | null | undefined = n?.dataEntradaSaida || n?.dataDocumento;
       if (!refDate) return true;
       const ref = format(refDate, "yyyy-MM-dd");
       return inRange(ref);

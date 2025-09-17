@@ -7,8 +7,7 @@ function stripUseClient() {
     name: "strip-use-client",
     transform(code, id) {
       if (!id.includes("node_modules")) return;
-      const starts =
-        code.startsWith('"use client"') || code.startsWith("'use client'");
+      const starts = code.startsWith('"use client"') || code.startsWith("'use client'");
       if (!starts) return;
       const ms = new MagicString(code);
       const firstLineEnd = code.indexOf("\n");

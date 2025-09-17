@@ -2,11 +2,7 @@ import React from "react";
 
 export default function Spinner({ className = "h-4 w-4" }) {
   return (
-    <svg
-      className={`animate-spin ${className}`}
-      viewBox="0 0 24 24"
-      aria-hidden
-    >
+    <svg className={`animate-spin ${className}`} viewBox="0 0 24 24" aria-hidden>
       <circle
         className="opacity-25"
         cx="12"

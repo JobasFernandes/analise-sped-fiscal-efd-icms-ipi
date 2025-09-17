@@ -108,20 +108,13 @@ export async function getSpedProcessed(spedId: number): Promise<ProcessedData> {
   const entradasPorDiaCfopArray = dayCfopAggs
     .filter((d) => d.dir === "0")
     .map((d) => ({ data: d.date, cfop: d.cfop, valor: d.valor }))
-    .sort(
-      (a, b) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
-    );
+    .sort((a, b) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop));
   const saidasPorDiaCfopArray = dayCfopAggs
     .filter((d) => d.dir === "1")
     .map((d) => ({ data: d.date, cfop: d.cfop, valor: d.valor }))
-    .sort(
-      (a, b) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
-    );
+    .sort((a, b) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop));
 
-  const totalEntradas = entradasPorDiaArray.reduce(
-    (acc, i) => acc + i.valor,
-    0
-  );
+  const totalEntradas = entradasPorDiaArray.reduce((acc, i) => acc + i.valor, 0);
   const totalSaidas = saidasPorDiaArray.reduce((acc, i) => acc + i.valor, 0);
   const totalGeral = totalEntradas + totalSaidas;
 

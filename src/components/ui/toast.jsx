@@ -27,10 +27,7 @@ function ToastProvider({ children }) {
     [remove]
   );
 
-  const value = useMemo(
-    () => ({ toast: push, dismiss: remove }),
-    [push, remove]
-  );
+  const value = useMemo(() => ({ toast: push, dismiss: remove }), [push, remove]);
 
   return (
     <ToastCtx.Provider value={value}>
@@ -43,8 +40,8 @@ function ToastProvider({ children }) {
               t.variant === "destructive"
                 ? "border-red-600 bg-red-600/10"
                 : t.variant === "success"
-                ? "border-emerald-600 bg-emerald-600/10"
-                : "border-border"
+                  ? "border-emerald-600 bg-emerald-600/10"
+                  : "border-border"
             }`}
           >
             {t.title && <div className="font-medium text-sm">{t.title}</div>}

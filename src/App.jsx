@@ -237,21 +237,16 @@ function App() {
 
       <main className="w-full px-2 sm:px-3 lg:px-4 py-4">
         {showManager ? (
-          <SpedManager
-            onBack={() => setShowManager(false)}
-            onLoad={handleLoadFromDb}
-          />
+          <SpedManager onBack={() => setShowManager(false)} onLoad={handleLoadFromDb} />
         ) : !dadosProcessados ? (
           <div className="max-w-4xl mx-auto">
             <div className="text-center mb-8">
               <FileText className="h-16 w-16 text-primary-600 dark:text-primary-300 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold mb-2">
-                Análise Detalhada SPED Fiscal
-              </h2>
+              <h2 className="text-3xl font-bold mb-2">Análise Detalhada SPED Fiscal</h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Faça o upload do seu arquivo SPED fiscal para visualizar
-                análises detalhadas das entradas e saídas por dia e por CFOP de
-                forma interativa e visual.
+                Faça o upload do seu arquivo SPED fiscal para visualizar análises
+                detalhadas das entradas e saídas por dia e por CFOP de forma interativa
+                e visual.
               </p>
             </div>
 
@@ -267,12 +262,10 @@ function App() {
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 bg-blue-100 dark:bg-blue-900/40">
                   <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-300" />
                 </div>
-                <h3 className="text-lg font-medium mb-2">
-                  Gráficos Interativos
-                </h3>
+                <h3 className="text-lg font-medium mb-2">Gráficos Interativos</h3>
                 <p className="text-muted-foreground">
-                  Visualize suas vendas através de gráficos de linha, barras e
-                  pizza interativos
+                  Visualize suas vendas através de gráficos de linha, barras e pizza
+                  interativos
                 </p>
               </div>
 
@@ -282,8 +275,7 @@ function App() {
                 </div>
                 <h3 className="text-lg font-medium mb-2">Análise por CFOP</h3>
                 <p className="text-muted-foreground">
-                  Entenda a distribuição das suas vendas por Código Fiscal de
-                  Operação
+                  Entenda a distribuição das suas vendas por Código Fiscal de Operação
                 </p>
               </div>
 
@@ -291,9 +283,7 @@ function App() {
                 <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 bg-purple-100 dark:bg-purple-900/30">
                   <Upload className="h-6 w-6 text-purple-600 dark:text-purple-300" />
                 </div>
-                <h3 className="text-lg font-medium mb-2">
-                  Processamento Rápido
-                </h3>
+                <h3 className="text-lg font-medium mb-2">Processamento Rápido</h3>
                 <p className="text-muted-foreground">
                   Upload seguro e processamento local dos seus dados fiscais
                 </p>
@@ -314,8 +304,8 @@ function App() {
           <div className="text-center text-sm text-muted-foreground">
             <p>Analizador SPED - Ferramenta para análise de dados fiscais</p>
             <p className="mt-1">
-              Os dados são processados localmente no seu navegador e não são
-              enviados para servidores externos.
+              Os dados são processados localmente no seu navegador e não são enviados
+              para servidores externos.
             </p>
           </div>
         </div>

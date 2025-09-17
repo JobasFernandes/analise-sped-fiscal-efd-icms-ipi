@@ -5,8 +5,7 @@ const STORAGE_KEY = "ui-theme-preference";
 
 export function ThemeProvider({ children, defaultTheme = "system" }) {
   const getSystemTheme = () =>
-    window.matchMedia &&
-    window.matchMedia("(prefers-color-scheme: dark)").matches
+    window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches
       ? "dark"
       : "light";
 
@@ -51,8 +50,6 @@ export function ThemeProvider({ children, defaultTheme = "system" }) {
     [theme]
   );
 
-  return (
-    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
-  );
+  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
 }
 export default ThemeProvider;

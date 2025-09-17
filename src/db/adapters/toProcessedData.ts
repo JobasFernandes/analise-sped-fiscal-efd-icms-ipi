@@ -151,23 +151,11 @@ export function toProcessedData(
         if (isEntrada) {
           addDia(mapEntradasPorDia, dataKey, valor);
           addCfop(mapEntradasPorCfop, cfop, valor);
-          addDiaCfop(
-            mapEntradasPorDiaCfop,
-            `${dataKey}-${cfop}`,
-            dataKey,
-            cfop,
-            valor
-          );
+          addDiaCfop(mapEntradasPorDiaCfop, `${dataKey}-${cfop}`, dataKey, cfop, valor);
         } else {
           addDia(mapSaidasPorDia, dataKey, valor);
           addCfop(mapSaidasPorCfop, cfop, valor);
-          addDiaCfop(
-            mapSaidasPorDiaCfop,
-            `${dataKey}-${cfop}`,
-            dataKey,
-            cfop,
-            valor
-          );
+          addDiaCfop(mapSaidasPorDiaCfop, `${dataKey}-${cfop}`, dataKey, cfop, valor);
         }
       }
     }
@@ -197,10 +185,7 @@ export function toProcessedData(
   const entradasPorDiaCfopArray = toDiaCfopArray(mapEntradasPorDiaCfop);
   const saidasPorDiaCfopArray = toDiaCfopArray(mapSaidasPorDiaCfop);
 
-  const totalEntradas = entradasPorDiaArray.reduce(
-    (acc, i) => acc + i.valor,
-    0
-  );
+  const totalEntradas = entradasPorDiaArray.reduce((acc, i) => acc + i.valor, 0);
   const totalSaidas = saidasPorDiaArray.reduce((acc, i) => acc + i.valor, 0);
   const totalGeral = totalEntradas + totalSaidas;
 
@@ -210,8 +195,7 @@ export function toProcessedData(
   };
 
   const itensPorCfopIndex: Record<string, any[]> = {};
-  for (const [cfop, arr] of itensPorCfop.entries())
-    itensPorCfopIndex[cfop] = arr;
+  for (const [cfop, arr] of itensPorCfop.entries()) itensPorCfopIndex[cfop] = arr;
 
   return {
     entradas,

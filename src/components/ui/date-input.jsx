@@ -106,11 +106,7 @@ const DateInput = ({
           )}
           {...props}
         >
-          <span
-            className={
-              displayValue ? "text-foreground" : "text-muted-foreground"
-            }
-          >
+          <span className={displayValue ? "text-foreground" : "text-muted-foreground"}>
             {displayValue || placeholder}
           </span>
           <Calendar className="h-4 w-4 text-muted-foreground" />
@@ -168,8 +164,7 @@ const DateInput = ({
               ))}
 
               {days.map((date, i) => {
-                const isSelected =
-                  selectedDate && isSameDay(date, selectedDate);
+                const isSelected = selectedDate && isSameDay(date, selectedDate);
                 const isTodayDate = isToday(date);
                 const disabled = isDateDisabled(date);
 

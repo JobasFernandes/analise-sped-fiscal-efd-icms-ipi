@@ -3,12 +3,7 @@ import { useDropzone } from "react-dropzone";
 import { Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { Progress } from "./ui/Progress";
 
-const FileUpload = ({
-  onFileSelect,
-  loading = false,
-  error = null,
-  progress = 0,
-}) => {
+const FileUpload = ({ onFileSelect, loading = false, error = null, progress = 0 }) => {
   const onDrop = useCallback(
     (acceptedFiles, rejectedFiles) => {
       if (rejectedFiles.length > 0) {
@@ -107,9 +102,7 @@ const FileUpload = ({
     if (loading) {
       return {
         primary: "Processando arquivo...",
-        secondary: `Analisando linhas do SPED (${(progress * 100).toFixed(
-          1
-        )}%)`,
+        secondary: `Analisando linhas do SPED (${(progress * 100).toFixed(1)}%)`,
       };
     }
     if (isDragAccept) {
@@ -162,9 +155,7 @@ const FileUpload = ({
           <div className="flex">
             <AlertCircle className="h-5 w-5 text-red-500 mr-2 flex-shrink-0 mt-0.5" />
             <div>
-              <h4 className="text-sm font-medium text-red-800">
-                Erro no arquivo
-              </h4>
+              <h4 className="text-sm font-medium text-red-800">Erro no arquivo</h4>
               <div className="mt-1 text-sm text-red-700">
                 {fileRejections.map((rejection, index) => (
                   <div key={index}>
@@ -210,8 +201,8 @@ const FileUpload = ({
                 <li>Faça o upload do arquivo aqui para análise</li>
               </ol>
               <p className="mt-2 font-medium">
-                O arquivo deve conter os blocos C (Documentos Fiscais) com
-                registros C100 e C190.
+                O arquivo deve conter os blocos C (Documentos Fiscais) com registros
+                C100 e C190.
               </p>
               <p className="mt-2 font-medium">
                 Para analise ainda mais detalhada, considere incluir o registro C170

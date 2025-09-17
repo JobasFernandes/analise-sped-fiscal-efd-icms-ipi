@@ -34,10 +34,7 @@ export function DialogContent({ className, children, ...props }) {
 export function DialogHeader({ className, ...props }) {
   return (
     <div
-      className={clsx(
-        "flex items-center justify-between p-6 border-b",
-        className
-      )}
+      className={clsx("flex items-center justify-between p-6 border-b", className)}
       {...props}
     />
   );

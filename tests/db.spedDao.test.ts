@@ -75,17 +75,11 @@ describe("DAO SPED", () => {
     deleteSped = daoMod.deleteSped;
     await db.open();
     // limpar tabelas para estado limpo
-    await db.transaction(
-      "rw",
-      db.sped_files,
-      db.documents,
-      db.items,
-      async () => {
-        await db.items.clear();
-        await db.documents.clear();
-        await db.sped_files.clear();
-      }
-    );
+    await db.transaction("rw", db.sped_files, db.documents, db.items, async () => {
+      await db.items.clear();
+      await db.documents.clear();
+      await db.sped_files.clear();
+    });
   });
   afterAll(async () => {
     await db.close();

@@ -77,9 +77,7 @@ describe("Progresso do parser", () => {
     linhas += gerarLinhaC190({ valor: "50,00" }) + "\n";
 
     const chamadas: Array<{ current: number; total: number }> = [];
-    parseSpedFile(linhas, (current, total) =>
-      chamadas.push({ current, total })
-    );
+    parseSpedFile(linhas, (current, total) => chamadas.push({ current, total }));
 
     expect(chamadas.length).toBe(1);
     expect(chamadas[0].current).toBe(chamadas[0].total);

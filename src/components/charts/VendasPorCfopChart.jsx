@@ -9,20 +9,10 @@ import {
   Legend,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
-import {
-  prepararDadosVendasPorCfop,
-  formatarMoeda,
-} from "../../utils/dataProcessor";
+import { prepararDadosVendasPorCfop, formatarMoeda } from "../../utils/dataProcessor";
 import { downloadChartImage } from "../../utils/chartExport";
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend
-);
+ChartJS.register(CategoryScale, LinearScale, BarElement, Title, Tooltip, Legend);
 
 const VendasPorCfopChart = ({
   dados,
@@ -129,9 +119,7 @@ const VendasPorCfopChart = ({
   return (
     <div className="h-80 w-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          {title}
-        </h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         <div className="flex space-x-2">
           <button
             onClick={() => downloadChartImage(chartRef.current, exportFilename)}

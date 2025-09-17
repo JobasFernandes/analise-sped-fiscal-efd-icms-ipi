@@ -48,12 +48,8 @@ describe("dataProcessor - filtros e totais", () => {
     expect(filtrado.totalEntradas).toBe(30);
     expect(filtrado.totalSaidas).toBe(100);
     expect(filtrado.totalGeral).toBe(130);
-    expect(
-      filtrado.entradasPorCfopArray?.reduce((a, i) => a + i.valor, 0)
-    ).toBe(30);
-    expect(filtrado.saidasPorCfopArray?.reduce((a, i) => a + i.valor, 0)).toBe(
-      100
-    );
+    expect(filtrado.entradasPorCfopArray?.reduce((a, i) => a + i.valor, 0)).toBe(30);
+    expect(filtrado.saidasPorCfopArray?.reduce((a, i) => a + i.valor, 0)).toBe(100);
   });
 });
 

@@ -11,10 +11,7 @@ import {
   Filler,
 } from "chart.js";
 import { Line } from "react-chartjs-2";
-import {
-  prepararDadosVendasPorDia,
-  formatarMoeda,
-} from "../../utils/dataProcessor";
+import { prepararDadosVendasPorDia, formatarMoeda } from "../../utils/dataProcessor";
 import { downloadChartImage } from "../../utils/chartExport";
 
 ChartJS.register(
@@ -139,17 +136,13 @@ const VendasPorDiaChart = ({
   return (
     <div className="h-64 w-full">
       <div className="flex items-center justify-between mb-2">
-        <h3 className="text-sm font-medium text-muted-foreground">
-          {title}
-        </h3>
+        <h3 className="text-sm font-medium text-muted-foreground">{title}</h3>
         <div className="flex space-x-2">
           <button
             onClick={() =>
               downloadChartImage(
                 chartRef.current,
-                (exportFilename || labelOverride)
-                  .replace(/\s+/g, "_")
-                  .toLowerCase()
+                (exportFilename || labelOverride).replace(/\s+/g, "_").toLowerCase()
               )
             }
             className="px-2 py-1 text-xs rounded bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-700 shadow-sm text-gray-700 dark:text-gray-200"

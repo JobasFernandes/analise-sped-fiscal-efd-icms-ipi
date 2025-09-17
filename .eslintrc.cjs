@@ -14,7 +14,7 @@ module.exports = {
     react: {
       version: "detect",
     },
-    'import/resolver': {
+    "import/resolver": {
       node: {
         extensions: [".js", ".jsx", ".ts", ".tsx", ".json"],
       },
@@ -29,10 +29,7 @@ module.exports = {
   rules: {
     "react/react-in-jsx-scope": "off",
     "react/prop-types": "off",
-    "no-unused-vars": [
-      "error",
-      { argsIgnorePattern: "^_", varsIgnorePattern: "^_" },
-    ],
+    "no-unused-vars": ["error", { argsIgnorePattern: "^_", varsIgnorePattern: "^_" }],
     "no-console": ["warn", { allow: ["warn", "error"] }],
     "import/no-unresolved": ["error", { commonjs: true, caseSensitive: true }],
   },

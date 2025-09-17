@@ -1,59 +1,38 @@
 {
-	"version": "2.0.0",
-	"tasks": [
-		{
-			"label": "Run vitest",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"test",
-				"--silent"
-			]
-		},
-		{
-			"label": "Run tests after CSV worker",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"test",
-				"--silent"
-			]
-		},
-		{
-			"label": "Run vitest",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"test",
-				"--silent"
-			],
-			"problemMatcher": [
-				"$tsc"
-			]
-		},
-		{
-			"label": "Run tests after CSV worker",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"test",
-				"--silent"
-			],
-			"problemMatcher": [
-				"$tsc"
-			]
-		},
-		{
-			"label": "Run vitest",
-			"type": "shell",
-			"command": "npm",
-			"args": [
-				"test",
-				"--silent"
-			],
-			"problemMatcher": [
-				"$tsc"
-			]
-		}
-	]
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Run vitest",
+      "type": "shell",
+      "command": "npm",
+      "args": ["test", "--silent"]
+    },
+    {
+      "label": "Run tests after CSV worker",
+      "type": "shell",
+      "command": "npm",
+      "args": ["test", "--silent"]
+    },
+    {
+      "label": "Run vitest",
+      "type": "shell",
+      "command": "npm",
+      "args": ["test", "--silent"],
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "Run tests after CSV worker",
+      "type": "shell",
+      "command": "npm",
+      "args": ["test", "--silent"],
+      "problemMatcher": ["$tsc"]
+    },
+    {
+      "label": "Run vitest",
+      "type": "shell",
+      "command": "npm",
+      "args": ["test", "--silent"],
+      "problemMatcher": ["$tsc"]
+    }
+  ]
 }

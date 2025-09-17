@@ -109,10 +109,7 @@ const Dashboard = ({ dados, arquivo }) => {
       for (const cfopChave of Object.keys(indice)) {
         for (const item of indice[cfopChave]) {
           const isEntrada = parseInt(cfopChave, 10) < 4000;
-          if (
-            (tipo === "entradas" && isEntrada) ||
-            (tipo === "saidas" && !isEntrada)
-          ) {
+          if ((tipo === "entradas" && isEntrada) || (tipo === "saidas" && !isEntrada)) {
             itens.push(item);
           }
         }
@@ -133,10 +130,9 @@ const Dashboard = ({ dados, arquivo }) => {
     let worker;
     try {
       // @ts-ignore
-      worker = new Worker(
-        new URL("../workers/csvExportWorker.ts", import.meta.url),
-        { type: "module" }
-      );
+      worker = new Worker(new URL("../workers/csvExportWorker.ts", import.meta.url), {
+        type: "module",
+      });
     } catch (e) {
       worker = null;
     }
@@ -171,8 +167,7 @@ const Dashboard = ({ dados, arquivo }) => {
         .join("\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
       const link = document.createElement("a");
-      const periodoTag =
-        resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
+      const periodoTag = resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
       link.href = URL.createObjectURL(blob);
       link.download = `cfops_${tipo}_${periodoTag}.csv`;
       link.click();
@@ -181,8 +176,7 @@ const Dashboard = ({ dados, arquivo }) => {
 
     const encoder = new TextEncoder();
     const partes = [];
-    const periodoTag =
-      resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
+    const periodoTag = resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
     const filename = `cfops_${tipo}_${periodoTag}.csv`;
 
     const onMessage = (e) => {
@@ -262,9 +256,7 @@ const Dashboard = ({ dados, arquivo }) => {
             </div>
 
             <div className="min-w-[140px] text-right">
-              <p className="text-xs font-medium text-muted-foreground mb-1">
-                Período
-              </p>
+              <p className="text-xs font-medium text-muted-foreground mb-1">Período</p>
               <p className="text-sm font-semibold text-foreground h-9 flex items-center justify-end">
                 {resumo.periodoAnalise || "Não identificado"}
               </p>
@@ -299,9 +291,7 @@ const Dashboard = ({ dados, arquivo }) => {
               <p className="text-sm font-medium text-muted-foreground">
                 Total de Saídas
               </p>
-              <p className="text-2xl font-bold">
-                {formatarMoeda(resumo.totalSaidas)}
-              </p>
+              <p className="text-2xl font-bold">{formatarMoeda(resumo.totalSaidas)}</p>
             </div>
           </div>
         </Card>
@@ -312,9 +302,7 @@ const Dashboard = ({ dados, arquivo }) => {
               <TrendingDown className="h-8 w-8 text-green-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-muted-foreground">
-                NFe Entrada
-              </p>
+              <p className="text-sm font-medium text-muted-foreground">NFe Entrada</p>
               <p className="text-2xl font-bold">
                 {formatarNumero(resumo.numeroNotasEntrada, 0)}
               </p>
@@ -328,9 +316,7 @@ const Dashboard = ({ dados, arquivo }) => {
               <TrendingUp className="h-8 w-8 text-blue-600" />
             </div>
             <div className="ml-4">
-              <p className="text-sm font-medium text-muted-foreground">
-                NFe Saída
-              </p>
+              <p className="text-sm font-medium text-muted-foreground">NFe Saída</p>
               <p className="text-2xl font-bold">
                 {formatarNumero(resumo.numeroNotasSaida, 0)}
               </p>
@@ -347,8 +333,7 @@ const Dashboard = ({ dados, arquivo }) => {
               labelOverride="Saídas"
               tooltipPrefix="Saídas"
               dados={
-                dadosFiltrados.saidasPorDiaArray ||
-                dadosFiltrados.vendasPorDiaArray
+                dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray
               }
             />
           </Card>
@@ -356,8 +341,7 @@ const Dashboard = ({ dados, arquivo }) => {
             <DistribuicaoCfopChart
               title="Distribuição CFOPs de Saída"
               dados={
-                dadosFiltrados.saidasPorCfopArray ||
-                dadosFiltrados.vendasPorCfopArray
+                dadosFiltrados.saidasPorCfopArray || dadosFiltrados.vendasPorCfopArray
               }
             />
           </Card>
@@ -388,8 +372,7 @@ const Dashboard = ({ dados, arquivo }) => {
               title="Comparativo Entradas vs Saídas"
               entradas={dadosFiltrados.entradasPorDiaArray}
               saidas={
-                dadosFiltrados.saidasPorDiaArray ||
-                dadosFiltrados.vendasPorDiaArray
+                dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray
               }
             />
           </Card>
@@ -447,9 +430,7 @@ const Dashboard = ({ dados, arquivo }) => {
                     return (
                       <tr
                         key={item.cfop}
-                        className={
-                          index % 2 === 0 ? "bg-background" : "bg-muted/20"
-                        }
+                        className={index % 2 === 0 ? "bg-background" : "bg-muted/20"}
                       >
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           {item.cfop}
@@ -533,9 +514,7 @@ const Dashboard = ({ dados, arquivo }) => {
                     return (
                       <tr
                         key={item.cfop}
-                        className={
-                          index % 2 === 0 ? "bg-background" : "bg-muted/20"
-                        }
+                        className={index % 2 === 0 ? "bg-background" : "bg-muted/20"}
                       >
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                           {item.cfop}
@@ -570,9 +549,8 @@ const Dashboard = ({ dados, arquivo }) => {
 
       <div className="bg-muted/40 rounded-lg p-4 text-xs text-muted-foreground">
         <p>
-          <strong>Dados processados:</strong> {resumo.numeroNotasEntrada} NFe de
-          entrada e {resumo.numeroNotasSaida} NFe de saída |
-          <strong> Total Entradas:</strong>{" "}
+          <strong>Dados processados:</strong> {resumo.numeroNotasEntrada} NFe de entrada
+          e {resumo.numeroNotasSaida} NFe de saída |<strong> Total Entradas:</strong>{" "}
           {formatarMoeda(resumo.totalEntradas)} |<strong> Total Saídas:</strong>{" "}
           {formatarMoeda(resumo.totalSaidas)} |<strong> Período:</strong>{" "}
           {resumo.periodoAnalise || "N/A"}

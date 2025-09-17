@@ -7,10 +7,8 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Compra para industrialização de mercadoria recebida anteriormente em consignação industrial",
   "1113":
     "Compra para comercialização, de mercadoria recebida anteriormente em consignação mercantil",
-  "1116":
-    "Compra para industrialização originada de encomenda para recebimento futuro",
-  "1117":
-    "Compra para comercialização originada de encomenda para recebimento futuro",
+  "1116": "Compra para industrialização originada de encomenda para recebimento futuro",
+  "1117": "Compra para comercialização originada de encomenda para recebimento futuro",
   "1118": "Compra para industrialização efetuada por terceiros",
   "1120":
     "Compra para industrialização, efetuada para entrega ao adquirente originário, em venda à ordem",
@@ -39,8 +37,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "1253": "Compra de energia elétrica por estabelecimento comercial",
   "1254":
     "Compra de energia elétrica por estabelecimento prestador de serviço de transporte",
-  "1255":
-    "Compra de energia elétrica por estabelecimento prestador de serviços",
+  "1255": "Compra de energia elétrica por estabelecimento prestador de serviços",
   "1256": "Compra de energia elétrica por estabelecimento de produtor rural",
   "1257": "Compra de energia elétrica para consumo por demanda contratada",
   "1401":
@@ -63,8 +60,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Retorno de produção do estabelecimento, remetida para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
   "1415":
     "Retorno de mercadoria adquirida ou recebida de terceiros, remetida para venda fora do estabelecimento em operação com mercadoria sujeita ao regime de substituição tributária",
-  "1451":
-    "Compra de combustível ou lubrificante para industrialização subsequente",
+  "1451": "Compra de combustível ou lubrificante para industrialização subsequente",
   "1452": "Compra de combustível ou lubrificante para comercialização",
   "1501": "Entrada de mercadoria recebida com fim específico de exportação",
   "1503":
@@ -80,8 +76,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Retorno de bem do ativo imobilizado remetido para uso fora do estabelecimento",
   "1555":
     "Entrada de bem do ativo imobilizado de terceiro, remetido para uso no estabelecimento",
-  "1556":
-    "Compra de combustível ou lubrificante para industrialização subsequente",
+  "1556": "Compra de combustível ou lubrificante para industrialização subsequente",
   "1557": "Compra de combustível ou lubrificante para comercialização",
   "1601": "Recebimento, por transferência, de classificação fiscal",
   "1602":
@@ -93,8 +88,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Compra de combustível ou lubrificante de produção do estabelecimento destinado à comercialização",
   "1653":
     "Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte",
-  "1658":
-    "Transferência de combustível e lubrificante de produção do estabelecimento",
+  "1658": "Transferência de combustível e lubrificante de produção do estabelecimento",
   "1659": "Entrada de combustível ou lubrificante para armazenagem",
   "1660":
     "Devolução de venda de combustível ou lubrificante destinado à industrialização na unidade federativa de origem",
@@ -134,14 +128,12 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "1921": "Retorno de vasilhame ou sacaria",
   "1922":
     "Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura",
-  "1923":
-    "Entrada de mercadoria recebida do vendedor remetente na venda à ordem",
+  "1923": "Entrada de mercadoria recebida do vendedor remetente na venda à ordem",
   "1924":
     "Entrada para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente",
   "1925":
     "Retorno de mercadoria remetida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente",
-  "1949":
-    "Outra entrada de mercadoria ou prestação de serviço não especificada",
+  "1949": "Outra entrada de mercadoria ou prestação de serviço não especificada",
 
   // CFOPs interestaduais (2xxx)
   "2101": "Compra para industrialização",
@@ -150,10 +142,8 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Compra para industrialização de mercadoria recebida anteriormente em consignação industrial",
   "2113":
     "Compra para comercialização, de mercadoria recebida anteriormente em consignação mercantil",
-  "2116":
-    "Compra para industrialização originada de encomenda para recebimento futuro",
-  "2117":
-    "Compra para comercialização originada de encomenda para recebimento futuro",
+  "2116": "Compra para industrialização originada de encomenda para recebimento futuro",
+  "2117": "Compra para comercialização originada de encomenda para recebimento futuro",
   "2118": "Compra para industrialização efetuada por terceiros",
   "2120":
     "Compra para industrialização, efetuada para entrega ao adquirente originário, em venda à ordem",
@@ -182,8 +172,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "2253": "Compra de energia elétrica por estabelecimento comercial",
   "2254":
     "Compra de energia elétrica por estabelecimento prestador de serviço de transporte",
-  "2255":
-    "Compra de energia elétrica por estabelecimento prestador de serviços",
+  "2255": "Compra de energia elétrica por estabelecimento prestador de serviços",
   "2256": "Compra de energia elétrica por estabelecimento de produtor rural",
   "2257": "Compra de energia elétrica para consumo por demanda contratada",
   "2401":
@@ -220,8 +209,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Retorno de bem do ativo imobilizado remetido para uso fora do estabelecimento",
   "2555":
     "Entrada de bem do ativo imobilizado de terceiro, remetido para uso no estabelecimento",
-  "2556":
-    "Compra de combustível ou lubrificante para industrialização subsequente",
+  "2556": "Compra de combustível ou lubrificante para industrialização subsequente",
   "2557": "Compra de combustível ou lubrificante para comercialização",
   "2651":
     "Compra de combustível ou lubrificante de produção do estabelecimento destinado à industrialização na unidade federativa de origem",
@@ -229,8 +217,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Compra de combustível ou lubrificante de produção do estabelecimento destinado à comercialização",
   "2653":
     "Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte",
-  "2658":
-    "Transferência de combustível e lubrificante de produção do estabelecimento",
+  "2658": "Transferência de combustível e lubrificante de produção do estabelecimento",
   "2659": "Entrada de combustível ou lubrificante para armazenagem",
   "2660":
     "Devolução de venda de combustível ou lubrificante destinado à industrialização na unidade federativa de origem",
@@ -268,14 +255,12 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "2921": "Retorno de vasilhame ou sacaria",
   "2922":
     "Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura",
-  "2923":
-    "Entrada de mercadoria recebida do vendedor remetente na venda à ordem",
+  "2923": "Entrada de mercadoria recebida do vendedor remetente na venda à ordem",
   "2924":
     "Entrada para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente",
   "2925":
     "Retorno de mercadoria remetida para industrialização por conta e ordem do adquirente da mercadoria, quando aquela não transitar pelo estabelecimento do adquirente",
-  "2949":
-    "Outra entrada de mercadoria ou prestação de serviço não especificada",
+  "2949": "Outra entrada de mercadoria ou prestação de serviço não especificada",
 
   // CFOPs do exterior (3xxx)
   "3101": "Compra para industrialização",
@@ -290,8 +275,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "3205": "Anulação de valor relativo à prestação de serviço de comunicação",
   "3206": "Anulação de valor relativo à prestação de serviço de transporte",
   "3207": "Anulação de valor relativo à venda de energia elétrica",
-  "3211":
-    "Devolução de venda de produção do estabelecimento sob o regime de drawback",
+  "3211": "Devolução de venda de produção do estabelecimento sob o regime de drawback",
   "3212":
     "Devolução de venda de mercadoria adquirida ou recebida de terceiros sob o regime de drawback",
   "3251": "Compra de energia elétrica para distribuição ou comercialização",
@@ -304,15 +288,13 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Aquisição de serviço de transporte por estabelecimento de prestador de serviço de comunicação",
   "3355":
     "Aquisição de serviço de transporte por estabelecimento de geradora ou de distribuidora de energia elétrica",
-  "3356":
-    "Aquisição de serviço de transporte por estabelecimento de produtor rural",
+  "3356": "Aquisição de serviço de transporte por estabelecimento de produtor rural",
   "3501": "Entrada de mercadoria recebida com fim específico de exportação",
   "3503":
     "Entrada decorrente de devolução de produto industrializado fora do estabelecimento",
   "3551": "Compra de bem para o ativo imobilizado",
   "3553": "Devolução de venda de bem do ativo imobilizado",
-  "3556":
-    "Compra de combustível ou lubrificante para industrialização subsequente",
+  "3556": "Compra de combustível ou lubrificante para industrialização subsequente",
   "3557": "Compra de combustível ou lubrificante para comercialização",
   "3651":
     "Compra de combustível ou lubrificante de produção do estabelecimento destinado à industrialização na unidade federativa de origem",
@@ -322,14 +304,12 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Compra de combustível ou lubrificante de produção do estabelecimento destinado a não contribuinte",
   "3930":
     "Lançamento efetuado a título de entrada de bem sob amparo de regime especial aduaneiro de admissão temporária",
-  "3949":
-    "Outra entrada de mercadoria ou prestação de serviço não especificada",
+  "3949": "Outra entrada de mercadoria ou prestação de serviço não especificada",
 
   // CFOPs de SAÍDA (5xxx, 6xxx, 7xxx)
   "5101": "Venda de produção do estabelecimento",
   "5102": "Venda de mercadoria adquirida ou recebida de terceiros",
-  "5103":
-    "Venda de produção do estabelecimento, efetuada fora do estabelecimento",
+  "5103": "Venda de produção do estabelecimento, efetuada fora do estabelecimento",
   "5104":
     "Venda de mercadoria adquirida ou recebida de terceiros, efetuada fora do estabelecimento",
   "5105": "Venda de produção do estabelecimento que não deva por ela transitar",
@@ -375,18 +355,15 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Transferência de mercadoria adquirida ou recebida de terceiros, que não deva por ele transitar",
   "5201": "Devolução de compra para industrialização",
   "5202": "Devolução de compra para comercialização",
-  "5208":
-    "Devolução de mercadoria recebida em transferência para industrialização",
-  "5209":
-    "Devolução de mercadoria recebida em transferência para comercialização",
+  "5208": "Devolução de mercadoria recebida em transferência para industrialização",
+  "5209": "Devolução de mercadoria recebida em transferência para comercialização",
   "5210": "Devolução de compra para utilização na prestação de serviço",
   "5251": "Venda de energia elétrica para distribuição ou comercialização",
   "5252": "Venda de energia elétrica para estabelecimento industrial",
   "5253": "Venda de energia elétrica para estabelecimento comercial",
   "5254":
     "Venda de energia elétrica para estabelecimento prestador de serviço de transporte",
-  "5255":
-    "Venda de energia elétrica para estabelecimento prestador de serviços",
+  "5255": "Venda de energia elétrica para estabelecimento prestador de serviços",
   "5256": "Venda de energia elétrica para estabelecimento de produtor rural",
   "5257": "Venda de energia elétrica para consumo por demanda contratada",
   "5258": "Venda de energia elétrica a não contribuinte",
@@ -398,8 +375,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Prestação de serviço de comunicação a estabelecimento de prestador de serviço de transporte",
   "5305":
     "Prestação de serviço de comunicação a estabelecimento de geradora ou de distribuidora de energia elétrica",
-  "5306":
-    "Prestação de serviço de comunicação a estabelecimento de produtor rural",
+  "5306": "Prestação de serviço de comunicação a estabelecimento de produtor rural",
   "5307": "Prestação de serviço de comunicação a não contribuinte",
   "5351": "Prestação de serviço de transporte",
   "5352": "Prestação de serviço de transporte a estabelecimento industrial",
@@ -408,8 +384,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Prestação de serviço de transporte a estabelecimento de prestador de serviço de comunicação",
   "5355":
     "Prestação de serviço de transporte a estabelecimento de geradora ou de distribuidora de energia elétrica",
-  "5356":
-    "Prestação de serviço de transporte a estabelecimento de produtor rural",
+  "5356": "Prestação de serviço de transporte a estabelecimento de produtor rural",
   "5357": "Prestação de serviço de transporte a não contribuinte",
   "5359":
     "Prestação de serviço de transporte a contribuinte ou a não contribuinte quando a mercadoria transportada está dispensada de emissão de nota fiscal",
@@ -434,8 +409,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Remessa de produção do estabelecimento para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
   "5415":
     "Remessa de mercadoria adquirida ou recebida de terceiros para venda fora do estabelecimento, em operação com mercadoria sujeita ao regime de substituição tributária",
-  "5501":
-    "Remessa de produção do estabelecimento, com fim específico de exportação",
+  "5501": "Remessa de produção do estabelecimento, com fim específico de exportação",
   "5502":
     "Remessa de mercadoria adquirida ou recebida de terceiros, com fim específico de exportação",
   "5503":
@@ -447,8 +421,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "5551": "Venda de bem do ativo imobilizado",
   "5552": "Transferência de bem do ativo imobilizado",
   "5553": "Devolução de compra de bem para o ativo imobilizado",
-  "5554":
-    "Remessa de bem do ativo imobilizado para uso fora do estabelecimento",
+  "5554": "Remessa de bem do ativo imobilizado para uso fora do estabelecimento",
   "5555":
     "Devolução de bem do ativo imobilizado de terceiro, recebido para uso no estabelecimento",
   "5556":
@@ -477,8 +450,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Venda de combustível ou lubrificante de produção do estabelecimento destinado a consumidor ou usuário final",
   "5657":
     "Venda de combustível ou lubrificante de produção do estabelecimento destinado a distribuidor",
-  "5658":
-    "Transferência de combustível e lubrificante de produção do estabelecimento",
+  "5658": "Transferência de combustível e lubrificante de produção do estabelecimento",
   "5659": "Saída de combustível ou lubrificante para armazenagem",
   "5660":
     "Devolução de compra de combustível ou lubrificante adquirido para industrialização",
@@ -487,8 +459,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "5662":
     "Devolução de compra de combustível ou lubrificante adquirido por não contribuinte",
   "5663": "Remessa para industrialização por encomenda",
-  "5664":
-    "Remessa de combustível ou lubrificante para venda fora do estabelecimento",
+  "5664": "Remessa de combustível ou lubrificante para venda fora do estabelecimento",
   "5665": "Retorno de combustível ou lubrificante remetido para armazenagem",
   "5901": "Remessa para industrialização por encomenda",
   "5902": "Retorno de mercadoria utilizada na industrialização por encomenda",
@@ -498,8 +469,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "5906": "Retorno de mercadoria remetida para beneficiamento",
   "5907":
     "Retorno da mercadoria remetida para industrialização quando vinculada a ordem de produção",
-  "5908":
-    "Remessa de mercadoria para depósito em depósito fechado ou armazém geral",
+  "5908": "Remessa de mercadoria para depósito em depósito fechado ou armazém geral",
   "5909":
     "Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral",
   "5910": "Bonificação, doação ou brinde",
@@ -519,8 +489,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "5921": "Remessa de vasilhame ou sacaria",
   "5922":
     "Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura",
-  "5923":
-    "Remessa de mercadoria por conta e ordem de terceiros, em venda à ordem",
+  "5923": "Remessa de mercadoria por conta e ordem de terceiros, em venda à ordem",
   "5924":
     "Remessa para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente",
   "5925":
@@ -537,8 +506,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   // CFOPs interestaduais de saída (6xxx)
   "6101": "Venda de produção do estabelecimento",
   "6102": "Venda de mercadoria adquirida ou recebida de terceiros",
-  "6103":
-    "Venda de produção do estabelecimento, efetuada fora do estabelecimento",
+  "6103": "Venda de produção do estabelecimento, efetuada fora do estabelecimento",
   "6104":
     "Venda de mercadoria adquirida ou recebida de terceiros, efetuada fora do estabelecimento",
   "6105": "Venda de produção do estabelecimento que não deva por ela transitar",
@@ -587,18 +555,15 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Transferência de mercadoria adquirida ou recebida de terceiros, que não deva por ele transitar",
   "6201": "Devolução de compra para industrialização",
   "6202": "Devolução de compra para comercialização",
-  "6208":
-    "Devolução de mercadoria recebida em transferência para industrialização",
-  "6209":
-    "Devolução de mercadoria recebida em transferência para comercialização",
+  "6208": "Devolução de mercadoria recebida em transferência para industrialização",
+  "6209": "Devolução de mercadoria recebida em transferência para comercialização",
   "6210": "Devolução de compra para utilização na prestação de serviço",
   "6251": "Venda de energia elétrica para distribuição ou comercialização",
   "6252": "Venda de energia elétrica para estabelecimento industrial",
   "6253": "Venda de energia elétrica para estabelecimento comercial",
   "6254":
     "Venda de energia elétrica para estabelecimento prestador de serviço de transporte",
-  "6255":
-    "Venda de energia elétrica para estabelecimento prestador de serviços",
+  "6255": "Venda de energia elétrica para estabelecimento prestador de serviços",
   "6256": "Venda de energia elétrica para estabelecimento de produtor rural",
   "6257": "Venda de energia elétrica para consumo por demanda contratada",
   "6258": "Venda de energia elétrica a não contribuinte",
@@ -610,8 +575,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Prestação de serviço de comunicação a estabelecimento de prestador de serviço de transporte",
   "6305":
     "Prestação de serviço de comunicação a estabelecimento de geradora ou de distribuidora de energia elétrica",
-  "6306":
-    "Prestação de serviço de comunicação a estabelecimento de produtor rural",
+  "6306": "Prestação de serviço de comunicação a estabelecimento de produtor rural",
   "6307": "Prestação de serviço de comunicação a não contribuinte",
   "6351": "Prestação de serviço de transporte",
   "6352": "Prestação de serviço de transporte a estabelecimento industrial",
@@ -620,8 +584,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Prestação de serviço de transporte a estabelecimento de prestador de serviço de comunicação",
   "6355":
     "Prestação de serviço de transporte a estabelecimento de geradora ou de distribuidora de energia elétrica",
-  "6356":
-    "Prestação de serviço de transporte a estabelecimento de produtor rural",
+  "6356": "Prestação de serviço de transporte a estabelecimento de produtor rural",
   "6357": "Prestação de serviço de transporte a não contribuinte",
   "6359":
     "Prestação de serviço de transporte a contribuinte ou a não contribuinte quando a mercadoria transportada está dispensada de emissão de nota fiscal",
@@ -647,8 +610,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Remessa de produção do estabelecimento para venda fora do estabelecimento em operação com produto sujeito ao regime de substituição tributária",
   "6415":
     "Remessa de mercadoria adquirida ou recebida de terceiros para venda fora do estabelecimento, em operação com mercadoria sujeita ao regime de substituição tributária",
-  "6501":
-    "Remessa de produção do estabelecimento, com fim específico de exportação",
+  "6501": "Remessa de produção do estabelecimento, com fim específico de exportação",
   "6502":
     "Remessa de mercadoria adquirida ou recebida de terceiros, com fim específico de exportação",
   "6503":
@@ -660,8 +622,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "6551": "Venda de bem do ativo imobilizado",
   "6552": "Transferência de bem do ativo imobilizado",
   "6553": "Devolução de compra de bem para o ativo imobilizado",
-  "6554":
-    "Remessa de bem do ativo imobilizado para uso fora do estabelecimento",
+  "6554": "Remessa de bem do ativo imobilizado para uso fora do estabelecimento",
   "6555":
     "Devolução de bem do ativo imobilizado de terceiro, recebido para uso no estabelecimento",
   "6556":
@@ -682,8 +643,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
     "Venda de combustível ou lubrificante de produção do estabelecimento destinado a consumidor ou usuário final",
   "6657":
     "Venda de combustível ou lubrificante de produção do estabelecimento destinado a distribuidor",
-  "6658":
-    "Transferência de combustível e lubrificante de produção do estabelecimento",
+  "6658": "Transferência de combustível e lubrificante de produção do estabelecimento",
   "6659": "Saída de combustível ou lubrificante para armazenagem",
   "6660":
     "Devolução de compra de combustível ou lubrificante adquirido para industrialização",
@@ -692,8 +652,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "6662":
     "Devolução de compra de combustível ou lubrificante adquirido por não contribuinte",
   "6663": "Remessa para industrialização por encomenda",
-  "6664":
-    "Remessa de combustível ou lubrificante para venda fora do estabelecimento",
+  "6664": "Remessa de combustível ou lubrificante para venda fora do estabelecimento",
   "6665": "Retorno de combustível ou lubrificante remetido para armazenagem",
   "6901": "Remessa para industrialização por encomenda",
   "6902": "Retorno de mercadoria utilizada na industrialização por encomenda",
@@ -703,8 +662,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "6906": "Retorno de mercadoria remetida para beneficiamento",
   "6907":
     "Retorno da mercadoria remetida para industrialização quando vinculada a ordem de produção",
-  "6908":
-    "Remessa de mercadoria para depósito em depósito fechado ou armazém geral",
+  "6908": "Remessa de mercadoria para depósito em depósito fechado ou armazém geral",
   "6909":
     "Retorno de mercadoria remetida para depósito em depósito fechado ou armazém geral",
   "6910": "Bonificação, doação ou brinde",
@@ -724,8 +682,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "6921": "Remessa de vasilhame ou sacaria",
   "6922":
     "Lançamento efetuado a título de simples faturamento decorrente de venda para entrega futura",
-  "6923":
-    "Remessa de mercadoria por conta e ordem de terceiros, em venda à ordem",
+  "6923": "Remessa de mercadoria por conta e ordem de terceiros, em venda à ordem",
   "6924":
     "Remessa para industrialização por conta e ordem do adquirente da mercadoria, quando esta não transitar pelo estabelecimento do adquirente",
   "6925":
@@ -742,8 +699,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   // CFOPs do exterior (7xxx)
   "7101": "Venda de produção do estabelecimento",
   "7102": "Venda de mercadoria adquirida ou recebida de terceiros",
-  "7105":
-    "Venda de produção do estabelecimento, que não deva por ela transitar",
+  "7105": "Venda de produção do estabelecimento, que não deva por ela transitar",
   "7106":
     "Venda de mercadoria adquirida ou recebida de terceiros, que não deva por ela transitar",
   "7127": "Venda de produção do estabelecimento sob o regime de drawback",
@@ -763,8 +719,7 @@ export const CFOPS_ESTATICOS: Record<string, string> = {
   "7301":
     "Prestação de serviço de comunicação para execução de serviços da mesma natureza",
   "7358": "Prestação de serviço de transporte",
-  "7501":
-    "Exportação de mercadorias recebidas com fim específico de exportação",
+  "7501": "Exportação de mercadorias recebidas com fim específico de exportação",
   "7504": "Exportação de mercadorias para formação de lote no exterior",
   "7551": "Venda de bem do ativo imobilizado",
   "7553": "Devolução de compra de bem para o ativo imobilizado",
