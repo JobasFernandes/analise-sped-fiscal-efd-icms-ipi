@@ -239,16 +239,14 @@ function App() {
             <div className="text-center mb-8">
               <FileText className="h-16 w-16 text-primary-600 dark:text-primary-300 mx-auto mb-4" />
               <h2 className="text-3xl font-bold mb-2">
-                Análise de Vendas SPED Fiscal
+                Análise Detalhada SPED Fiscal
               </h2>
               <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
                 Faça o upload do seu arquivo SPED fiscal para visualizar
-                análises detalhadas das vendas por dia e por CFOP de forma
+                análises detalhadas das entradas e saídas por dia e por CFOP de forma
                 interativa e visual.
               </p>
             </div>
-
-            {/* Botão 'Meus SPEDs' movido para o navbar */}
 
             <FileUpload
               onFileSelect={handleFileSelect}

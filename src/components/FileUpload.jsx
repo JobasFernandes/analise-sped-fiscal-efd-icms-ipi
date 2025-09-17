@@ -213,6 +213,10 @@ const FileUpload = ({
                 O arquivo deve conter os blocos C (Documentos Fiscais) com
                 registros C100 e C190.
               </p>
+              <p className="mt-2 font-medium">
+                Para analise ainda mais detalhada, considere incluir o registro C170
+                (itens do documento fiscal).
+              </p>
             </div>
           </div>
         </div>
