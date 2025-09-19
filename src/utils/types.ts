@@ -152,3 +152,62 @@ export interface ResumoExecutivo {
     descricao: string;
   } | null;
 }
+
+export interface XmlItemResumo {
+  cfop: string;
+  vProd: number;
+  qCom?: number;
+  qBCMonoRet?: number;
+  vICMSMonoRet?: number;
+}
+
+export interface XmlNotaResumo {
+  chave: string;
+  dhEmi: string;
+  dhRecbto?: string;
+  dataEmissao: string;
+  modelo: string;
+  serie: string;
+  numero: string;
+  cnpjEmit?: string;
+  cnpjDest?: string;
+  autorizada: boolean;
+  valorTotalProduto: number;
+  qBCMonoRetTotal?: number;
+  vICMSMonoRetTotal?: number;
+  itens: XmlItemResumo[];
+}
+
+export interface XmlAggDiaCfop {
+  data: string;
+  cfop: string;
+  vProd: number;
+  qBCMonoRet?: number;
+  vICMSMonoRet?: number;
+}
+
+export interface XmlComparativoLinha {
+  data: string;
+  cfop: string;
+  xmlVProd: number;
+  spedValorOperacao: number;
+  diffAbs: number;
+  diffPerc: number;
+}
+
+export type DivergenciaLinhaTipo = "AMBOS" | "SOMENTE_XML" | "SOMENTE_SPED";
+export interface DivergenciaNotaResumo {
+  chave: string;
+  valorXml?: number;
+  valorSped?: number;
+  diff?: number;
+  tipo: DivergenciaLinhaTipo;
+}
+export interface DivergenciaDetalheResultado {
+  data: string;
+  cfop: string;
+  totalXml: number;
+  totalSped: number;
+  diffAbs: number;
+  notas: DivergenciaNotaResumo[];
+}

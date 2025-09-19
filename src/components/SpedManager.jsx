@@ -333,7 +333,8 @@ export default function SpedManager({ onLoad, onBack }) {
                         <div>{importedAtStr}</div>
                         {(s.periodoInicio || s.periodoFim) && (
                           <div className="opacity-80">
-                                Período: {formatBr(s.periodoInicio)} → {formatBr(s.periodoFim)}
+                            Período: {formatBr(s.periodoInicio)} →{" "}
+                            {formatBr(s.periodoFim)}
                           </div>
                         )}
                       </div>

@@ -11,6 +11,8 @@ import { getSped } from "./db/daos/spedDao";
 import { getSpedProcessed } from "./db/daos/spedProcessedDao";
 import { toProcessedData } from "./db/adapters/toProcessedData";
 import { db } from "./db";
+import XmlUpload from "./components/XmlUpload";
+import SpedXmlComparison from "./components/SpedXmlComparison";
 
 function App() {
   const [dadosProcessados, setDadosProcessados] = useState(null);
@@ -21,6 +23,7 @@ function App() {
   const [savedSpedId, setSavedSpedId] = useState(null);
   const workerRef = useRef(null);
   const [showManager, setShowManager] = useState(false);
+  const [xmlVersion, setXmlVersion] = useState(0);
 
   useEffect(() => {
     return () => {
@@ -161,6 +164,7 @@ function App() {
           size: sped?.size || 0,
           lastModified: sped?.importedAt || new Date().toISOString(),
         });
+        setSavedSpedId(spedId);
         setShowManager(false);
         return;
       } catch (e) {
@@ -179,6 +183,7 @@ function App() {
         size: sped.size,
         lastModified: sped.importedAt,
       });
+      setSavedSpedId(spedId);
       setShowManager(false);
     } catch (e) {
       console.error("Falha ao carregar SPED do banco:", e);
@@ -198,7 +203,7 @@ function App() {
                 title="Voltar para página inicial"
               >
                 <img
-                  src="/images/logo.png"
+                  src={`${import.meta.env.BASE_URL}images/logo.png`}
                   alt="Logo SPED"
                   className="h-10 w-10 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
                 />
@@ -291,11 +296,57 @@ function App() {
             </div>
           </div>
         ) : (
-          <Dashboard
-            dados={dadosProcessados}
-            arquivo={arquivoInfo}
-            savedSpedId={savedSpedId}
-          />
+          <div className="space-y-6">
+            <Dashboard
+              dados={dadosProcessados}
+              arquivo={arquivoInfo}
+              savedSpedId={savedSpedId}
+            />
+            {savedSpedId && (
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <XmlUpload
+                  onImported={() => {
+                    setXmlVersion((v) => v + 1);
+                  }}
+                  onXmlReset={() => {
+                    setXmlVersion((v) => v + 1);
+                  }}
+                  cnpjBase={dadosProcessados?.cnpj}
+                  periodo={{
+                    inicio: dadosProcessados?.periodo?.inicio
+                      ? new Date(dadosProcessados.periodo.inicio)
+                          .toISOString()
+                          .slice(0, 10)
+                      : undefined,
+                    fim: dadosProcessados?.periodo?.fim
+                      ? new Date(dadosProcessados.periodo.fim)
+                          .toISOString()
+                          .slice(0, 10)
+                      : undefined,
+                  }}
+                  cfopsVendaPermitidos={
+                    dadosProcessados?.saidasPorCfopArray?.map((c) => c.cfop) || []
+                  }
+                />
+                <SpedXmlComparison
+                  spedId={savedSpedId}
+                  reloadKey={xmlVersion}
+                  periodo={{
+                    inicio: dadosProcessados?.periodo?.inicio
+                      ? new Date(dadosProcessados.periodo.inicio)
+                          .toISOString()
+                          .slice(0, 10)
+                      : undefined,
+                    fim: dadosProcessados?.periodo?.fim
+                      ? new Date(dadosProcessados.periodo.fim)
+                          .toISOString()
+                          .slice(0, 10)
+                      : undefined,
+                  }}
+                />
+              </div>
+            )}
+          </div>
         )}
       </main>
 
