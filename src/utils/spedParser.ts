@@ -8,6 +8,11 @@ import type {
   DiaCfopValor,
   ProcessedData,
   NotaItemC170,
+  Participante,
+  Produto,
+  ApuracaoICMS,
+  Inventario,
+  RegistroSped,
 } from "./types";
 
 export class SpedParser {
@@ -37,10 +42,19 @@ export class SpedParser {
     itensPorCfopIndex?: Record<string, ItemDetalhado[]>;
     companyName?: string;
     cnpj?: string;
+    numeroNotasEntrada?: number;
+    numeroNotasSaida?: number;
+    participantes?: Participante[];
+    produtos?: Produto[];
+    apuracaoICMS?: ApuracaoICMS[];
+    inventario?: Inventario[];
   };
   constructor() {
     this.resetData();
   }
+  private currentNota: Nota | null = null;
+  private currentApuracao: ApuracaoICMS | null = null;
+  private currentInventario: Inventario | null = null;
 
   /**
    * @param fileContent
@@ -67,6 +81,12 @@ export class SpedParser {
           this.processC190(registro, currentNota);
         else if (registro.tipo === "C170" && currentNota)
           this.processC170(registro, currentNota);
+        else if (registro.tipo === "0150") this.process0150(registro);
+        else if (registro.tipo === "0200") this.process0200(registro);
+        else if (registro.tipo === "E100") this.processE100(registro);
+        else if (registro.tipo === "E110") this.processE110(registro);
+        else if (registro.tipo === "H005") this.processH005(registro);
+        else if (registro.tipo === "H010") this.processH010(registro);
       } catch (err) {
         console.warn("Linha SPED ignorada por erro de parsing:", err);
       } finally {
@@ -98,10 +118,16 @@ export class SpedParser {
       totalEntradas: 0,
       totalSaidas: 0,
       totalGeral: 0,
+      numeroNotasEntrada: 0,
+      numeroNotasSaida: 0,
       periodo: { inicio: null, fim: null },
+      participantes: [],
+      produtos: [],
+      apuracaoICMS: [],
+      inventario: [],
     };
   }
-  process0000(registro: any) {
+  process0000(registro: RegistroSped) {
     const campos = registro.campos;
     try {
       const dtIniStr = campos[3];
@@ -133,16 +159,16 @@ export class SpedParser {
     }
   }
 
-  parseRegistro(line: string) {
+  parseRegistro(line: string): RegistroSped {
     const partes = line.split("|");
-    if (!partes || partes.length < 2) return { tipo: null };
+    if (!partes || partes.length < 2) return { tipo: null, campos: [], linha: line };
     const campos = partes.filter((_, index) => index > 0 && index < partes.length - 1);
-    if (campos.length === 0) return { tipo: null };
+    if (campos.length === 0) return { tipo: null, campos: [], linha: line };
     const tipo = campos[0];
     return { tipo, campos, linha: line };
   }
 
-  processC100(registro: any): Nota | null {
+  processC100(registro: RegistroSped, pushToData = true): Nota | null {
     const campos = registro.campos;
     if (campos.length < 12) return null;
     const dataDoc = this.parseDate(campos[9]);
@@ -164,8 +190,15 @@ export class SpedParser {
       itensC170: [],
     };
     if (valorDoc > 0 && situacao === "00") {
-      if (indicadorOperacao === "0") this.data.entradas.push(nota);
-      else if (indicadorOperacao === "1") this.data.saidas.push(nota);
+      if (pushToData) {
+        if (indicadorOperacao === "0") this.data.entradas.push(nota);
+        else if (indicadorOperacao === "1") this.data.saidas.push(nota);
+      }
+      if (indicadorOperacao === "0")
+        this.data.numeroNotasEntrada = (this.data.numeroNotasEntrada || 0) + 1;
+      else if (indicadorOperacao === "1")
+        this.data.numeroNotasSaida = (this.data.numeroNotasSaida || 0) + 1;
+
       if (dataDoc && (!this.data.periodo.inicio || !this.data.periodo.fim)) {
         if (!this.data.periodo.inicio || dataDoc < this.data.periodo.inicio)
           this.data.periodo.inicio = dataDoc;
@@ -176,7 +209,7 @@ export class SpedParser {
     return nota;
   }
 
-  processC190(registro: any, nota: Nota) {
+  processC190(registro: RegistroSped, nota: Nota) {
     const campos = registro.campos;
     if (campos.length < 5) return;
     const cfop = campos[2];
@@ -224,7 +257,7 @@ export class SpedParser {
     }
   }
 
-  processC170(registro: any, nota: Nota) {
+  processC170(registro: RegistroSped, nota: Nota) {
     const c = registro.campos || [];
     const safe = (i: number) => (i >= 0 && i < c.length ? c[i] : undefined);
     const numItem = parseInt(safe(1) || "") || undefined;
@@ -276,6 +309,72 @@ export class SpedParser {
     };
     if (!nota.itensC170) nota.itensC170 = [];
     nota.itensC170.push(item);
+  }
+
+  process0150(registro: RegistroSped) {
+    const c = registro.campos;
+    this.data.participantes?.push({
+      codPart: c[2],
+      nome: c[3],
+      codMun: c[8],
+      cnpj: c[5],
+      cpf: c[6],
+      ie: c[7],
+    });
+  }
+
+  process0200(registro: RegistroSped) {
+    const c = registro.campos;
+    this.data.produtos?.push({
+      codItem: c[2],
+      descrItem: c[3],
+      unidInv: c[6],
+      tipoItem: c[7],
+    });
+  }
+
+  processE100(registro: RegistroSped) {
+    const c = registro.campos;
+    this.currentApuracao = {
+      dtIni: this.parseDate(c[2]),
+      dtFim: this.parseDate(c[3]),
+      vlTotDebitos: 0,
+      vlTotCreditos: 0,
+      vlSaldoDevedor: 0,
+      vlSaldoCredor: 0,
+    };
+    this.data.apuracaoICMS?.push(this.currentApuracao);
+  }
+
+  processE110(registro: RegistroSped) {
+    if (!this.currentApuracao) return;
+    const c = registro.campos;
+    this.currentApuracao.vlTotDebitos = this.parseValor(c[2]);
+    this.currentApuracao.vlTotCreditos = this.parseValor(c[6]);
+    this.currentApuracao.vlSaldoDevedor = this.parseValor(c[11]);
+    this.currentApuracao.vlSaldoCredor = this.parseValor(c[14]);
+  }
+
+  processH005(registro: RegistroSped) {
+    const c = registro.campos;
+    this.currentInventario = {
+      dtInv: this.parseDate(c[2]),
+      vlInv: this.parseValor(c[3]),
+      itens: [],
+    };
+    this.data.inventario?.push(this.currentInventario);
+  }
+
+  processH010(registro: RegistroSped) {
+    if (!this.currentInventario) return;
+    const c = registro.campos;
+    this.currentInventario.itens.push({
+      codItem: c[2],
+      qtd: this.parseValor(c[4]),
+      vlUnit: this.parseValor(c[5]),
+      vlItem: this.parseValor(c[6]),
+      indProp: c[7],
+    });
   }
 
   parseDate(dateStr?: string) {
@@ -341,7 +440,7 @@ export class SpedParser {
       this.data.entradasPorDia.entries() as Iterable<[string, number]>
     )
       .map(([data, valor]) => ({ data, valor }))
-      .sort((a: any, b: any) => a.data.localeCompare(b.data));
+      .sort((a: DiaValor, b: DiaValor) => a.data.localeCompare(b.data));
     this.data.entradasPorCfopArray = Array.from(
       this.data.entradasPorCfop.entries() as Iterable<[string, number]>
     )
@@ -350,7 +449,7 @@ export class SpedParser {
         valor,
         descricao: getDescricaoCfop(cfop),
       }))
-      .sort((a: any, b: any) => b.valor - a.valor);
+      .sort((a: CfopValor, b: CfopValor) => b.valor - a.valor);
     this.data.entradasPorDiaCfopArray = Array.from(
       this.data.entradasPorDiaCfop.values() as Iterable<{
         data: string;
@@ -358,13 +457,14 @@ export class SpedParser {
         valor: number;
       }>
     ).sort(
-      (a: any, b: any) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
+      (a: DiaCfopValor, b: DiaCfopValor) =>
+        a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
     );
     this.data.saidasPorDiaArray = Array.from(
       this.data.saidasPorDia.entries() as Iterable<[string, number]>
     )
       .map(([data, valor]) => ({ data, valor }))
-      .sort((a: any, b: any) => a.data.localeCompare(b.data));
+      .sort((a: DiaValor, b: DiaValor) => a.data.localeCompare(b.data));
     this.data.saidasPorCfopArray = Array.from(
       this.data.saidasPorCfop.entries() as Iterable<[string, number]>
     )
@@ -373,7 +473,7 @@ export class SpedParser {
         valor,
         descricao: getDescricaoCfop(cfop),
       }))
-      .sort((a: any, b: any) => b.valor - a.valor);
+      .sort((a: CfopValor, b: CfopValor) => b.valor - a.valor);
     this.data.saidasPorDiaCfopArray = Array.from(
       this.data.saidasPorDiaCfop.values() as Iterable<{
         data: string;
@@ -381,7 +481,8 @@ export class SpedParser {
         valor: number;
       }>
     ).sort(
-      (a: any, b: any) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
+      (a: DiaCfopValor, b: DiaCfopValor) =>
+        a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
     );
     this.data.vendas = this.data.saidas;
     this.data.vendasPorDia = this.data.saidasPorDia;
@@ -394,6 +495,55 @@ export class SpedParser {
       itensIndexObj[cfop] = itens;
     }
     this.data.itensPorCfopIndex = itensIndexObj;
+  }
+
+  public processLine(line: string) {
+    try {
+      const registro = this.parseRegistro(line);
+      if (!registro || !registro.tipo) return;
+      if (registro.tipo === "0000") this.process0000(registro);
+      else if (registro.tipo === "0150") this.process0150(registro);
+      else if (registro.tipo === "0200") this.process0200(registro);
+      else if (registro.tipo === "E100") this.processE100(registro);
+      else if (registro.tipo === "E110") this.processE110(registro);
+      else if (registro.tipo === "H005") this.processH005(registro);
+      else if (registro.tipo === "H010") this.processH010(registro);
+      else if (registro.tipo === "C100") {
+        if (this.currentNota) {
+          if (this.currentNota.indicadorOperacao === "0")
+            this.data.entradas.push(this.currentNota);
+          else if (this.currentNota.indicadorOperacao === "1")
+            this.data.saidas.push(this.currentNota);
+        }
+        this.currentNota = this.processC100(registro, false) as Nota | null;
+      } else if (registro.tipo === "C190" && this.currentNota)
+        this.processC190(registro, this.currentNota);
+      else if (registro.tipo === "C170" && this.currentNota)
+        this.processC170(registro, this.currentNota);
+    } catch (err) {
+      console.warn("Linha SPED ignorada por erro de parsing:", err);
+    }
+  }
+
+  public finish() {
+    if (this.currentNota) {
+      if (this.currentNota.indicadorOperacao === "0")
+        this.data.entradas.push(this.currentNota);
+      else if (this.currentNota.indicadorOperacao === "1")
+        this.data.saidas.push(this.currentNota);
+      this.currentNota = null;
+    }
+    this.processarDadosFinais();
+  }
+
+  public getAndClearBatchData() {
+    const batch = {
+      entradas: [...this.data.entradas],
+      saidas: [...this.data.saidas],
+    };
+    this.data.entradas = [];
+    this.data.saidas = [];
+    return batch;
   }
 }
 

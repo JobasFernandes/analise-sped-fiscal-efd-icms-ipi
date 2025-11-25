@@ -1,12 +1,27 @@
 import React, { useState, useRef, useEffect } from "react";
-import { parseSpedFile } from "./utils/spedParser";
 import FileUpload from "./components/FileUpload";
 import Dashboard from "./components/Dashboard";
 import { FileText, BarChart3, Upload } from "lucide-react";
 import ThemeToggle from "./components/ThemeToggle";
 import Button from "./components/ui/Button";
-import { addSped } from "./db/daos/spedDao";
+import {
+  createSpedFile,
+  saveSpedBatch,
+  updateSpedTotals,
+  saveSpedAggregations,
+  findSpedByCnpjAndPeriod,
+  deleteSped,
+} from "./db/daos/spedDao";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
+} from "./components/ui/dialog";
 import SpedManager from "./components/SpedManager";
+import { formatarData } from "./utils/dataProcessor";
 import { getSped } from "./db/daos/spedDao";
 import { getSpedProcessed } from "./db/daos/spedProcessedDao";
 import { toProcessedData } from "./db/adapters/toProcessedData";
@@ -24,6 +39,9 @@ function App() {
   const workerRef = useRef(null);
   const [showManager, setShowManager] = useState(false);
   const [xmlVersion, setXmlVersion] = useState(0);
+  const [duplicateSped, setDuplicateSped] = useState(null);
+  const [pendingSpedId, setPendingSpedId] = useState(null);
+  const workerState = useRef({ waiting: false, pendingResult: null });
 
   useEffect(() => {
     return () => {
@@ -49,99 +67,129 @@ function App() {
     }
   };
 
+  const processImportResult = async (spedId, dados, fileData) => {
+    await updateSpedTotals(spedId, {
+      totalEntradas: dados.totalEntradas,
+      totalSaidas: dados.totalSaidas,
+      totalGeral: dados.totalGeral,
+      numeroNotasEntrada: dados.numeroNotasEntrada || 0,
+      numeroNotasSaida: dados.numeroNotasSaida || 0,
+      periodoInicio: dados.periodo.inicio,
+      periodoFim: dados.periodo.fim,
+      companyName: dados.companyName,
+      cnpj: dados.cnpj,
+    });
+
+    await saveSpedAggregations(spedId, dados);
+
+    setArquivoInfo({
+      name: fileData.name,
+      size: fileData.size,
+      lastModified: fileData.lastModified,
+    });
+
+    const fullData = await getSpedProcessed(spedId);
+    setDadosProcessados(fullData);
+    setLoading(false);
+  };
+
   const handleFileSelect = async (fileData) => {
     setLoading(true);
     setError(null);
     setProgress(0);
     setDadosProcessados(null);
     setSavedSpedId(null);
+    workerState.current = { waiting: false, pendingResult: null, fileData };
 
     const worker = iniciarWorkerSeNecessario();
 
-    const computeHash = async (text) => {
-      try {
-        const enc = new TextEncoder();
-        const data = enc.encode(text);
-        const buf = await crypto.subtle.digest("SHA-256", data);
-        const arr = Array.from(new Uint8Array(buf));
-        return arr.map((b) => b.toString(16).padStart(2, "0")).join("");
-      } catch (e) {
-        return null;
+    if (!worker) {
+      setError("Falha ao iniciar Web Worker. O navegador pode não suportar.");
+      setLoading(false);
+      return;
+    }
+
+    // Create SPED record immediately
+    let currentSpedId = null;
+    try {
+      currentSpedId = await createSpedFile({
+        filename: fileData.name,
+        size: fileData.size,
+        contentHash: null,
+      });
+      setSavedSpedId(currentSpedId);
+    } catch (e) {
+      setError("Falha ao criar registro do SPED.");
+      setLoading(false);
+      return;
+    }
+
+    const onMessage = async (e) => {
+      const msg = e.data;
+      if (!msg || !msg.type) return;
+
+      if (msg.type === "progress") {
+        setProgress(msg.progress);
+      } else if (msg.type === "metadata") {
+        const { cnpj, periodoInicio, periodoFim } = msg.data;
+        const existing = await findSpedByCnpjAndPeriod(cnpj, periodoInicio, periodoFim);
+        if (existing) {
+          setDuplicateSped(existing);
+          setPendingSpedId(currentSpedId);
+          // Worker waits for "continue" signal
+        } else {
+          worker.postMessage({ type: "continue" });
+        }
+      } else if (msg.type === "batch") {
+        if (currentSpedId) {
+          await saveSpedBatch(currentSpedId, msg.data);
+        }
+      } else if (msg.type === "result") {
+        const dados = msg.data;
+        if (currentSpedId) {
+          await processImportResult(currentSpedId, dados, fileData);
+          worker.removeEventListener("message", onMessage);
+        }
+      } else if (msg.type === "error") {
+        setError(msg.error || "Erro ao processar arquivo no worker.");
+        setLoading(false);
+        worker.removeEventListener("message", onMessage);
       }
     };
 
-    const contentHash = await computeHash(fileData.content);
+    worker.addEventListener("message", onMessage);
+    worker.postMessage({ type: "parse", file: fileData.file });
+  };
 
-    if (worker) {
-      const onMessage = async (e) => {
-        const msg = e.data;
-        if (!msg || !msg.type) return;
-        if (msg.type === "progress") {
-          setProgress(msg.progress);
-        } else if (msg.type === "result") {
-          const dados = msg.data;
-          if (!dados || dados.totalGeral === 0) {
-            setError("Arquivo SPED não contém dados válidos.");
-          } else {
-            setDadosProcessados(dados);
-            setArquivoInfo({
-              name: fileData.name,
-              size: fileData.size,
-              lastModified: fileData.lastModified,
-            });
-            try {
-              const newSpedId = await addSped(dados, {
-                filename: fileData.name,
-                size: fileData.size,
-                contentHash,
-              });
-              setSavedSpedId(newSpedId);
-            } catch (persistErr) {
-              console.warn("Falha ao salvar SPED localmente:", persistErr);
-            }
-          }
-          setLoading(false);
-          worker.removeEventListener("message", onMessage);
-        } else if (msg.type === "error") {
-          setError(msg.error || "Erro ao processar arquivo no worker.");
-          setLoading(false);
-          worker.removeEventListener("message", onMessage);
-        }
-      };
-      worker.addEventListener("message", onMessage);
-      worker.postMessage({ type: "parse", content: fileData.content });
-    } else {
-      try {
-        const dados = parseSpedFile(fileData.content, (current, total) =>
-          setProgress(current / total)
-        );
-        if (!dados || dados.totalGeral === 0) {
-          throw new Error(
-            "Arquivo SPED não contém dados de vendas válidos ou não foi possível processar o arquivo."
-          );
-        }
-        setDadosProcessados(dados);
-        setArquivoInfo({
-          name: fileData.name,
-          size: fileData.size,
-          lastModified: fileData.lastModified,
-        });
-        try {
-          const newSpedId = await addSped(dados, {
-            filename: fileData.name,
-            size: fileData.size,
-            contentHash,
-          });
-          setSavedSpedId(newSpedId);
-        } catch (persistErr) {
-          console.warn("Falha ao salvar SPED localmente:", persistErr);
-        }
-      } catch (err) {
-        console.error("Erro ao processar arquivo (fallback):", err);
-        setError(err.message || "Erro ao processar o arquivo SPED.");
-      } finally {
-        setLoading(false);
-      }
+  const handleDuplicateCancel = async () => {
+    if (workerRef.current) {
+      workerRef.current.terminate();
+      workerRef.current = null;
+    }
+    if (pendingSpedId) {
+      await deleteSped(pendingSpedId);
+    }
+    setDuplicateSped(null);
+    setPendingSpedId(null);
+    setLoading(false);
+    setProgress(0);
+    setSavedSpedId(null);
+    setError("Importação cancelada pelo usuário.");
+  };
+
+  const handleDuplicateReplace = async () => {
+    const idToDelete = duplicateSped?.id;
+    setDuplicateSped(null);
+
+    // Small delay to allow UI to update and modal to close
+    await new Promise((resolve) => setTimeout(resolve, 100));
+
+    if (idToDelete) {
+      await deleteSped(idToDelete);
+    }
+
+    if (workerRef.current) {
+      workerRef.current.postMessage({ type: "continue" });
     }
   };
 
@@ -361,6 +409,35 @@ function App() {
           </div>
         </div>
       </footer>
+
+      <Dialog open={!!duplicateSped} onOpenChange={() => {}}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Arquivo Duplicado</DialogTitle>
+            <DialogDescription>
+              Já existe um SPED importado para este período.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="px-6 py-2 text-sm text-muted-foreground">
+            <p className="mb-2">
+              <strong>Período:</strong> {formatarData(duplicateSped?.periodoInicio)} a{" "}
+              {formatarData(duplicateSped?.periodoFim)}
+            </p>
+            <p className="mb-4">
+              <strong>CNPJ:</strong> {duplicateSped?.cnpj}
+            </p>
+            <p>Deseja substituir o arquivo existente ou cancelar a importação?</p>
+          </div>
+          <DialogFooter className="flex justify-end gap-2">
+            <Button variant="outline" onClick={handleDuplicateCancel}>
+              Cancelar
+            </Button>
+            <Button variant="destructive" onClick={handleDuplicateReplace}>
+              Substituir
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

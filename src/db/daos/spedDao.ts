@@ -16,6 +16,18 @@ export interface AddSpedMetadata {
   contentHash?: string | null;
 }
 
+export async function findSpedByCnpjAndPeriod(
+  cnpj: string,
+  inicio: string,
+  fim: string
+): Promise<SpedFileRow | undefined> {
+  return await db.sped_files
+    .where("cnpj")
+    .equals(cnpj)
+    .and((item) => item.periodoInicio === inicio && item.periodoFim === fim)
+    .first();
+}
+
 export async function addSped(
   data: ProcessedData,
   meta: AddSpedMetadata
@@ -314,3 +326,237 @@ export async function possuiIndicadores(spedId: number): Promise<boolean> {
 export const rebuildAggregates = recalcularIndicadores;
 export const rebuildAggregatesForAll = recalcularIndicadoresTodos;
 export const hasAggregates = possuiIndicadores;
+
+export async function createSpedFile(meta: AddSpedMetadata): Promise<number> {
+  if (meta.contentHash) {
+    const existing = await db.sped_files.where({ hash: meta.contentHash }).first();
+    if (existing?.id) return existing.id;
+  }
+
+  const toLocalISOWithOffset = () => {
+    const d = new Date();
+    const tz = -d.getTimezoneOffset();
+    const sign = tz >= 0 ? "+" : "-";
+    const abs = Math.abs(tz);
+    const hh = String(Math.trunc(abs / 60)).padStart(2, "0");
+    const mm = String(abs % 60).padStart(2, "0");
+    const pad = (n: number) => String(n).padStart(2, "0");
+    const Y = d.getFullYear();
+    const M = pad(d.getMonth() + 1);
+    const D = pad(d.getDate());
+    const h = pad(d.getHours());
+    const m = pad(d.getMinutes());
+    const s = pad(d.getSeconds());
+    return `${Y}-${M}-${D}T${h}:${m}:${s}${sign}${hh}:${mm}`;
+  };
+
+  const id = await db.sped_files.add({
+    filename: meta.filename,
+    size: meta.size,
+    importedAt: toLocalISOWithOffset(),
+    periodoInicio: null,
+    periodoFim: null,
+    totalEntradas: 0,
+    totalSaidas: 0,
+    totalGeral: 0,
+    numeroNotasEntrada: 0,
+    numeroNotasSaida: 0,
+    hash: meta.contentHash || null,
+    companyName: null,
+    cnpj: null,
+  } as SpedFileRow);
+
+  return id;
+}
+
+export async function saveSpedBatch(
+  spedId: number,
+  data: { entradas: any[]; saidas: any[] }
+): Promise<void> {
+  const docs: DocumentRow[] = [];
+  const items: ItemRow[] = [];
+  const itemsC170: ItemC170Row[] = [];
+
+  const genId = () =>
+    (globalThis as any).crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  const processNota = (nota: any, indicador: "0" | "1") => {
+    const docId = genId();
+
+    docs.push({
+      id: docId,
+      spedId,
+      numeroDoc: nota.numeroDoc,
+      chaveNfe: nota.chaveNfe,
+      dataDocumento: nota.dataDocumento
+        ? new Date(nota.dataDocumento).toISOString().slice(0, 10)
+        : null,
+      dataEntradaSaida: nota.dataEntradaSaida
+        ? new Date(nota.dataEntradaSaida).toISOString().slice(0, 10)
+        : null,
+      valorDocumento: nota.valorDocumento,
+      valorMercadoria: nota.valorMercadoria,
+      indicadorOperacao: indicador,
+      situacao: nota.situacao,
+    } as DocumentRow);
+
+    if (nota.itens && Array.isArray(nota.itens)) {
+      for (const it of nota.itens) {
+        items.push({
+          id: genId(),
+          spedId,
+          documentId: docId,
+          cfop: it.cfop,
+          valorOperacao: it.valorOperacao,
+          cstIcms: it.cstIcms,
+          aliqIcms: it.aliqIcms,
+          valorBcIcms: it.valorBcIcms,
+          valorIcms: it.valorIcms,
+        } as ItemRow);
+      }
+    }
+    if (nota.itensC170 && Array.isArray(nota.itensC170)) {
+      for (const it of nota.itensC170) {
+        itemsC170.push({
+          id: genId(),
+          spedId,
+          documentId: docId,
+          numItem: it.numItem,
+          codItem: it.codItem,
+          descrCompl: it.descrCompl,
+          quantidade: it.quantidade,
+          unidade: it.unidade,
+          valorItem: it.valorItem,
+          valorDesconto: it.valorDesconto,
+          cfop: it.cfop,
+          cstIcms: it.cstIcms,
+          aliqIcms: it.aliqIcms,
+          valorBcIcms: it.valorBcIcms,
+          valorIcms: it.valorIcms,
+        } as ItemC170Row);
+      }
+    }
+  };
+
+  for (const n of data.entradas) processNota(n, "0");
+  for (const n of data.saidas) processNota(n, "1");
+
+  await db.transaction("rw", [db.documents, db.items, db.items_c170], async () => {
+    if (docs.length) await db.documents.bulkAdd(docs);
+    if (items.length) await db.items.bulkAdd(items);
+    if (itemsC170.length) await db.items_c170.bulkAdd(itemsC170);
+  });
+}
+
+export async function updateSpedTotals(
+  id: number,
+  totals: {
+    totalEntradas: number;
+    totalSaidas: number;
+    totalGeral: number;
+    numeroNotasEntrada: number;
+    numeroNotasSaida: number;
+    periodoInicio?: Date | string | null;
+    periodoFim?: Date | string | null;
+    companyName?: string;
+    cnpj?: string;
+  }
+) {
+  const updateData: any = {
+    totalEntradas: totals.totalEntradas,
+    totalSaidas: totals.totalSaidas,
+    totalGeral: totals.totalGeral,
+    numeroNotasEntrada: totals.numeroNotasEntrada,
+    numeroNotasSaida: totals.numeroNotasSaida,
+  };
+
+  if (totals.periodoInicio) {
+    updateData.periodoInicio =
+      typeof totals.periodoInicio === "string"
+        ? totals.periodoInicio
+        : new Date(totals.periodoInicio).toISOString().slice(0, 10);
+  }
+  if (totals.periodoFim) {
+    updateData.periodoFim =
+      typeof totals.periodoFim === "string"
+        ? totals.periodoFim
+        : new Date(totals.periodoFim).toISOString().slice(0, 10);
+  }
+  if (totals.companyName) updateData.companyName = totals.companyName;
+  if (totals.cnpj) updateData.cnpj = totals.cnpj;
+
+  await db.sped_files.update(id, updateData);
+}
+
+export async function saveSpedAggregations(
+  spedId: number,
+  data: {
+    entradasPorDiaArray?: { data: string; valor: number }[];
+    saidasPorDiaArray?: { data: string; valor: number }[];
+    entradasPorCfopArray?: { cfop: string; valor: number }[];
+    saidasPorCfopArray?: { cfop: string; valor: number }[];
+    entradasPorDiaCfopArray?: { data: string; cfop: string; valor: number }[];
+    saidasPorDiaCfopArray?: { data: string; cfop: string; valor: number }[];
+  }
+) {
+  const dayAggs: DayAggRow[] = [];
+  const cfopAggs: CfopAggRow[] = [];
+  const dayCfopAggs: DayCfopAggRow[] = [];
+
+  // Entradas
+  if (data.entradasPorDiaArray) {
+    for (const item of data.entradasPorDiaArray) {
+      dayAggs.push({ spedId, date: item.data, dir: "0", valor: item.valor });
+    }
+  }
+  if (data.entradasPorCfopArray) {
+    for (const item of data.entradasPorCfopArray) {
+      cfopAggs.push({ spedId, cfop: item.cfop, dir: "0", valor: item.valor });
+    }
+  }
+  if (data.entradasPorDiaCfopArray) {
+    for (const item of data.entradasPorDiaCfopArray) {
+      dayCfopAggs.push({
+        spedId,
+        date: item.data,
+        cfop: item.cfop,
+        dir: "0",
+        valor: item.valor,
+      });
+    }
+  }
+
+  // Saidas
+  if (data.saidasPorDiaArray) {
+    for (const item of data.saidasPorDiaArray) {
+      dayAggs.push({ spedId, date: item.data, dir: "1", valor: item.valor });
+    }
+  }
+  if (data.saidasPorCfopArray) {
+    for (const item of data.saidasPorCfopArray) {
+      cfopAggs.push({ spedId, cfop: item.cfop, dir: "1", valor: item.valor });
+    }
+  }
+  if (data.saidasPorDiaCfopArray) {
+    for (const item of data.saidasPorDiaCfopArray) {
+      dayCfopAggs.push({
+        spedId,
+        date: item.data,
+        cfop: item.cfop,
+        dir: "1",
+        valor: item.valor,
+      });
+    }
+  }
+
+  await db.transaction(
+    "rw",
+    [db.day_aggs, db.cfop_aggs, db.day_cfop_aggs],
+    async () => {
+      await db.day_aggs.bulkAdd(dayAggs);
+      await db.cfop_aggs.bulkAdd(cfopAggs);
+      await db.day_cfop_aggs.bulkAdd(dayCfopAggs);
+    }
+  );
+}

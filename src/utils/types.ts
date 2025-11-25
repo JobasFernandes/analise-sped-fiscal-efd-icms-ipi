@@ -96,6 +96,14 @@ export interface ProcessedData {
   // Metadados do arquivo (registro 0000)
   companyName?: string;
   cnpj?: string;
+  numeroNotasEntrada?: number;
+  numeroNotasSaida?: number;
+
+  // Novos blocos
+  participantes?: Participante[];
+  produtos?: Produto[];
+  apuracaoICMS?: ApuracaoICMS[];
+  inventario?: Inventario[];
 }
 
 export type FilteredProcessedData = Omit<
@@ -210,4 +218,49 @@ export interface DivergenciaDetalheResultado {
   totalSped: number;
   diffAbs: number;
   notas: DivergenciaNotaResumo[];
+}
+
+export interface Participante {
+  codPart: string;
+  nome: string;
+  cnpj?: string;
+  cpf?: string;
+  ie?: string;
+  codMun?: string;
+}
+
+export interface Produto {
+  codItem: string;
+  descrItem: string;
+  unidInv: string;
+  tipoItem: string;
+}
+
+export interface ApuracaoICMS {
+  dtIni: Date | null;
+  dtFim: Date | null;
+  vlTotDebitos: number;
+  vlTotCreditos: number;
+  vlSaldoDevedor: number;
+  vlSaldoCredor: number;
+}
+
+export interface ItemInventario {
+  codItem: string;
+  qtd: number;
+  vlUnit: number;
+  vlItem: number;
+  indProp: string;
+}
+
+export interface Inventario {
+  dtInv: Date | null;
+  vlInv: number;
+  itens: ItemInventario[];
+}
+
+export interface RegistroSped {
+  tipo: string | null;
+  campos: string[];
+  linha: string;
 }

@@ -16,22 +16,13 @@ const FileUpload = ({ onFileSelect, loading = false, error = null, progress = 0 
 
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
-
-        const reader = new FileReader();
-        reader.onload = (e) => {
-          const content = e.target.result;
-          onFileSelect({
-            file,
-            content,
-            name: file.name,
-            size: file.size,
-            lastModified: new Date(file.lastModified),
-          });
-        };
-        reader.onerror = () => {
-          console.error("Erro ao ler arquivo");
-        };
-        reader.readAsText(file, "UTF-8");
+        // Pass the file object directly, do not read content here
+        onFileSelect({
+          file,
+          name: file.name,
+          size: file.size,
+          lastModified: new Date(file.lastModified),
+        });
       }
     },
     [onFileSelect]
