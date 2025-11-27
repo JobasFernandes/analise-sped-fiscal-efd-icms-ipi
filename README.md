@@ -2,90 +2,121 @@
 
 # Analizador SPED Fiscal
 
-<img src="images/banner.png" alt="Screenshot da aplicação Analizador SPED Fiscal" width="100%" style="max-width:1180px;border-radius:8px;" />
+<img src="public/images/banner.png" alt="Screenshot da aplicação Analizador SPED Fiscal" width="100%" style="max-width:1180px;border-radius:8px;" />
 
-<p><strong>Deploy (GitHub Pages):</strong> <a href="https://jobasfernandes.github.io/analise-sped-fiscal-efd-icms-ipi/" target="_blank">Acesse a aplicação</a></p>
+**[Acessar aplicação](https://jobasfernandes.github.io/analise-sped-fiscal-efd-icms-ipi/)**
 
-Aplicação web (client‑side) para análise exploratória do **SPED Fiscal (Bloco C)**. Tudo acontece no navegador: parsing local, agregações, gráficos e persistência offline com **IndexedDB/Dexie**. Nenhum dado é enviado a servidores.
+Aplicação web para análise de arquivos **SPED Fiscal (EFD ICMS/IPI)** e comparativo com XMLs de NFe/NFCe.  
+Processamento 100% local no navegador com persistência offline via IndexedDB.
 
 </div>
 
-## ✨ Funcionalidades principais
+---
 
-- Upload seguro (drag & drop) — processamento 100% local
-- Parser dos registros: **0000, C100, C190 e C170**
-- Indicadores pré‑computados: por dia, por CFOP e por dia+CFOP
-- Visualizações (Chart.js): Entradas, Saídas e Comparativo
-- Drill‑down por CFOP com notas/itens relacionados e exportação CSV
-- Exportação de gráficos em PNG
-- Tema claro/escuro, tooltips Radix e UX responsiva (Web Worker)
-- Persistência offline (IndexedDB) e carregamento rápido
-- Testes automatizados (Vitest)
+## Funcionalidades
 
-## 🔄 XML NFe/NFC‑e: importação e comparativo
+| SPED Fiscal | XML NFe/NFCe | Visualização |
+|-------------|--------------|--------------|
+| Parser de registros 0000, C100, C190, C170 | Importação de arquivos .xml, .zip ou pastas | Gráficos interativos (Chart.js) |
+| Indicadores por dia, CFOP e dia+CFOP | Filtro por período, CNPJ e CFOPs | Drill-down por CFOP |
+| Persistência offline (IndexedDB/Dexie) | Rastreamento detalhado de notas ignoradas | Exportação CSV e PNG |
+| Processamento assíncrono via Web Worker | Toggle para restringir a CFOPs do SPED | Tema claro/escuro |
 
-- Importa múltiplos XMLs (somente autorizados `cStat = 100`).
-- Filtragem por período e CNPJ do SPED (aceita se CNPJ emitente ou destinatário coincide com o CNPJ base do SPED).
-- Datas: a aplicação usa a **data de emissão** (`dhEmi`) como referência; cai para `dhRecbto` somente se necessário.
-- CFOPs excluídos:
-  - Na importação: `5929`, `6929`.
-  - No comparativo: `5929`, `6929`.
-- Agregação dos itens válidos em `Dia + CFOP` (soma de `vProd` e campos monofásicos quando existirem).
+---
 
-Comparativo (Saídas):
+## Arquitetura
 
-- Linhas por `Dia + CFOP` com valores do SPED (C190) vs soma dos XML.
-- Diferenças destacadas quando diferentes de zero (tolerância 0%).
-- Resumo: Total XML, Total SPED, Dif. Absoluta e Dif. %.
+```mermaid
+flowchart LR
+    subgraph Entrada
+        A[SPED .txt]
+        B[XML .xml/.zip]
+    end
 
-Fórmulas:
+    subgraph Processamento
+        C[Web Worker]
+        D[Parser SPED]
+        E[Parser XML]
+    end
 
-- Dif. Abs = `Σ(vProd XML) − Σ(valorOperacao SPED)`
-- Dif. % = `(XML − SPED) / SPED × 100` (SPED = 0 ⇒ 0%)
+    subgraph Armazenamento
+        F[(IndexedDB)]
+    end
 
-“Zerar XMLs”: apaga dados XML no IndexedDB para reimportação limpa.
+    subgraph Interface
+        G[Dashboard]
+        H[Comparativo]
+        I[Exportação]
+    end
 
-## 🧬 Como funciona (alto nível)
+    A --> C --> D --> F
+    B --> C --> E --> F
+    F --> G & H & I
+```
 
-- Parsing do SPED é assíncrono via Web Worker; há fallback síncrono.
-- Dados consolidados são persistidos (Dexie) em tabelas de documentos, itens e agregados.
-- Indicadores são reconstruídos sob demanda para carregamento rápido do dashboard.
+---
 
-## ▶️ Executando localmente
+## Importação de XML
+
+**Formatos aceitos:** arquivos `.xml`, `.zip` ou drag-drop de pastas.
+
+**Filtros aplicados:**
+- Período do SPED (data de emissão `dhEmi`)
+- CNPJ do emitente ou destinatário igual ao CNPJ base do SPED
+- CFOPs permitidos (configurável) e CFOPs a excluir (padrão: 5929, 6929)
+- Apenas notas autorizadas (`cStat = 100`)
+
+**Rastreamento de notas ignoradas:** cada nota rejeitada é categorizada por motivo (cancelada, duplicada, fora do período, CNPJ diferente, sem itens válidos, XML inválido) com dados da nota e CFOPs originais disponíveis para consulta.
+
+---
+
+## Comparativo SPED vs XML
+
+Agregação por **Dia + CFOP** comparando valores do SPED (registro C190) com a soma dos XMLs importados (`vProd`).
+
+| Métrica | Fórmula |
+|---------|---------|
+| Diferença Absoluta | `Σ(vProd XML) − Σ(valorOperacao SPED)` |
+| Diferença Percentual | `(XML − SPED) / SPED × 100` |
+
+Divergências são destacadas visualmente. O botão "Zerar XMLs" remove dados do IndexedDB para reimportação.
+
+---
+
+## Execução local
 
 ```bash
 git clone https://github.com/JobasFernandes/analise-sped-fiscal-efd-icms-ipi.git
 cd analise-sped-fiscal-efd-icms-ipi
 npm install
-npm run dev
+npm run dev     # http://localhost:3001
+npm test        # Testes com Vitest
 ```
-
-Acesse: http://localhost:3001
-
-Rodar testes:
-
-```bash
-npm test
-```
-
-## 📁 Estrutura essencial
-
-```
-src/
-  App.jsx               # Shell / Navbar / fluxo
-  components/           # UI, Dashboard, Upload, Comparativo
-  db/                   # Dexie (daos, adapters, schema)
-  utils/                # spedParser, dataProcessor, xmlParser, cfopService
-  workers/              # spedParserWorker, csvExportWorker
-tests/                  # Suite Vitest
-examples/               # SPED de exemplo
-```
-
-## 🛡 Limites
-
-- Foco analítico no Bloco C (NFe). Não valida assinatura/integração fiscal.
-- Cálculos de impostos exibem valores do arquivo; não reconstroem regras tributárias.
 
 ---
 
-Se este projeto ajudou você, deixe uma ⭐ e contribua com ideias!
+## Estrutura do projeto
+
+```
+src/
+  components/     Dashboard, Upload, Comparativo, CfopDetalhes
+  db/             Schema IndexedDB e DAOs (spedDao, xmlDao)
+  utils/          Parsers (SPED, XML), processamento, serviços
+  workers/        Web Workers para parsing assíncrono
+tests/            Suite de testes automatizados
+```
+
+---
+
+## Limitações
+
+- Foco analítico no Bloco C (documentos fiscais). Não valida assinatura digital.
+- Valores de impostos são exibidos conforme o arquivo; não há recálculo tributário.
+
+---
+### Se este projeto ajudou você, deixe uma ⭐ e contribua com ideias!
+---
+
+## Licença
+
+MIT - Consulte [LICENSE](LICENSE.txt) para detalhes.
