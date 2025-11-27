@@ -15,6 +15,7 @@ import {
   DialogBody,
   DialogFooter,
   DialogTitle,
+  DialogDescription,
 } from "./ui/dialog";
 import { useToast } from "./ui/use-toast";
 import Spinner from "./ui/spinner";
@@ -417,6 +418,9 @@ export default function SpedManager({ onLoad, onBack }) {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Confirmar exclusão</DialogTitle>
+              <DialogDescription>
+                Exclusão permanente de SPED e dados relacionados.
+              </DialogDescription>
             </DialogHeader>
             <DialogBody>
               <p className="text-sm text-muted-foreground">
@@ -471,6 +475,9 @@ export default function SpedManager({ onLoad, onBack }) {
           <DialogContent className="max-w-md">
             <DialogHeader>
               <DialogTitle>Importar backup (JSON)</DialogTitle>
+              <DialogDescription>
+                Restaurar dados de um arquivo de backup exportado anteriormente.
+              </DialogDescription>
             </DialogHeader>
             <DialogBody>
               <div className="space-y-3">

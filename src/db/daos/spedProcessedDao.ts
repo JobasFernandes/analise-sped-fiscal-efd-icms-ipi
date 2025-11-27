@@ -119,8 +119,8 @@ export async function getSpedProcessed(spedId: number): Promise<ProcessedData> {
   const totalGeral = totalEntradas + totalSaidas;
 
   const periodo = {
-    inicio: sped.periodoInicio as any,
-    fim: sped.periodoFim as any,
+    inicio: sped.periodoInicio ?? null,
+    fim: sped.periodoFim ?? null,
   };
   const vendas = saidas;
   const vendasPorDiaArray = saidasPorDiaArray;
@@ -166,5 +166,13 @@ export async function getSpedProcessed(spedId: number): Promise<ProcessedData> {
     vendasPorCfop: undefined as any,
     vendasPorDiaArray,
     vendasPorCfopArray,
+    companyName: sped.companyName ?? undefined,
+    cnpj: sped.cnpj ?? undefined,
+    numeroNotasEntrada:
+      typeof sped.numeroNotasEntrada === "number"
+        ? sped.numeroNotasEntrada
+        : entradas.length,
+    numeroNotasSaida:
+      typeof sped.numeroNotasSaida === "number" ? sped.numeroNotasSaida : saidas.length,
   } as unknown as ProcessedData;
 }

@@ -220,12 +220,6 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
                   {linhaSelecionada?.data} / CFOP {linhaSelecionada?.cfop}
                 </p>
               </div>
-              <button
-                onClick={() => setDetalheAberto(false)}
-                className="text-sm px-3 py-1 border rounded-md hover:bg-muted"
-              >
-                Fechar
-              </button>
             </div>
             <div className="p-4 overflow-auto text-sm grow">
               {detalheLoading && (

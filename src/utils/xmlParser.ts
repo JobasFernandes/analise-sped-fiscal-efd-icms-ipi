@@ -1,23 +1,29 @@
 import { XmlNotaResumo, XmlItemResumo } from "./types";
 
-function extract(tag: string, xml: string): string | null {
-  try {
-    const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`);
-    const m = re.exec(xml);
-    return m && m[1] !== undefined ? m[1].trim() : null;
-  } catch {
-    return null;
-  }
+// Helper para extrair texto de um elemento
+function getText(parent: Element | Document, tagName: string): string | null {
+  const el = parent.getElementsByTagName(tagName)[0];
+  return el?.textContent?.trim() || null;
 }
-function extractAttr(tag: string, attr: string, xml: string): string | null {
-  const m = xml.match(new RegExp(`<${tag}[^>]*${attr}="([^"]+)"`));
-  return m ? m[1].trim() : null;
+
+// Helper para extrair atributo de um elemento
+function getAttr(
+  parent: Element | Document,
+  tagName: string,
+  attr: string
+): string | null {
+  const el = parent.getElementsByTagName(tagName)[0];
+  return el?.getAttribute(attr) || null;
 }
-function extractAll(reg: RegExp, xml: string): string[] {
-  const out: string[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = reg.exec(xml))) out.push(m[1]);
-  return out;
+
+// Helper para obter primeiro elemento filho por tag
+function getElement(parent: Element | Document, tagName: string): Element | null {
+  return parent.getElementsByTagName(tagName)[0] || null;
+}
+
+// Helper para obter todos elementos por tag
+function getElements(parent: Element | Document, tagName: string): Element[] {
+  return Array.from(parent.getElementsByTagName(tagName));
 }
 
 function toNumber(v?: string | null): number {
@@ -26,52 +32,175 @@ function toNumber(v?: string | null): number {
   return isNaN(n) ? 0 : n;
 }
 
+// Fallback regex para casos onde DOMParser falha
+function extractRegex(tag: string, xml: string): string | null {
+  try {
+    const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`);
+    const m = re.exec(xml);
+    return m && m[1] !== undefined ? m[1].trim() : null;
+  } catch {
+    return null;
+  }
+}
+
 export function parseXmlNfe(content: string): XmlNotaResumo | null {
+  try {
+    // Remover BOM se presente
+    let xml = content;
+    if (xml.charCodeAt(0) === 0xfeff) {
+      xml = xml.slice(1);
+    }
+
+    // Tentar usar DOMParser nativo (mais robusto e rápido)
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(xml, "application/xml");
+
+    // Verificar se houve erro de parsing
+    const parseError = doc.querySelector("parsererror");
+    if (parseError) {
+      // Fallback para regex se DOMParser falhar
+      return parseXmlNfeRegex(content);
+    }
+
+    // Extrair cStat para verificar se está autorizada
+    const cStat = getText(doc, "cStat");
+    const autorizada = cStat === "100";
+
+    // Extrair chave da NFe
+    const infNFeId = getAttr(doc, "infNFe", "Id") || "";
+    const chave = getText(doc, "chNFe") || infNFeId.replace(/^NFe/, "");
+
+    // Datas
+    const dhEmi = getText(doc, "dhEmi") || "";
+    const dhRecbto = getText(doc, "dhRecbto") || "";
+    const usado = dhEmi || dhRecbto;
+    const dataEmissao = usado ? usado.slice(0, 10) : "";
+
+    // Dados básicos
+    const modelo = getText(doc, "mod") || "";
+    const serie = getText(doc, "serie") || "";
+    const numero = getText(doc, "nNF") || "";
+
+    // CNPJs
+    const emitEl = getElement(doc, "emit");
+    const cnpjEmit = emitEl ? getText(emitEl, "CNPJ") || undefined : undefined;
+
+    const destEl = getElement(doc, "dest");
+    const cnpjDest = destEl ? getText(destEl, "CNPJ") || undefined : undefined;
+
+    // Totais
+    const totalEl = getElement(doc, "ICMSTot");
+    const vProd = totalEl ? toNumber(getText(totalEl, "vProd")) : 0;
+    const qBCMonoRetTotal = totalEl ? toNumber(getText(totalEl, "qBCMonoRet")) : 0;
+    const vICMSMonoRetTotal = totalEl ? toNumber(getText(totalEl, "vICMSMonoRet")) : 0;
+
+    // Itens (det)
+    const detElements = getElements(doc, "det");
+    const itens: XmlItemResumo[] = detElements
+      .map((detEl) => {
+        const prodEl = getElement(detEl, "prod");
+        const impostoEl = getElement(detEl, "imposto");
+        const icms61El = impostoEl ? getElement(impostoEl, "ICMS61") : null;
+
+        return {
+          cfop: prodEl ? getText(prodEl, "CFOP") || "" : "",
+          vProd: prodEl ? toNumber(getText(prodEl, "vProd")) : 0,
+          qCom: prodEl ? toNumber(getText(prodEl, "qCom")) || undefined : undefined,
+          qBCMonoRet: icms61El
+            ? toNumber(getText(icms61El, "qBCMonoRet")) || undefined
+            : undefined,
+          vICMSMonoRet: icms61El
+            ? toNumber(getText(icms61El, "vICMSMonoRet")) || undefined
+            : undefined,
+        };
+      })
+      .filter((it) => it.cfop && it.vProd > 0);
+
+    const nota: XmlNotaResumo = {
+      chave,
+      dhEmi,
+      dhRecbto: dhRecbto || undefined,
+      dataEmissao,
+      modelo,
+      serie,
+      numero,
+      cnpjEmit,
+      cnpjDest,
+      autorizada,
+      valorTotalProduto: vProd,
+      qBCMonoRetTotal: qBCMonoRetTotal || undefined,
+      vICMSMonoRetTotal: vICMSMonoRetTotal || undefined,
+      itens,
+    };
+
+    return nota;
+  } catch (e) {
+    console.warn("Falha ao parsear XML NFe com DOMParser, tentando regex:", e);
+    return parseXmlNfeRegex(content);
+  }
+}
+
+// Fallback com regex para XMLs malformados
+function parseXmlNfeRegex(content: string): XmlNotaResumo | null {
   try {
     const xml = content.replace(/xmlns(:\w+)?="[^"]*"/g, "");
 
-    const cStat = extract("cStat", xml);
+    const cStat = extractRegex("cStat", xml);
     const autorizada = cStat === "100";
 
-    const infNFeId = extractAttr("infNFe", "Id", xml) || "";
-    const chave = extract("chNFe", xml) || infNFeId.replace(/^NFe/, "");
+    const infNFeMatch = xml.match(/<infNFe[^>]*Id="([^"]+)"/);
+    const infNFeId = infNFeMatch ? infNFeMatch[1] : "";
+    const chave = extractRegex("chNFe", xml) || infNFeId.replace(/^NFe/, "");
 
-    const dhEmi = extract("dhEmi", xml) || "";
-    const dhRecbto = extract("dhRecbto", xml) || "";
+    const dhEmi = extractRegex("dhEmi", xml) || "";
+    const dhRecbto = extractRegex("dhRecbto", xml) || "";
 
     const usado = dhEmi || dhRecbto;
     const dataEmissao = usado ? usado.slice(0, 10) : "";
 
-    const modelo = extract("mod", xml) || "";
-    const serie = extract("serie", xml) || "";
-    const numero = extract("nNF", xml) || "";
+    const modelo = extractRegex("mod", xml) || "";
+    const serie = extractRegex("serie", xml) || "";
+    const numero = extractRegex("nNF", xml) || "";
 
-    const cnpjEmit = extract("CNPJ", extract("emit", xml) || "") || undefined;
-    const destBlock = extract("dest", xml) || "";
+    const emitMatch = xml.match(/<emit>([\s\S]*?)<\/emit>/);
+    const cnpjEmit = emitMatch
+      ? extractRegex("CNPJ", emitMatch[1]) || undefined
+      : undefined;
+
+    const destMatch = xml.match(/<dest>([\s\S]*?)<\/dest>/);
     let cnpjDest: string | undefined = undefined;
-    if (destBlock) {
-      const cnpjMatch = destBlock.match(/<CNPJ>(\d+)<\/CNPJ>/);
+    if (destMatch) {
+      const cnpjMatch = destMatch[1].match(/<CNPJ>(\d+)<\/CNPJ>/);
       if (cnpjMatch) cnpjDest = cnpjMatch[1];
     }
 
-    const totalBlock = extract("ICMSTot", xml) || "";
-    const vProd = toNumber(extract("vProd", totalBlock));
-    const qBCMonoRetTotal = toNumber(extract("qBCMonoRet", totalBlock));
-    const vICMSMonoRetTotal = toNumber(extract("vICMSMonoRet", totalBlock));
+    const totalMatch = xml.match(/<ICMSTot>([\s\S]*?)<\/ICMSTot>/);
+    const totalBlock = totalMatch ? totalMatch[1] : "";
+    const vProd = toNumber(extractRegex("vProd", totalBlock));
+    const qBCMonoRetTotal = toNumber(extractRegex("qBCMonoRet", totalBlock));
+    const vICMSMonoRetTotal = toNumber(extractRegex("vICMSMonoRet", totalBlock));
 
     const detRegex = /<det[^>]*>([\s\S]*?)<\/det>/g;
-    const dets = extractAll(detRegex, xml);
+    const dets: string[] = [];
+    let m: RegExpExecArray | null;
+    while ((m = detRegex.exec(xml))) dets.push(m[1]);
+
     const itens: XmlItemResumo[] = dets
       .map((detXml) => {
-        const prodBlock = extract("prod", detXml) || "";
-        const impostoBlock = extract("imposto", detXml) || "";
-        const icms61Block = extract("ICMS61", impostoBlock) || "";
+        const prodMatch = detXml.match(/<prod>([\s\S]*?)<\/prod>/);
+        const prodBlock = prodMatch ? prodMatch[1] : "";
+        const impostoMatch = detXml.match(/<imposto>([\s\S]*?)<\/imposto>/);
+        const impostoBlock = impostoMatch ? impostoMatch[1] : "";
+        const icms61Match = impostoBlock.match(/<ICMS61>([\s\S]*?)<\/ICMS61>/);
+        const icms61Block = icms61Match ? icms61Match[1] : "";
+
         return {
-          cfop: extract("CFOP", prodBlock) || "",
-          vProd: toNumber(extract("vProd", prodBlock)),
-          qCom: toNumber(extract("qCom", prodBlock)) || undefined,
-          qBCMonoRet: toNumber(extract("qBCMonoRet", icms61Block)) || undefined,
-          vICMSMonoRet: toNumber(extract("vICMSMonoRet", icms61Block)) || undefined,
+          cfop: extractRegex("CFOP", prodBlock) || "",
+          vProd: toNumber(extractRegex("vProd", prodBlock)),
+          qCom: toNumber(extractRegex("qCom", prodBlock)) || undefined,
+          qBCMonoRet: toNumber(extractRegex("qBCMonoRet", icms61Block)) || undefined,
+          vICMSMonoRet:
+            toNumber(extractRegex("vICMSMonoRet", icms61Block)) || undefined,
         };
       })
       .filter((it) => it.cfop && it.vProd > 0);
