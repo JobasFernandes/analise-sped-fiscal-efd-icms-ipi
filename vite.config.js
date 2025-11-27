@@ -19,10 +19,20 @@ function stripUseClient() {
 
 const repoName = "analise-sped-fiscal-efd-icms-ipi";
 const isCI = process.env.GITHUB_ACTIONS === "true";
+const base = isCI ? `/${repoName}/` : "/";
+
+function htmlBasePlugin() {
+  return {
+    name: "html-base-plugin",
+    transformIndexHtml(html) {
+      return html.replace(/href="\.\/images\//g, `href="${base}images/`);
+    },
+  };
+}
 
 export default defineConfig({
-  base: isCI ? `/${repoName}/` : "/",
-  plugins: [stripUseClient(), react()],
+  base,
+  plugins: [stripUseClient(), htmlBasePlugin(), react()],
   server: {
     port: 3001,
     open: true,
