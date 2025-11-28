@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
   listSpeds,
   deleteSped,
@@ -20,17 +20,53 @@ import {
 import { useToast } from "./ui/use-toast";
 import Spinner from "./ui/spinner";
 import { TooltipProvider, Tooltip, TooltipTrigger, TooltipContent } from "./ui/tooltip";
+import {
+  ArrowLeft,
+  Database,
+  Download,
+  Upload,
+  RefreshCw,
+  Trash2,
+  Play,
+  FileText,
+  Calendar,
+  Zap,
+  HelpCircle,
+} from "lucide-react";
 
 export default function SpedManager({ onLoad, onBack }) {
   const { toast } = useToast();
   const [speds, setSpeds] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-  const [busy, setBusy] = useState(false);
+
+  // Estados de loading separados por ação
+  const [loadingStates, setLoadingStates] = useState({
+    export: false,
+    import: false,
+    reindexAll: false,
+    reindexing: null, // ID do SPED sendo reindexado
+    deleting: null, // ID do SPED sendo deletado
+    loading: null, // ID do SPED sendo carregado
+  });
+
   const [deleteId, setDeleteId] = useState(null);
   const [importOpen, setImportOpen] = useState(false);
   const [importClear, setImportClear] = useState(true);
   const [importFile, setImportFile] = useState(null);
+
+  // Helper para verificar se alguma ação está em andamento
+  const isAnyBusy =
+    loadingStates.export ||
+    loadingStates.import ||
+    loadingStates.reindexAll ||
+    loadingStates.reindexing !== null ||
+    loadingStates.deleting !== null ||
+    loadingStates.loading !== null;
+
+  const setLoadingState = useCallback((key, value) => {
+    setLoadingStates((prev) => ({ ...prev, [key]: value }));
+  }, []);
 
   const load = async () => {
     try {
@@ -59,7 +95,7 @@ export default function SpedManager({ onLoad, onBack }) {
   const confirmDelete = async () => {
     if (!deleteId) return;
     try {
-      setBusy(true);
+      setLoadingState("deleting", deleteId);
       setError(null);
       await handleDelete(deleteId);
       toast({
@@ -70,14 +106,14 @@ export default function SpedManager({ onLoad, onBack }) {
     } catch (e) {
       setError(e?.message || "Falha ao excluir SPED");
     } finally {
-      setBusy(false);
+      setLoadingState("deleting", null);
       setDeleteId(null);
     }
   };
 
   const handleReindexOne = async (id) => {
     try {
-      setBusy(true);
+      setLoadingState("reindexing", id);
       setError(null);
       await recalcularIndicadores(id);
       await load();
@@ -89,13 +125,13 @@ export default function SpedManager({ onLoad, onBack }) {
     } catch (e) {
       setError(e?.message || "Falha ao recalcular agregados");
     } finally {
-      setBusy(false);
+      setLoadingState("reindexing", null);
     }
   };
 
   const handleReindexAll = async () => {
     try {
-      setBusy(true);
+      setLoadingState("reindexAll", true);
       setError(null);
       await recalcularIndicadoresTodos();
       await load();
@@ -107,13 +143,13 @@ export default function SpedManager({ onLoad, onBack }) {
     } catch (e) {
       setError(e?.message || "Falha ao recalcular agregados");
     } finally {
-      setBusy(false);
+      setLoadingState("reindexAll", false);
     }
   };
 
   const handleExport = async () => {
     try {
-      setBusy(true);
+      setLoadingState("export", true);
       const backup = await exportDbToJson();
       const blob = new Blob([JSON.stringify(backup)], {
         type: "application/json",
@@ -133,14 +169,14 @@ export default function SpedManager({ onLoad, onBack }) {
     } catch (e) {
       setError(e?.message || "Falha ao exportar backup");
     } finally {
-      setBusy(false);
+      setLoadingState("export", false);
     }
   };
 
   const executeImport = async () => {
     if (!importFile) return;
     try {
-      setBusy(true);
+      setLoadingState("import", true);
       const text = await importFile.text();
       const json = JSON.parse(text);
       await importDbFromJson(json, { clearBeforeImport: importClear });
@@ -157,12 +193,21 @@ export default function SpedManager({ onLoad, onBack }) {
     } catch (e) {
       setError(e?.message || "Falha ao importar backup");
     } finally {
-      setBusy(false);
+      setLoadingState("import", false);
+    }
+  };
+
+  const handleLoadSped = async (id) => {
+    setLoadingState("loading", id);
+    try {
+      await onLoad?.(id);
+    } finally {
+      setLoadingState("loading", null);
     }
   };
 
   const formatBr = (d) => {
-    if (!d) return "?";
+    if (!d) return "—";
     if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
       const [y, m, dia] = d.split("-");
       return `${dia}/${m}/${y}`;
@@ -176,232 +221,309 @@ export default function SpedManager({ onLoad, onBack }) {
     return d;
   };
 
+  const formatBytes = (bytes) => {
+    if (!bytes) return "";
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   return (
     <TooltipProvider delayDuration={150}>
-      <div className="mx-auto w-full max-w-6xl flex flex-col border rounded-lg bg-background/60 backdrop-blur-sm min-h-[73vh]">
-        <div className="flex flex-wrap gap-3 items-center justify-between px-4 py-3 border-b">
-          <h2 className="text-2xl font-bold flex items-center gap-2">
-            {onBack && (
-              <Button
-                variant="ghost"
-                className="-ml-1 px-2 text-sm"
-                onClick={() => onBack?.()}
-                title="Voltar"
-              >
-                ← Voltar
-              </Button>
-            )}
-            Meus SPEDs
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <button
-                  type="button"
-                  className="h-5 w-5 inline-flex items-center justify-center rounded border text-xs font-medium bg-muted/40 hover:bg-muted transition-colors"
-                  aria-label="Ajuda sobre indicadores"
-                >
-                  ?
-                </button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="start" className="max-w-sm">
-                Indicadores = somatórios por dia e por CFOP usados nos gráficos e
-                dashboards. Se algo parecer incorreto ou desatualizado, clique em
-                &quot;Recalcular Indicadores&quot;.
-              </TooltipContent>
-            </Tooltip>
-          </h2>
-          <div className="flex flex-wrap gap-2">
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
+      <div className="flex flex-col min-h-[calc(100vh-4rem)]">
+        {/* Header */}
+        <div className="border-b bg-card/50 backdrop-blur-sm sticky top-0 z-10">
+          <div className="flex-1 w-full px-3 sm:px-4 lg:px-6 pb-4">
+            <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+              {/* Título e voltar */}
+              <div className="flex items-center gap-3">
+                {onBack && (
                   <Button
-                    variant="outline"
-                    onClick={() => setImportOpen(true)}
-                    disabled={busy}
-                    aria-busy={busy}
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => onBack?.()}
+                    className="gap-2"
                   >
-                    {busy ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Spinner /> Importando…
-                      </span>
-                    ) : (
-                      "Importar backup"
-                    )}
+                    <ArrowLeft className="h-4 w-4" />
+                    <span className="hidden sm:inline">Voltar</span>
                   </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                Importa um backup JSON exportado anteriormente.
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    variant="outline"
-                    onClick={handleExport}
-                    disabled={busy}
-                    aria-busy={busy}
-                  >
-                    {busy ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Spinner /> Gerando…
-                      </span>
-                    ) : (
-                      "Exportar backup"
-                    )}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom">
-                Gera um arquivo JSON com todos os SPEDs e indicadores.
-              </TooltipContent>
-            </Tooltip>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <span>
-                  <Button
-                    variant="outline"
-                    onClick={handleReindexAll}
-                    disabled={busy}
-                    aria-busy={busy}
-                  >
-                    {busy ? (
-                      <span className="inline-flex items-center gap-2">
-                        <Spinner /> Processando…
-                      </span>
-                    ) : (
-                      "Recalcular Indicadores (todos)"
-                    )}
-                  </Button>
-                </span>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" align="center">
-                Reprocessa os indicadores (totais por dia e CFOP) de todos os SPEDs. Use
-                se notar inconsistências.
-              </TooltipContent>
-            </Tooltip>
+                )}
+                <div className="flex items-center gap-3">
+                  <div className="h-10 w-10 rounded-lg bg-primary/10 flex items-center justify-center">
+                    <Database className="h-5 w-5 text-primary" />
+                  </div>
+                  <div>
+                    <h1 className="text-xl font-semibold flex items-center gap-2">
+                      Meus SPEDs
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <button
+                            type="button"
+                            className="h-5 w-5 inline-flex items-center justify-center rounded-full bg-muted hover:bg-muted/80 transition-colors"
+                            aria-label="Ajuda"
+                          >
+                            <HelpCircle className="h-3.5 w-3.5 text-muted-foreground" />
+                          </button>
+                        </TooltipTrigger>
+                        <TooltipContent
+                          side="bottom"
+                          align="start"
+                          className="max-w-xs"
+                        >
+                          Gerencie seus arquivos SPED importados. Indicadores são
+                          somatórios por dia e CFOP usados nos gráficos.
+                        </TooltipContent>
+                      </Tooltip>
+                    </h1>
+                  </div>
+                </div>
+              </div>
+
+              {/* Ações globais */}
+              <div className="flex flex-wrap items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => setImportOpen(true)}
+                      disabled={isAnyBusy}
+                      className="gap-2"
+                    >
+                      {loadingStates.import ? (
+                        <>
+                          <Spinner className="h-4 w-4" />
+                          <span className="hidden sm:inline">Importando…</span>
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="h-4 w-4" />
+                          <span className="hidden sm:inline">Importar</span>
+                        </>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Importar backup JSON</TooltipContent>
+                </Tooltip>
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleExport}
+                      disabled={isAnyBusy || speds.length === 0}
+                      className="gap-2"
+                    >
+                      {loadingStates.export ? (
+                        <>
+                          <Spinner className="h-4 w-4" />
+                          <span className="hidden sm:inline">Gerando…</span>
+                        </>
+                      ) : (
+                        <>
+                          <Download className="h-4 w-4" />
+                          <span className="hidden sm:inline">Exportar</span>
+                        </>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Exportar backup JSON</TooltipContent>
+                </Tooltip>
+
+                <div className="hidden sm:block w-px h-6 bg-border" />
+
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={handleReindexAll}
+                      disabled={isAnyBusy || speds.length === 0}
+                      className="gap-2"
+                    >
+                      {loadingStates.reindexAll ? (
+                        <>
+                          <Spinner className="h-4 w-4" />
+                          <span className="hidden sm:inline">Processando…</span>
+                        </>
+                      ) : (
+                        <>
+                          <RefreshCw className="h-4 w-4" />
+                          <span className="hidden sm:inline">Recalcular todos</span>
+                        </>
+                      )}
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent className="max-w-xs">
+                    Reprocessa os indicadores de todos os SPEDs. Use se notar
+                    inconsistências.
+                  </TooltipContent>
+                </Tooltip>
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto px-2 py-2 space-y-2">
-          {loading && <p className="p-4">Carregando...</p>}
-          {error && <p className="p-4 text-red-500">{error}</p>}
-          {!loading && speds.length === 0 && (
-            <p className="p-4 text-muted-foreground">Nenhum SPED salvo ainda.</p>
+        {/* Conteúdo principal */}
+        <div className="flex-1 w-full px-3 sm:px-4 lg:px-6 py-4">
+          {error && (
+            <div className="mb-4 p-3 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+              {error}
+            </div>
           )}
-          {speds.length > 0 && (
-            <div className="divide-y divide-border rounded-md border border-border bg-card/40">
+
+          {loading && (
+            <div className="flex items-center justify-center py-12">
+              <Spinner className="h-8 w-8" />
+              <span className="ml-3 text-muted-foreground">Carregando SPEDs...</span>
+            </div>
+          )}
+
+          {!loading && speds.length === 0 && (
+            <div className="flex flex-col items-center justify-center py-16 text-center">
+              <div className="h-16 w-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
+                <FileText className="h-8 w-8 text-muted-foreground" />
+              </div>
+              <h3 className="text-lg font-medium mb-2">Nenhum SPED salvo</h3>
+              <p className="text-sm text-muted-foreground max-w-sm">
+                Faça upload de um arquivo SPED Fiscal para começar a análise, ou importe
+                um backup existente.
+              </p>
+              <div className="flex gap-2 mt-4">
+                {onBack && (
+                  <Button onClick={() => onBack?.()} className="gap-2">
+                    <Upload className="h-4 w-4" />
+                    Carregar SPED
+                  </Button>
+                )}
+                <Button
+                  variant="outline"
+                  onClick={() => setImportOpen(true)}
+                  className="gap-2"
+                >
+                  <Download className="h-4 w-4" />
+                  Importar backup
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {!loading && speds.length > 0 && (
+            <div className="space-y-3">
               {speds.map((s) => {
                 const importedAtStr = (() => {
                   try {
                     const d = s.importedAt ? new Date(s.importedAt) : null;
-                    return d ? d.toLocaleString() : "";
+                    return d ? d.toLocaleString("pt-BR") : "";
                   } catch {
                     return s.importedAt || "";
                   }
                 })();
+
+                const isThisLoading = loadingStates.loading === s.id;
+                const isThisReindexing = loadingStates.reindexing === s.id;
+                const isThisDeleting = loadingStates.deleting === s.id;
+
                 return (
                   <div
                     key={s.id}
-                    className="p-3 flex flex-col md:flex-row md:items-center justify-between gap-3"
+                    className="group relative rounded-lg border bg-card hover:bg-card/80 transition-colors overflow-hidden"
                   >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium flex items-center gap-2 break-all">
-                        <span>{s.filename}</span>
-                        {s.companyName && (
-                          <span
-                            className="text-xs font-normal text-muted-foreground truncate max-w-[220px]"
-                            title={`${s.companyName}`}
-                          >
-                            • {s.companyName}
-                          </span>
-                        )}
-                        {s.cnpj && (
-                          <span
-                            className="text-[10px] px-1 py-0.5 rounded border bg-muted/40"
-                            title="CNPJ"
-                          >
-                            {s.cnpj}
-                          </span>
-                        )}
-                        {s._fast && (
-                          <span className="text-[10px] px-1.5 py-0.5 rounded-full border border-emerald-600 text-emerald-700 dark:text-emerald-400">
-                            Rápido
-                          </span>
-                        )}
+                    <div className="p-2 flex flex-col lg:flex-row lg:items-center gap-4">
+                      {/* Ícone */}
+                      <div className="hidden sm:flex h-12 w-12 rounded-lg bg-primary/5 items-center justify-center shrink-0">
+                        <FileText className="h-6 w-6 text-primary/70" />
                       </div>
-                      <div className="text-xs text-muted-foreground mt-0.5 space-y-0.5">
-                        <div>{importedAtStr}</div>
-                        {(s.periodoInicio || s.periodoFim) && (
-                          <div className="opacity-80">
-                            Período: {formatBr(s.periodoInicio)} →{" "}
-                            {formatBr(s.periodoFim)}
-                          </div>
-                        )}
+
+                      {/* Info principal */}
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-sm">
+                          <h3 className="font-medium text-base">
+                            {s.companyName || "Empresa não identificada"}
+                          </h3>
+                          {s.cnpj && (
+                            <span className="font-mono text-xs bg-muted px-1.5 py-0.5 rounded">
+                              {s.cnpj}
+                            </span>
+                          )}
+                          {(s.periodoInicio || s.periodoFim) && (
+                            <span className="inline-flex items-center gap-1.5 text-muted-foreground">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {formatBr(s.periodoInicio)} → {formatBr(s.periodoFim)}
+                            </span>
+                          )}
+                          {s._fast && (
+                            <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800">
+                              <Zap className="h-3 w-3" />
+                              Otimizado
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground/70">
+                          {importedAtStr && <span>Importado em {importedAtStr}</span>}
+                          {s.size && <span>{formatBytes(s.size)}</span>}
+                        </div>
                       </div>
-                    </div>
-                    <div className="flex gap-2 shrink-0 flex-wrap">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>
-                            <Button
-                              onClick={() => onLoad?.(s.id)}
-                              disabled={busy}
-                              aria-busy={busy}
-                            >
-                              Carregar
-                            </Button>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>Carrega este SPED para análise.</TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>
+
+                      {/* Ações */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Button
+                          onClick={() => handleLoadSped(s.id)}
+                          disabled={isAnyBusy}
+                          className="gap-2"
+                        >
+                          {isThisLoading ? (
+                            <>
+                              <Spinner className="h-4 w-4" />
+                              Carregando…
+                            </>
+                          ) : (
+                            <>
+                              <Play className="h-4 w-4" />
+                              Analisar
+                            </>
+                          )}
+                        </Button>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                             <Button
                               variant="outline"
+                              size="icon"
                               onClick={() => handleReindexOne(s.id)}
-                              disabled={busy}
-                              aria-busy={busy}
+                              disabled={isAnyBusy}
                             >
-                              {busy ? (
-                                <span className="inline-flex items-center gap-2">
-                                  <Spinner /> Recalc…
-                                </span>
+                              {isThisReindexing ? (
+                                <Spinner className="h-4 w-4" />
                               ) : (
-                                "Recalcular"
+                                <RefreshCw className="h-4 w-4" />
                               )}
                             </Button>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="left">
-                          Reprocessa os indicadores apenas deste SPED (não altera as
-                          notas).
-                        </TooltipContent>
-                      </Tooltip>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span>
+                          </TooltipTrigger>
+                          <TooltipContent>Recalcular indicadores</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
                             <Button
-                              variant="destructive"
+                              variant="outline"
+                              size="icon"
                               onClick={() => setDeleteId(s.id)}
-                              disabled={busy}
-                              aria-busy={busy}
+                              disabled={isAnyBusy}
+                              className="text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/50"
                             >
-                              {busy ? (
-                                <span className="inline-flex items-center gap-2">
-                                  <Spinner />
-                                </span>
+                              {isThisDeleting ? (
+                                <Spinner className="h-4 w-4" />
                               ) : (
-                                "Excluir"
+                                <Trash2 className="h-4 w-4" />
                               )}
                             </Button>
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent side="left">
-                          Exclui definitivamente este SPED.
-                        </TooltipContent>
-                      </Tooltip>
+                          </TooltipTrigger>
+                          <TooltipContent>Excluir SPED</TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
                   </div>
                 );
@@ -410,52 +532,55 @@ export default function SpedManager({ onLoad, onBack }) {
           )}
         </div>
 
-        <div className="border-t px-4 py-3 text-center text-xs text-muted-foreground bg-background/70">
-          Analizador SPED - Os dados são processados localmente no seu navegador.
+        {/* Footer */}
+        <div className="border-t bg-muted/30 px-3 sm:px-4 lg:px-6 py-3">
+          <p className="text-xs text-center text-muted-foreground">
+            Os dados são processados e armazenados localmente no seu navegador. Exporte
+            backups regularmente para não perder seus dados.
+          </p>
         </div>
 
+        {/* Dialog de exclusão */}
         <Dialog open={Boolean(deleteId)} onOpenChange={(o) => !o && setDeleteId(null)}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Confirmar exclusão</DialogTitle>
-              <DialogDescription>
-                Exclusão permanente de SPED e dados relacionados.
-              </DialogDescription>
+              <DialogTitle className="flex items-center gap-2">
+                <Trash2 className="h-5 w-5 text-destructive" />
+                Confirmar exclusão
+              </DialogTitle>
+              <DialogDescription>Esta ação não pode ser desfeita.</DialogDescription>
             </DialogHeader>
             <DialogBody>
               <p className="text-sm text-muted-foreground">
                 Tem certeza que deseja excluir este SPED e todos os dados relacionados
-                (notas, itens e indicadores)? Essa ação não pode ser desfeita.
+                (notas, itens e indicadores)?
               </p>
             </DialogBody>
             <DialogFooter>
               <div className="flex justify-end gap-2">
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   onClick={() => setDeleteId(null)}
-                  disabled={busy}
-                  aria-busy={busy}
+                  disabled={loadingStates.deleting !== null}
                 >
-                  {busy ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Spinner /> Fechando…
-                    </span>
-                  ) : (
-                    "Cancelar"
-                  )}
+                  Cancelar
                 </Button>
                 <Button
                   variant="destructive"
                   onClick={confirmDelete}
-                  disabled={busy}
-                  aria-busy={busy}
+                  disabled={loadingStates.deleting !== null}
+                  className="gap-2"
                 >
-                  {busy ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Spinner /> Excluindo…
-                    </span>
+                  {loadingStates.deleting !== null ? (
+                    <>
+                      <Spinner className="h-4 w-4" />
+                      Excluindo…
+                    </>
                   ) : (
-                    "Excluir definitivamente"
+                    <>
+                      <Trash2 className="h-4 w-4" />
+                      Excluir
+                    </>
                   )}
                 </Button>
               </div>
@@ -463,71 +588,91 @@ export default function SpedManager({ onLoad, onBack }) {
           </DialogContent>
         </Dialog>
 
+        {/* Dialog de importação */}
         <Dialog
           open={importOpen}
           onOpenChange={(o) => {
-            setImportOpen(o);
-            if (!o) {
-              setImportFile(null);
+            if (!loadingStates.import) {
+              setImportOpen(o);
+              if (!o) setImportFile(null);
             }
           }}
         >
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Importar backup (JSON)</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Upload className="h-5 w-5 text-primary" />
+                Importar backup
+              </DialogTitle>
               <DialogDescription>
-                Restaurar dados de um arquivo de backup exportado anteriormente.
+                Restaure dados de um arquivo JSON exportado anteriormente.
               </DialogDescription>
             </DialogHeader>
             <DialogBody>
-              <div className="space-y-3">
-                <input
-                  type="file"
-                  accept="application/json,.json"
-                  onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                />
-                <label className="flex items-center gap-2 text-sm">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">
+                    Arquivo de backup
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="file"
+                      accept="application/json,.json"
+                      onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+                      className="w-full text-sm file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-primary file:text-primary-foreground hover:file:bg-primary/90 file:cursor-pointer cursor-pointer border rounded-lg"
+                      disabled={loadingStates.import}
+                    />
+                  </div>
+                  {importFile && (
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Selecionado: {importFile.name}
+                    </p>
+                  )}
+                </div>
+
+                <label className="flex items-start gap-3 p-3 rounded-lg border bg-muted/30 cursor-pointer hover:bg-muted/50 transition-colors">
                   <input
                     type="checkbox"
                     checked={importClear}
                     onChange={(e) => setImportClear(e.target.checked)}
+                    className="mt-0.5 h-4 w-4 rounded border-gray-300"
+                    disabled={loadingStates.import}
                   />
-                  Limpar banco antes de importar (recomendado)
+                  <div>
+                    <span className="text-sm font-medium">
+                      Limpar banco antes de importar
+                    </span>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      Recomendado para evitar conflitos e duplicidades
+                    </p>
+                  </div>
                 </label>
-                <p className="text-xs text-muted-foreground">
-                  Dica: use &quot;Limpar&quot; para evitar conflitos de chaves e
-                  duplicidades. SPEDs duplicados são evitados quando o backup possui
-                  hashes.
-                </p>
               </div>
             </DialogBody>
             <DialogFooter>
               <div className="flex justify-end gap-2">
                 <Button
-                  variant="secondary"
+                  variant="outline"
                   onClick={() => setImportOpen(false)}
-                  disabled={busy}
-                  aria-busy={busy}
+                  disabled={loadingStates.import}
                 >
-                  {busy ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Spinner /> Fechando…
-                    </span>
-                  ) : (
-                    "Cancelar"
-                  )}
+                  Cancelar
                 </Button>
                 <Button
                   onClick={executeImport}
-                  disabled={busy || !importFile}
-                  aria-busy={busy}
+                  disabled={loadingStates.import || !importFile}
+                  className="gap-2"
                 >
-                  {busy ? (
-                    <span className="inline-flex items-center gap-2">
-                      <Spinner /> Importando…
-                    </span>
+                  {loadingStates.import ? (
+                    <>
+                      <Spinner className="h-4 w-4" />
+                      Importando…
+                    </>
                   ) : (
-                    "Importar"
+                    <>
+                      <Upload className="h-4 w-4" />
+                      Importar
+                    </>
                   )}
                 </Button>
               </div>

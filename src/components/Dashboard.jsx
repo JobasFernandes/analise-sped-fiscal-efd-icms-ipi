@@ -23,7 +23,7 @@ import Button from "./ui/Button";
 import DateInput from "./ui/date-input";
 import { FiscalHelpSection } from "./ui/FiscalInsight";
 
-const Dashboard = ({ dados, arquivo }) => {
+const Dashboard = ({ dados }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -203,14 +203,29 @@ const Dashboard = ({ dados, arquivo }) => {
     worker.postMessage({ type: "exportCsvAll", items: itens, filename });
   };
 
+  const formatarPeriodo = (inicio, fim) => {
+    const formatarData = (d) => {
+      if (!d) return "";
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        const [y, m, dia] = d.split("-");
+        return `${dia}/${m}/${y}`;
+      }
+      return d;
+    };
+    if (!inicio && !fim) return "";
+    return `${formatarData(inicio)} → ${formatarData(fim)}`;
+  };
+
   return (
     <div className="space-y-3">
       <Card className="py-4">
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
           <div className="flex-shrink-0">
-            <h1 className="text-2xl font-bold">Análise SPED Fiscal</h1>
+            <h1 className="text-2xl font-bold">
+              {dados?.companyName || "Análise SPED Fiscal"}
+            </h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Arquivo: {arquivo?.name || "Não identificado"}
+              {formatarPeriodo(dados?.periodo?.inicio, dados?.periodo?.fim)}
             </p>
           </div>
 
