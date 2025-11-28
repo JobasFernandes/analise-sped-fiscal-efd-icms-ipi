@@ -231,6 +231,7 @@ export async function importarXmlNotas(
       valorTotalProduto: nota.valorTotalProduto,
       qBCMonoRetTotal: nota.qBCMonoRetTotal,
       vICMSMonoRetTotal: nota.vICMSMonoRetTotal,
+      xmlContent: a.content,
       itens: itensFiltrados.map((i) => ({
         cfop: i.cfop,
         vProd: i.vProd,
@@ -349,4 +350,23 @@ export async function limparXmlDadosPorCnpj(cnpjBase: string): Promise<void> {
       .toArray();
     for (const a of aggs) await db.xml_day_cfop_aggs.delete(a.id!);
   });
+}
+
+export async function buscarXmlsPorCnpj(cnpjBase: string): Promise<XmlNotaRow[]> {
+  const cnpjRef = cnpjBase.replace(/\D/g, "");
+  return db.xml_notas
+    .filter((n) => (n.cnpjRef || "") === cnpjRef && !!n.xmlContent)
+    .toArray();
+}
+
+export async function contarXmlsPorCnpj(cnpjBase: string): Promise<number> {
+  const cnpjRef = cnpjBase.replace(/\D/g, "");
+  return db.xml_notas.filter((n) => (n.cnpjRef || "") === cnpjRef).count();
+}
+
+export async function contarXmlsExportaveisPorCnpj(cnpjBase: string): Promise<number> {
+  const cnpjRef = cnpjBase.replace(/\D/g, "");
+  return db.xml_notas
+    .filter((n) => (n.cnpjRef || "") === cnpjRef && !!n.xmlContent)
+    .count();
 }

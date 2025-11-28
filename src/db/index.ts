@@ -109,6 +109,10 @@ export class SpedDB extends Dexie {
         await trans.table("xml_notas").clear();
         await trans.table("xml_day_cfop_aggs").clear();
       });
+    // v7: adicionar campo xmlContent para armazenar o XML original
+    this.version(7).stores({
+      xml_notas: "id, chave, dataEmissao, cnpjEmit, cnpjDest, cnpjRef",
+    });
   }
 }
 
@@ -152,6 +156,7 @@ export interface XmlNotaRow {
   valorTotalProduto: number;
   qBCMonoRetTotal?: number;
   vICMSMonoRetTotal?: number;
+  xmlContent?: string; // conteúdo XML original (v7)
   itens?: Array<{
     cfop: string;
     vProd: number;

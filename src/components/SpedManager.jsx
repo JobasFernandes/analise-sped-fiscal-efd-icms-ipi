@@ -6,7 +6,13 @@ import {
   recalcularIndicadoresTodos,
   possuiIndicadores,
 } from "../db/daos/spedDao";
+import {
+  contarXmlsPorCnpj,
+  buscarXmlsPorCnpj,
+  contarXmlsExportaveisPorCnpj,
+} from "../db/daos/xmlDao";
 import { exportDbToJson, importDbFromJson } from "../db/backup";
+import JSZip from "jszip";
 import Button from "./ui/Button";
 import {
   Dialog,
@@ -32,6 +38,7 @@ import {
   Calendar,
   Zap,
   HelpCircle,
+  FileArchive,
 } from "lucide-react";
 
 export default function SpedManager({ onLoad, onBack }) {
@@ -40,14 +47,14 @@ export default function SpedManager({ onLoad, onBack }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
-  // Estados de loading separados por ação
   const [loadingStates, setLoadingStates] = useState({
     export: false,
     import: false,
     reindexAll: false,
-    reindexing: null, // ID do SPED sendo reindexado
-    deleting: null, // ID do SPED sendo deletado
-    loading: null, // ID do SPED sendo carregado
+    reindexing: null,
+    deleting: null,
+    loading: null,
+    exportingXml: null,
   });
 
   const [deleteId, setDeleteId] = useState(null);
@@ -55,14 +62,14 @@ export default function SpedManager({ onLoad, onBack }) {
   const [importClear, setImportClear] = useState(true);
   const [importFile, setImportFile] = useState(null);
 
-  // Helper para verificar se alguma ação está em andamento
   const isAnyBusy =
     loadingStates.export ||
     loadingStates.import ||
     loadingStates.reindexAll ||
     loadingStates.reindexing !== null ||
     loadingStates.deleting !== null ||
-    loadingStates.loading !== null;
+    loadingStates.loading !== null ||
+    loadingStates.exportingXml !== null;
 
   const setLoadingState = useCallback((key, value) => {
     setLoadingStates((prev) => ({ ...prev, [key]: value }));
@@ -73,7 +80,19 @@ export default function SpedManager({ onLoad, onBack }) {
       setLoading(true);
       const data = await listSpeds();
       const withFlags = await Promise.all(
-        data.map(async (s) => ({ ...s, _fast: await possuiIndicadores(s.id) }))
+        data.map(async (s) => {
+          const hasFast = await possuiIndicadores(s.id);
+          const xmlCount = s.cnpj ? await contarXmlsPorCnpj(s.cnpj) : 0;
+          const xmlExportCount = s.cnpj
+            ? await contarXmlsExportaveisPorCnpj(s.cnpj)
+            : 0;
+          return {
+            ...s,
+            _fast: hasFast,
+            _xmlCount: xmlCount,
+            _xmlExportCount: xmlExportCount,
+          };
+        })
       );
       setSpeds(withFlags);
     } catch (e) {
@@ -203,6 +222,53 @@ export default function SpedManager({ onLoad, onBack }) {
       await onLoad?.(id);
     } finally {
       setLoadingState("loading", null);
+    }
+  };
+
+  const handleExportXmlZip = async (sped) => {
+    if (!sped.cnpj) return;
+    try {
+      setLoadingState("exportingXml", sped.id);
+      const xmls = await buscarXmlsPorCnpj(sped.cnpj);
+      if (xmls.length === 0) {
+        toast({
+          title: "Nenhum XML disponível",
+          description:
+            "Os XMLs importados anteriormente não possuem conteúdo para exportação.",
+          variant: "warning",
+        });
+        return;
+      }
+
+      const zip = new JSZip();
+      for (const xml of xmls) {
+        const filename = `${xml.chave}.xml`;
+        zip.file(filename, xml.xmlContent);
+      }
+
+      const blob = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      const cnpjFormatado = sped.cnpj.replace(/\D/g, "");
+      const periodo =
+        sped.periodoInicio && sped.periodoFim
+          ? `_${sped.periodoInicio.replace(/-/g, "")}_${sped.periodoFim.replace(/-/g, "")}`
+          : "";
+      a.href = URL.createObjectURL(blob);
+      a.download = `xmls_${cnpjFormatado}${periodo}.zip`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+
+      toast({
+        title: "XMLs exportados",
+        description: `${xmls.length} arquivo(s) XML exportado(s) em ZIP.`,
+        variant: "success",
+      });
+    } catch (e) {
+      setError(e?.message || "Falha ao exportar XMLs");
+    } finally {
+      setLoadingState("exportingXml", null);
     }
   };
 
@@ -424,6 +490,8 @@ export default function SpedManager({ onLoad, onBack }) {
                 const isThisLoading = loadingStates.loading === s.id;
                 const isThisReindexing = loadingStates.reindexing === s.id;
                 const isThisDeleting = loadingStates.deleting === s.id;
+                const isThisExportingXml = loadingStates.exportingXml === s.id;
+                const hasXmls = s._xmlCount > 0;
 
                 return (
                   <div
@@ -504,6 +572,31 @@ export default function SpedManager({ onLoad, onBack }) {
                           </TooltipTrigger>
                           <TooltipContent>Recalcular indicadores</TooltipContent>
                         </Tooltip>
+
+                        {hasXmls && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => handleExportXmlZip(s)}
+                                disabled={isAnyBusy || s._xmlExportCount === 0}
+                                className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 dark:text-blue-400 dark:hover:bg-blue-900/20"
+                              >
+                                {isThisExportingXml ? (
+                                  <Spinner className="h-4 w-4" />
+                                ) : (
+                                  <FileArchive className="h-4 w-4" />
+                                )}
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              {s._xmlExportCount > 0
+                                ? `Exportar ${s._xmlExportCount} XML${s._xmlExportCount > 1 ? "s" : ""} em ZIP`
+                                : `${s._xmlCount} XML${s._xmlCount > 1 ? "s" : ""} vinculado${s._xmlCount > 1 ? "s" : ""} (reimporte para exportar)`}
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
 
                         <Tooltip>
                           <TooltipTrigger asChild>
