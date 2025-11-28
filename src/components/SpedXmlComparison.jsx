@@ -2,6 +2,7 @@ import React, { useEffect, useState } from "react";
 import Card from "./ui/Card";
 import Button from "./ui/Button";
 import DateInput from "./ui/date-input";
+import { FiscalInsight, FiscalBadge } from "./ui/FiscalInsight";
 import {
   gerarComparativoSpedXml,
   obterDetalhesDivergencia,
@@ -47,7 +48,7 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
     return { totalXml, totalSped, diffAbs, diffPerc };
   }, [totais]);
 
-  const diffsCriticos = linhas.filter((l) => Math.abs(l.diffPerc) > 0); // tolerância 0%
+  const diffsCriticos = linhas.filter((l) => Math.abs(l.diffPerc) > 0);
 
   const abrirDetalhe = async (linha) => {
     setLinhaSelecionada(linha);
@@ -95,8 +96,18 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
         </div>
       </div>
 
-      <div className="text-xs text-muted-foreground">
-        {diffsCriticos.length} divergência(s) (tolerância 0%)
+      {/* Status do comparativo */}
+      <div className="flex items-center gap-3 text-sm">
+        <span className="text-muted-foreground">
+          {diffsCriticos.length} divergência(s)
+        </span>
+        {diffsCriticos.length === 0 ? (
+          <FiscalBadge status="ok">✓ Conferido</FiscalBadge>
+        ) : diffsCriticos.length <= 5 ? (
+          <FiscalBadge status="warning">Atenção</FiscalBadge>
+        ) : (
+          <FiscalBadge status="error">Divergências</FiscalBadge>
+        )}
       </div>
 
       {resumo && (
@@ -170,7 +181,7 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
             {!loading &&
               linhas.map((l, idx) => {
                 const diffPercFmt = l.diffPerc.toFixed(2);
-                const critico = Math.abs(l.diffPerc) > 0; // qualquer diferença
+                const critico = Math.abs(l.diffPerc) > 0;
                 const diffAbsFmt = formatarMoeda(l.diffAbs === 0 ? 0 : l.diffAbs);
                 return (
                   <tr
@@ -209,6 +220,49 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
         Notas: Dif% = (XML - SPED)/SPED. SPED=0 =&gt; 0% para evitar divisão por zero.
         Apenas CFOPs de saída (dir=1).
       </p>
+
+      {/* Dica de divergências */}
+      {diffsCriticos.length > 0 && (
+        <FiscalInsight
+          type="warning"
+          title={`${diffsCriticos.length} divergência(s) encontrada(s)`}
+          collapsible
+          defaultExpanded={true}
+          dismissible
+        >
+          <p>
+            Clique em uma linha da tabela para ver os detalhes e identificar quais notas
+            estão causando a diferença. Causas comuns incluem:
+          </p>
+          <ul className="mt-2 space-y-1 list-disc list-inside">
+            <li>
+              <strong>XML faltando:</strong> Nota consta no SPED mas o XML não foi
+              importado
+            </li>
+            <li>
+              <strong>Nota cancelada:</strong> XML foi ignorado por estar cancelado
+              (cStat≠100)
+            </li>
+            <li>
+              <strong>Data de competência:</strong> Nota com emissão em um mês e
+              autorização em outro
+            </li>
+            <li>
+              <strong>CFOP divergente:</strong> O CFOP no XML difere do escriturado no
+              SPED
+            </li>
+          </ul>
+        </FiscalInsight>
+      )}
+
+      {diffsCriticos.length === 0 && linhas.length > 0 && (
+        <FiscalInsight type="info" title="Conferência OK" dismissible>
+          <p>
+            Todos os valores do SPED conferem com os XMLs importados. Os totais por dia
+            e CFOP estão batendo corretamente.
+          </p>
+        </FiscalInsight>
+      )}
 
       {detalheAberto && (
         <div className="fixed inset-0 z-50 bg-black/40 flex items-center justify-center p-2">
@@ -333,6 +387,64 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
                     Chaves presentes em ambos mostram diferenças linha a linha. Valores
                     são soma dos itens da nota para o CFOP selecionado.
                   </p>
+
+                  {/* Dicas de resolução baseadas no tipo de divergência */}
+                  {detalhe.notas?.some((n) => n.tipo === "SOMENTE_SPED") && (
+                    <FiscalInsight
+                      type="tip"
+                      title="Notas apenas no SPED"
+                      className="mt-3"
+                    >
+                      <p>
+                        Existem notas escrituradas no SPED que não foram encontradas nos
+                        XMLs. Verifique se:
+                      </p>
+                      <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                        <li>O arquivo XML foi incluído na importação</li>
+                        <li>A nota não foi cancelada após a emissão</li>
+                        <li>A data de emissão está dentro do período filtrado</li>
+                      </ul>
+                    </FiscalInsight>
+                  )}
+
+                  {detalhe.notas?.some((n) => n.tipo === "SOMENTE_XML") && (
+                    <FiscalInsight
+                      type="tip"
+                      title="Notas apenas no XML"
+                      className="mt-3"
+                    >
+                      <p>
+                        Existem XMLs importados que não aparecem no SPED. Possíveis
+                        causas:
+                      </p>
+                      <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                        <li>Nota não foi escriturada no SPED fiscal</li>
+                        <li>CFOP diferente no SPED vs XML</li>
+                        <li>Erro na digitação da chave de acesso no SPED</li>
+                      </ul>
+                    </FiscalInsight>
+                  )}
+
+                  {detalhe.notas?.some(
+                    (n) =>
+                      n.tipo === "AMBOS" &&
+                      Math.abs((n.valorXml || 0) - (n.valorSped || 0)) > 0.01
+                  ) && (
+                    <FiscalInsight
+                      type="tip"
+                      title="Diferença de valores"
+                      className="mt-3"
+                    >
+                      <p>
+                        Notas presentes em ambos mas com valores diferentes. Verifique:
+                      </p>
+                      <ul className="mt-1 space-y-0.5 list-disc list-inside">
+                        <li>Descontos ou acréscimos não refletidos no SPED</li>
+                        <li>Arredondamentos diferentes entre sistemas</li>
+                        <li>Itens com CFOPs diferentes na mesma nota</li>
+                      </ul>
+                    </FiscalInsight>
+                  )}
                 </div>
               )}
             </div>

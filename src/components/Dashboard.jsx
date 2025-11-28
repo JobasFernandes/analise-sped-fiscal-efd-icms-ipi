@@ -21,6 +21,7 @@ import CfopDetalhes from "./CfopDetalhes";
 import Card from "./ui/Card";
 import Button from "./ui/Button";
 import DateInput from "./ui/date-input";
+import { FiscalHelpSection } from "./ui/FiscalInsight";
 
 const Dashboard = ({ dados, arquivo }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);
@@ -559,6 +560,33 @@ const Dashboard = ({ dados, arquivo }) => {
           Apenas operações com situação normal foram consideradas na análise.
         </p>
       </div>
+
+      {/* Insights fiscais do Dashboard */}
+      <FiscalHelpSection
+        title="Entendendo os dados do SPED Fiscal"
+        items={[
+          {
+            title: "Entradas vs Saídas",
+            text: "Entradas são operações de compra (CFOP iniciando com 1, 2 ou 3). Saídas são operações de venda (CFOP iniciando com 5, 6 ou 7).",
+          },
+          {
+            title: "CFOPs importantes",
+            text: "5102/6102 = Venda de mercadoria. 5405/6405 = Venda de produto ST. 5656/5667 = Venda de combustíveis. 5929/6929 = Cupom fiscal vinculado.",
+          },
+          {
+            title: "Situação da nota",
+            text: "Apenas notas com situação '00' (documento regular) são consideradas na análise. Notas canceladas ou inutilizadas são ignoradas.",
+          },
+          {
+            title: "Registro C190",
+            text: "Os valores exibidos vêm do registro C190 (analítico por CFOP), que agrupa os totais por código fiscal de operação.",
+          },
+          {
+            title: "Filtro de período",
+            text: "Use os filtros de data para analisar períodos específicos. Os dados são baseados na data do documento (DT_DOC) do SPED.",
+          },
+        ]}
+      />
 
       {cfopSelecionado && (
         <CfopDetalhes

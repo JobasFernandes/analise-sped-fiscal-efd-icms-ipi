@@ -10,6 +10,7 @@ import {
 } from "./ui/dialog";
 import Button from "./ui/Button";
 import { formatarMoeda, formatarData, formatarNumero } from "../utils/dataProcessor";
+import { FiscalInsight } from "./ui/FiscalInsight";
 
 const removerAcentos = (texto) => {
   if (!texto) return "";
@@ -225,6 +226,77 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     return { tipo: "Indefinido", cor: "text-gray-600", bg: "bg-gray-100" };
   };
 
+  const getDicaFiscalCfop = (cfopCode) => {
+    const num = parseInt(cfopCode);
+    if ([5656, 5667, 6656, 6667, 1656, 1667, 2656, 2667].includes(num)) {
+      return {
+        tipo: "info",
+        titulo: "CFOP de Combustíveis",
+        texto:
+          "Este CFOP é utilizado para operações com combustíveis e derivados de petróleo. " +
+          "Verifique se o ICMS Monofásico (ST) está sendo tratado corretamente no registro.",
+      };
+    }
+    if ([5929, 6929].includes(num)) {
+      return {
+        tipo: "tip",
+        titulo: "Cupom Fiscal Vinculado",
+        texto:
+          "Este CFOP representa operações já documentadas por cupom fiscal (ECF/SAT). " +
+          "Geralmente deve ser excluído do comparativo XML para evitar duplicidade.",
+      };
+    }
+    if ([5401, 5402, 5403, 5405, 6401, 6402, 6403, 6405].includes(num)) {
+      return {
+        tipo: "info",
+        titulo: "Substituição Tributária",
+        texto:
+          "Este CFOP indica operação com mercadoria sujeita à substituição tributária. " +
+          "O ICMS-ST já foi recolhido anteriormente na cadeia.",
+      };
+    }
+    if ([5102, 5405, 6102, 6405].includes(num)) {
+      return {
+        tipo: "info",
+        titulo: "Venda de Mercadoria",
+        texto:
+          "CFOP de venda de mercadoria adquirida ou recebida de terceiros. " +
+          "Verifique a tributação de ICMS conforme o regime do contribuinte.",
+      };
+    }
+    if (
+      (num >= 5200 && num < 5300) ||
+      (num >= 6200 && num < 6300) ||
+      (num >= 1200 && num < 1300) ||
+      (num >= 2200 && num < 2300)
+    ) {
+      return {
+        tipo: "warning",
+        titulo: "Operação de Devolução",
+        texto:
+          "Este CFOP indica devolução de mercadoria. Devoluções impactam o valor líquido " +
+          "das operações e podem gerar créditos de ICMS.",
+      };
+    }
+    if (
+      (num >= 5150 && num < 5160) ||
+      (num >= 6150 && num < 6160) ||
+      (num >= 1150 && num < 1160) ||
+      (num >= 2150 && num < 2160)
+    ) {
+      return {
+        tipo: "info",
+        titulo: "Transferência entre Estabelecimentos",
+        texto:
+          "Este CFOP indica transferência de mercadoria entre estabelecimentos da mesma empresa. " +
+          "A tributação varia conforme a UF de origem e destino.",
+      };
+    }
+    return null;
+  };
+
+  const dicaFiscal = hasData ? getDicaFiscalCfop(cfop.cfop) : null;
+
   const tipoOperacao = hasData
     ? getTipoOperacao(cfop.cfop)
     : { tipo: "", cor: "", bg: "" };
@@ -272,6 +344,20 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
               </Button>
             </div>
           </DialogHeader>
+
+          {/* Dica fiscal contextual */}
+          {dicaFiscal && (
+            <div className="px-6 py-2">
+              <FiscalInsight
+                type={dicaFiscal.tipo}
+                title={dicaFiscal.titulo}
+                dismissible
+              >
+                <p>{dicaFiscal.texto}</p>
+              </FiscalInsight>
+            </div>
+          )}
+
           <div className="px-6 pb-4 bg-muted/30"></div>
 
           <div

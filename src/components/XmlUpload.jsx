@@ -7,6 +7,7 @@ import Spinner from "./ui/spinner";
 import { useToast } from "./ui/use-toast";
 import { importarXmlNotas, limparXmlDados } from "../db/daos/xmlDao";
 import Switch from "./ui/Switch";
+import { FiscalInsight, FiscalHelpSection } from "./ui/FiscalInsight";
 import {
   Dialog,
   DialogBody,
@@ -17,7 +18,6 @@ import {
   DialogTitle,
 } from "./ui/dialog";
 
-// CFOPs padrão para exclusão (cupom fiscal vinculado)
 const CFOPS_EXCLUIR_PADRAO = ["5929", "6929"];
 const MAX_DETALHES_UI = 1000;
 
@@ -83,13 +83,11 @@ export default function XmlUpload({
   const possuiCfopsSped =
     Array.isArray(cfopsVendaPermitidos) && cfopsVendaPermitidos.length > 0;
 
-  // Ler arquivo XML como texto
   const lerArquivoXml = async (file) => {
     const text = await file.text();
     return { name: file.name, content: text };
   };
 
-  // Extrair XMLs de arquivo ZIP
   const extrairZip = async (file) => {
     const zip = await JSZip.loadAsync(file);
     const xmlFiles = [];
@@ -105,10 +103,9 @@ export default function XmlUpload({
     return xmlFiles;
   };
 
-  // Ler arquivos em paralelo (lotes para não sobrecarregar)
   const lerArquivosParalelo = async (files, onProgress) => {
     const out = [];
-    const BATCH_SIZE = 50; // Processar 50 arquivos por vez
+    const BATCH_SIZE = 50;
     let processed = 0;
     const total = files.length;
 
@@ -134,7 +131,6 @@ export default function XmlUpload({
     return out;
   };
 
-  // Processar entries de drag-drop (suporte a pastas)
   const processarEntries = async (entries) => {
     const files = [];
 
@@ -167,7 +163,7 @@ export default function XmlUpload({
                 for (const e of entries) {
                   await processEntry(e);
                 }
-                readEntries(); // Continuar lendo (batches de 100)
+                readEntries();
               },
               () => resolve()
             );
@@ -184,13 +180,11 @@ export default function XmlUpload({
     return files;
   };
 
-  // Handler de seleção de arquivos
   const handleSelect = (e) => {
     const files = Array.from(e.target.files || []);
     setArquivos(files);
   };
 
-  // Handlers de drag-drop
   const handleDragEnter = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -200,7 +194,6 @@ export default function XmlUpload({
   const handleDragLeave = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
-    // Verificar se saiu realmente da área
     if (dropRef.current && !dropRef.current.contains(e.relatedTarget)) {
       setIsDragging(false);
     }
@@ -230,7 +223,6 @@ export default function XmlUpload({
         return;
       }
 
-      // Tentar usar webkitGetAsEntry para suporte a pastas
       const entries = [];
       for (let i = 0; i < items.length; i++) {
         const entry = items[i].webkitGetAsEntry?.();
@@ -260,7 +252,6 @@ export default function XmlUpload({
           setStatusText("");
         }
       } else {
-        // Fallback para arquivos simples
         const files = Array.from(e.dataTransfer.files || []);
         setArquivos(
           files.filter(
@@ -274,7 +265,6 @@ export default function XmlUpload({
     [toast]
   );
 
-  // Processar e importar
   const processar = async () => {
     if (!arquivos.length) return;
     if (!possuiCnpjBase) {
@@ -294,15 +284,13 @@ export default function XmlUpload({
       const cfopsPermitidosAtivos = deveRestringirCfops
         ? cfopsVendaPermitidos || undefined
         : undefined;
-      // Parsear CFOPs de exclusão
       const cfopsExcluirArray = cfopsExcluir
         .split(/[,;\s]+/)
         .map((c) => c.trim())
         .filter((c) => c.length > 0);
 
-      // Ler todos os arquivos em paralelo
       const dados = await lerArquivosParalelo(arquivos, (p, text) => {
-        setProgress(p * 0.3); // 30% para leitura
+        setProgress(p * 0.3);
         setStatusText(text);
       });
 
@@ -317,7 +305,6 @@ export default function XmlUpload({
 
       setStatusText(`Importando ${dados.length} XMLs...`);
 
-      // Processar em lotes para não travar a UI
       const tamanhoLote = 100;
       const lotes = [];
       for (let i = 0; i < dados.length; i += tamanhoLote) {
@@ -354,7 +341,7 @@ export default function XmlUpload({
           listaAtual.push(...detalhesDoMotivo.slice(0, espacoDisponivel));
         }
         processadas += lote.length;
-        setProgress(0.3 + (processadas / dados.length) * 0.7); // 70% para importação
+        setProgress(0.3 + (processadas / dados.length) * 0.7);
         setStatusText(`Importando... ${processadas}/${dados.length}`);
       }
 
@@ -398,7 +385,6 @@ export default function XmlUpload({
     }
   };
 
-  // Contar arquivos (incluindo estimativa de ZIPs)
   const contarArquivos = () => {
     const xmlCount = arquivos.filter((f) =>
       f.name.toLowerCase().endsWith(".xml")
@@ -748,6 +734,54 @@ export default function XmlUpload({
         CFOPs de venda direta, são consideradas. Dados armazenados localmente em formato
         resumido.
       </p>
+
+      <FiscalInsight
+        type="tip"
+        title="Data de Emissão vs Data de Autorização"
+        collapsible
+        defaultExpanded={false}
+        className="mt-2"
+      >
+        <p>
+          O sistema usa a <strong>data de emissão</strong> (dhEmi) do XML para
+          determinar o período da nota, não a data de autorização (dhRecbto). Isso está
+          de acordo com as regras fiscais do ICMS:
+        </p>
+        <ul className="mt-2 space-y-1 list-disc list-inside">
+          <li>
+            Uma nota emitida em 31/10 e autorizada em 01/11 pertence a{" "}
+            <strong>outubro</strong>
+          </li>
+          <li>A data de emissão representa o fato gerador do ICMS</li>
+          <li>O SPED também usa a data do documento (DT_DOC) para escrituração</li>
+        </ul>
+      </FiscalInsight>
+
+      <FiscalHelpSection
+        title="Motivos comuns para notas serem ignoradas"
+        items={[
+          {
+            title: "Canceladas (cStat≠100)",
+            text: "Notas canceladas, denegadas ou não autorizadas são excluídas automaticamente.",
+          },
+          {
+            title: "CNPJ diferente",
+            text: "A nota não tem o CNPJ do SPED como emitente nem como destinatário.",
+          },
+          {
+            title: "Fora do período",
+            text: "A data de emissão está fora do intervalo do SPED carregado.",
+          },
+          {
+            title: "CFOP não permitido",
+            text: "A nota só possui itens com CFOPs que não são de venda direta (ex: 5929, 6929 são cupom fiscal vinculado).",
+          },
+          {
+            title: "Duplicada",
+            text: "A nota já foi importada anteriormente (verificado pela chave de acesso).",
+          },
+        ]}
+      />
     </Card>
   );
 }

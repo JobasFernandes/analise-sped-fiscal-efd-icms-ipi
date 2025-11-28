@@ -2,6 +2,7 @@ import React, { useCallback } from "react";
 import { useDropzone } from "react-dropzone";
 import { Upload, FileText, AlertCircle, CheckCircle } from "lucide-react";
 import { Progress } from "./ui/Progress";
+import { FiscalInsight } from "./ui/FiscalInsight";
 
 const FileUpload = ({ onFileSelect, loading = false, error = null, progress = 0 }) => {
   const onDrop = useCallback(
@@ -16,7 +17,6 @@ const FileUpload = ({ onFileSelect, loading = false, error = null, progress = 0 
 
       if (acceptedFiles.length > 0) {
         const file = acceptedFiles[0];
-        // Pass the file object directly, do not read content here
         onFileSelect({
           file,
           name: file.name,
@@ -191,6 +191,34 @@ const FileUpload = ({ onFileSelect, loading = false, error = null, progress = 0 
           </p>
         </div>
       </details>
+
+      <FiscalInsight
+        type="info"
+        title="Sobre o arquivo SPED Fiscal (EFD ICMS IPI)"
+        collapsible
+        defaultExpanded={false}
+        className="mt-4"
+      >
+        <p>
+          O SPED Fiscal é a Escrituração Fiscal Digital que contém informações sobre
+          documentos fiscais (notas fiscais), apuração de ICMS e IPI. Este sistema
+          analisa principalmente:
+        </p>
+        <ul className="mt-2 space-y-1 list-disc list-inside">
+          <li>
+            <strong>Registro 0000:</strong> Dados do contribuinte e período
+          </li>
+          <li>
+            <strong>Registro C100:</strong> Notas fiscais (entradas e saídas)
+          </li>
+          <li>
+            <strong>Registro C190:</strong> Totalizações por CFOP e CST
+          </li>
+          <li>
+            <strong>Registro C170:</strong> Itens detalhados (quando disponível)
+          </li>
+        </ul>
+      </FiscalInsight>
     </div>
   );
 };
