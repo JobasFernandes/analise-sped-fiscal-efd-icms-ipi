@@ -15,12 +15,12 @@ Processamento 100% local no navegador com persistência offline via IndexedDB.
 
 ## Funcionalidades
 
-| SPED Fiscal | XML NFe/NFCe | Visualização |
-|-------------|--------------|--------------|
+| SPED Fiscal                                | XML NFe/NFCe                                | Visualização                    |
+| ------------------------------------------ | ------------------------------------------- | ------------------------------- |
 | Parser de registros 0000, C100, C190, C170 | Importação de arquivos .xml, .zip ou pastas | Gráficos interativos (Chart.js) |
-| Indicadores por dia, CFOP e dia+CFOP | Filtro por período, CNPJ e CFOPs | Drill-down por CFOP |
-| Persistência offline (IndexedDB/Dexie) | Rastreamento detalhado de notas ignoradas | Exportação CSV e PNG |
-| Processamento assíncrono via Web Worker | Toggle para restringir a CFOPs do SPED | Tema claro/escuro |
+| Indicadores por dia, CFOP e dia+CFOP       | Filtro por período, CNPJ e CFOPs            | Drill-down por CFOP             |
+| Persistência offline (IndexedDB/Dexie)     | Rastreamento detalhado de notas ignoradas   | Exportação CSV e PNG            |
+| Processamento assíncrono via Web Worker    | Toggle para restringir a CFOPs do SPED      | Tema claro/escuro               |
 
 ---
 
@@ -61,6 +61,7 @@ flowchart LR
 **Formatos aceitos:** arquivos `.xml`, `.zip` ou drag-drop de pastas.
 
 **Filtros aplicados:**
+
 - Período do SPED (data de emissão `dhEmi`)
 - CNPJ do emitente ou destinatário igual ao CNPJ base do SPED
 - CFOPs permitidos (configurável) e CFOPs a excluir (padrão: 5929, 6929)
@@ -74,10 +75,10 @@ flowchart LR
 
 Agregação por **Dia + CFOP** comparando valores do SPED (registro C190) com a soma dos XMLs importados (`vProd`).
 
-| Métrica | Fórmula |
-|---------|---------|
-| Diferença Absoluta | `Σ(vProd XML) − Σ(valorOperacao SPED)` |
-| Diferença Percentual | `(XML − SPED) / SPED × 100` |
+| Métrica              | Fórmula                                |
+| -------------------- | -------------------------------------- |
+| Diferença Absoluta   | `Σ(vProd XML) − Σ(valorOperacao SPED)` |
+| Diferença Percentual | `(XML − SPED) / SPED × 100`            |
 
 Divergências são destacadas visualmente. O botão "Zerar XMLs" remove dados do IndexedDB para reimportação.
 
@@ -114,7 +115,9 @@ tests/            Suite de testes automatizados
 - Valores de impostos são exibidos conforme o arquivo; não há recálculo tributário.
 
 ---
+
 ### Se este projeto ajudou você, deixe uma ⭐ e contribua com ideias!
+
 ---
 
 ## Licença
