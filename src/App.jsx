@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import FileUpload from "./components/FileUpload";
 import Dashboard from "./components/Dashboard";
 import { FileText, BarChart3, Upload } from "lucide-react";
@@ -28,6 +28,34 @@ import { toProcessedData } from "./db/adapters/toProcessedData";
 import { db } from "./db";
 import XmlUpload from "./components/XmlUpload";
 import SpedXmlComparison from "./components/SpedXmlComparison";
+
+const FEATURES = [
+  {
+    icon: BarChart3,
+    title: "Gráficos Interativos",
+    description:
+      "Visualize entradas e saídas através de gráficos de linha, barras e pizza",
+    color: "blue",
+  },
+  {
+    icon: FileText,
+    title: "Análise por CFOP",
+    description: "Drill-down por Código Fiscal de Operação com exportação CSV",
+    color: "green",
+  },
+  {
+    icon: Upload,
+    title: "Comparativo XML",
+    description: "Importe XMLs NFe/NFCe e compare com os dados do SPED automaticamente",
+    color: "purple",
+  },
+];
+
+const FEATURE_COLORS = {
+  blue: "bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-300",
+  green: "bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-300",
+  purple: "bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-300",
+};
 
 function App() {
   const [dadosProcessados, setDadosProcessados] = useState(null);
@@ -193,43 +221,50 @@ function App() {
     }
   };
 
-  const handleReset = () => {
+  const handleReset = useCallback(() => {
     setDadosProcessados(null);
     setArquivoInfo(null);
     setError(null);
     setProgress(0);
     setShowManager(false);
-  };
+  }, []);
 
-  const handleLoadFromDb = async (spedId) => {
+  const periodoFormatado = useMemo(
+    () => ({
+      inicio: dadosProcessados?.periodo?.inicio
+        ? new Date(dadosProcessados.periodo.inicio).toISOString().slice(0, 10)
+        : undefined,
+      fim: dadosProcessados?.periodo?.fim
+        ? new Date(dadosProcessados.periodo.fim).toISOString().slice(0, 10)
+        : undefined,
+    }),
+    [dadosProcessados?.periodo]
+  );
+
+  const cfopsPermitidos = useMemo(
+    () => dadosProcessados?.saidasPorCfopArray?.map((c) => c.cfop) || [],
+    [dadosProcessados?.saidasPorCfopArray]
+  );
+
+  const handleXmlChange = useCallback(() => setXmlVersion((v) => v + 1), []);
+
+  const handleLoadFromDb = useCallback(async (spedId) => {
     try {
-      try {
-        const dados = await getSpedProcessed(spedId);
-        const sped = await db.sped_files.get(spedId).catch(() => null);
-        setDadosProcessados(dados);
-        setArquivoInfo({
-          name: sped?.filename || `SPED #${spedId}`,
-          size: sped?.size || 0,
-          lastModified: sped?.importedAt || new Date().toISOString(),
-        });
-        setSavedSpedId(spedId);
-        setShowManager(false);
-        return;
-      } catch (e) {
-        // fallback
-      }
+      const dados = await getSpedProcessed(spedId).catch(async () => {
+        const { sped, documents, items } = await getSped(spedId);
+        const itemsC170 = await db.items_c170
+          .where({ spedId })
+          .toArray()
+          .catch(() => []);
+        return toProcessedData(sped, documents, items, itemsC170);
+      });
 
-      const { sped, documents, items } = await getSped(spedId);
-      const itemsC170 = await db.items_c170
-        .where({ spedId })
-        .toArray()
-        .catch(() => []);
-      const dados = toProcessedData(sped, documents, items, itemsC170);
+      const sped = await db.sped_files.get(spedId).catch(() => null);
       setDadosProcessados(dados);
       setArquivoInfo({
-        name: sped.filename,
-        size: sped.size,
-        lastModified: sped.importedAt,
+        name: sped?.filename || `SPED #${spedId}`,
+        size: sped?.size || 0,
+        lastModified: sped?.importedAt || new Date().toISOString(),
       });
       setSavedSpedId(spedId);
       setShowManager(false);
@@ -237,13 +272,13 @@ function App() {
       console.error("Falha ao carregar SPED do banco:", e);
       setError(e?.message || "Falha ao carregar SPED do banco");
     }
-  };
+  }, []);
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
-      <header className="bg-card text-card-foreground shadow-sm border-b border-border">
-        <div className="w-full px-4 sm:px-6 lg:px-8">
-          <div className="flex items-center justify-between h-16">
+    <div className="h-screen flex flex-col bg-background text-foreground overflow-hidden">
+      <header className="flex-shrink-0 bg-card/80 backdrop-blur-sm text-card-foreground shadow-sm border-b border-border">
+        <div className="w-full px-3 sm:px-4 lg:px-6">
+          <div className="flex items-center justify-between h-12 sm:h-14">
             <div className="flex items-center">
               <button
                 onClick={handleReset}
@@ -253,158 +288,130 @@ function App() {
                 <img
                   src={`${import.meta.env.BASE_URL}images/logo.png`}
                   alt="Logo SPED"
-                  className="h-10 w-10 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
+                  className="h-8 w-8 sm:h-9 sm:w-9 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
                 />
-                <div className="ml-3 text-left">
-                  <h1 className="text-xl font-semibold">Analizador SPED</h1>
-                  <p className="text-sm text-muted-foreground">
-                    Detalhamento de entradas e saídas de dados fiscais
+                <div className="ml-2 sm:ml-3 text-left">
+                  <h1 className="text-base sm:text-lg font-semibold">Analizador SPED</h1>
+                  <p className="text-xs text-muted-foreground hidden sm:block">
+                    Detalhamento de entradas e saídas
                   </p>
                 </div>
               </button>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-1.5 sm:gap-2">
               <ThemeToggle />
               <Button
                 variant="outline"
                 onClick={() => setShowManager(true)}
-                className="flex items-center gap-2"
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
                 title="Gerenciar SPEDs salvos"
               >
-                <FileText className="h-4 w-4" />
-                Meus SPEDs
+                <FileText className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Meus SPEDs</span>
               </Button>
               <Button
                 variant="outline"
                 onClick={handleReset}
-                className="flex items-center gap-2"
+                className="flex items-center gap-1 sm:gap-2 text-xs sm:text-sm px-2 sm:px-3 h-8 sm:h-9"
                 title="Importar novo arquivo SPED"
               >
-                <Upload className="h-4 w-4" />
-                Novo Arquivo
+                <Upload className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                <span className="hidden xs:inline">Novo</span>
               </Button>
             </div>
           </div>
         </div>
       </header>
 
-      <main className="w-full px-2 sm:px-3 lg:px-4 py-4">
+      <main className="flex-1 w-full overflow-auto">
         {showManager ? (
-          <SpedManager onBack={() => setShowManager(false)} onLoad={handleLoadFromDb} />
+          <div className="h-full px-2 sm:px-3 lg:px-4 py-4">
+            <SpedManager onBack={() => setShowManager(false)} onLoad={handleLoadFromDb} />
+          </div>
         ) : !dadosProcessados ? (
-          <div className="max-w-4xl mx-auto">
-            <div className="text-center mb-8">
-              <FileText className="h-16 w-16 text-primary-600 dark:text-primary-300 mx-auto mb-4" />
-              <h2 className="text-3xl font-bold mb-2">Análise Detalhada SPED Fiscal</h2>
-              <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-                Faça o upload do seu arquivo SPED fiscal para visualizar análises
-                detalhadas das entradas e saídas por dia e por CFOP de forma interativa
-                e visual.
-              </p>
-            </div>
-
-            <FileUpload
-              onFileSelect={handleFileSelect}
-              loading={loading}
-              error={error}
-              progress={progress}
-            />
-
-            <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8">
-              <div className="text-center p-6">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 bg-blue-100 dark:bg-blue-900/40">
-                  <BarChart3 className="h-6 w-6 text-blue-600 dark:text-blue-300" />
+          <div className="h-full flex flex-col justify-center px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
+            <div className="max-w-3xl mx-auto w-full space-y-4 sm:space-y-6">
+              {/* Hero Section */}
+              <div className="text-center">
+                <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-gradient-to-br from-blue-500/20 to-purple-500/20 mb-3 sm:mb-4">
+                  <FileText className="h-6 w-6 sm:h-7 sm:w-7 text-blue-500 dark:text-blue-400" />
                 </div>
-                <h3 className="text-lg font-medium mb-2">Gráficos Interativos</h3>
-                <p className="text-muted-foreground">
-                  Visualize suas vendas através de gráficos de linha, barras e pizza
-                  interativos
+                <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-1.5 sm:mb-2 bg-gradient-to-r from-foreground to-foreground/70 bg-clip-text">
+                  Análise Detalhada SPED Fiscal
+                </h2>
+                <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
+                  Upload do arquivo SPED para análises de entradas e saídas por dia e CFOP
                 </p>
               </div>
 
-              <div className="text-center p-6">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 bg-green-100 dark:bg-green-900/30">
-                  <FileText className="h-6 w-6 text-green-600 dark:text-green-300" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">Análise por CFOP</h3>
-                <p className="text-muted-foreground">
-                  Entenda a distribuição das suas vendas por Código Fiscal de Operação
-                </p>
+              {/* Upload Area */}
+              <div className="max-w-lg mx-auto w-full">
+                <FileUpload
+                  onFileSelect={handleFileSelect}
+                  loading={loading}
+                  error={error}
+                  progress={progress}
+                />
               </div>
 
-              <div className="text-center p-6">
-                <div className="w-12 h-12 rounded-lg flex items-center justify-center mx-auto mb-4 bg-purple-100 dark:bg-purple-900/30">
-                  <Upload className="h-6 w-6 text-purple-600 dark:text-purple-300" />
-                </div>
-                <h3 className="text-lg font-medium mb-2">Processamento Rápido</h3>
-                <p className="text-muted-foreground">
-                  Upload seguro e processamento local dos seus dados fiscais
-                </p>
+              {/* Features Grid */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 max-w-2xl mx-auto">
+                {FEATURES.map(({ icon: Icon, title, description, color }) => (
+                  <div
+                    key={title}
+                    className="group text-center p-2.5 sm:p-4 rounded-xl border border-border/50 bg-card/30 backdrop-blur-sm hover:bg-card/60 hover:border-border transition-all duration-300 hover:shadow-lg hover:-translate-y-0.5"
+                  >
+                    <div
+                      className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl flex items-center justify-center mx-auto mb-2 sm:mb-3 transition-transform group-hover:scale-110 ${FEATURE_COLORS[color].split(" ").slice(0, 2).join(" ")}`}
+                    >
+                      <Icon
+                        className={`h-4 w-4 sm:h-5 sm:w-5 ${FEATURE_COLORS[color].split(" ").slice(2).join(" ")}`}
+                      />
+                    </div>
+                    <h3 className="text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">{title}</h3>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight hidden sm:block">{description}</p>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         ) : (
-          <div className="space-y-6">
-            <Dashboard
-              dados={dadosProcessados}
-              arquivo={arquivoInfo}
-              savedSpedId={savedSpedId}
-            />
-            {savedSpedId && (
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <XmlUpload
-                  onImported={() => {
-                    setXmlVersion((v) => v + 1);
-                  }}
-                  onXmlReset={() => {
-                    setXmlVersion((v) => v + 1);
-                  }}
-                  cnpjBase={dadosProcessados?.cnpj}
-                  periodo={{
-                    inicio: dadosProcessados?.periodo?.inicio
-                      ? new Date(dadosProcessados.periodo.inicio)
-                          .toISOString()
-                          .slice(0, 10)
-                      : undefined,
-                    fim: dadosProcessados?.periodo?.fim
-                      ? new Date(dadosProcessados.periodo.fim)
-                          .toISOString()
-                          .slice(0, 10)
-                      : undefined,
-                  }}
-                  cfopsVendaPermitidos={
-                    dadosProcessados?.saidasPorCfopArray?.map((c) => c.cfop) || []
-                  }
-                />
-                <SpedXmlComparison
-                  spedId={savedSpedId}
-                  reloadKey={xmlVersion}
-                  periodo={{
-                    inicio: dadosProcessados?.periodo?.inicio
-                      ? new Date(dadosProcessados.periodo.inicio)
-                          .toISOString()
-                          .slice(0, 10)
-                      : undefined,
-                    fim: dadosProcessados?.periodo?.fim
-                      ? new Date(dadosProcessados.periodo.fim)
-                          .toISOString()
-                          .slice(0, 10)
-                      : undefined,
-                  }}
-                />
-              </div>
-            )}
+          <div className="h-full overflow-auto px-2 sm:px-3 lg:px-4 py-4">
+            <div className="space-y-6">
+              <Dashboard
+                dados={dadosProcessados}
+                arquivo={arquivoInfo}
+                savedSpedId={savedSpedId}
+              />
+              {savedSpedId && (
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <XmlUpload
+                    onImported={handleXmlChange}
+                    onXmlReset={handleXmlChange}
+                    cnpjBase={dadosProcessados?.cnpj}
+                    periodo={periodoFormatado}
+                    cfopsVendaPermitidos={cfopsPermitidos}
+                  />
+                  <SpedXmlComparison
+                    spedId={savedSpedId}
+                    reloadKey={xmlVersion}
+                    periodo={periodoFormatado}
+                  />
+                </div>
+              )}
+            </div>
           </div>
         )}
       </main>
 
-      <footer className="bg-card text-card-foreground border-t border-border mt-12">
-        <div className="w-full px-4 sm:px-6 lg:px-8 py-6">
-          <div className="text-center text-sm text-muted-foreground">
-            <p>Analizador SPED - Ferramenta para análise de dados fiscais</p>
-            <p className="mt-1">
-              Os dados são processados localmente no seu navegador e não são enviados
-              para servidores externos.
+      <footer className="flex-shrink-0 bg-card/80 backdrop-blur-sm text-card-foreground border-t border-border">
+        <div className="w-full px-3 sm:px-4 lg:px-6 py-2 sm:py-3">
+          <div className="text-center text-[10px] sm:text-xs text-muted-foreground">
+            <p className="flex flex-wrap items-center justify-center gap-x-1">
+              <span>Analizador SPED</span>
+              <span className="hidden sm:inline">•</span>
+              <span className="hidden sm:inline">Dados processados localmente</span>
+              <span className="sm:hidden">• Processamento local</span>
             </p>
           </div>
         </div>
