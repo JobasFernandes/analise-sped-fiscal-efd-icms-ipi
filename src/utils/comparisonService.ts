@@ -38,7 +38,7 @@ export async function gerarComparativoSpedXml(
     const k = `${a.data}|${a.cfop}`;
     const spedValor = mapSped.get(k) || 0;
     let diffAbs = a.vProd - spedValor;
-    if (Math.abs(diffAbs) < 0.00001) diffAbs = 0; // normaliza -0
+    if (Math.abs(diffAbs) < 0.00001) diffAbs = 0;
     let diffPerc = spedValor === 0 ? 0 : (diffAbs / spedValor) * 100;
     if (Math.abs(diffPerc) < 0.00001) diffPerc = 0;
     linhas.push({
@@ -57,7 +57,7 @@ export async function gerarComparativoSpedXml(
     if (cfopsExcluir.has(cfop)) continue;
     let diffAbs = 0 - spedValor;
     if (Math.abs(diffAbs) < 0.00001) diffAbs = 0;
-    let diffPerc = spedValor === 0 ? 0 : (-spedValor / spedValor) * 100; // -100
+    let diffPerc = spedValor === 0 ? 0 : (-spedValor / spedValor) * 100;
     if (Math.abs(diffPerc) < 0.00001) diffPerc = 0;
     linhas.push({
       data,
@@ -88,6 +88,7 @@ export async function obterDetalhesDivergencia(
   const docById = new Map(docs.map((d) => [d.id!, d]));
   const itensSped = await db.items.where({ spedId }).toArray();
   const spedAgrupado = new Map<string, number>();
+  const spedNumeros = new Map<string, string>();
   for (const it of itensSped) {
     const doc = docById.get(it.documentId);
     if (!doc) continue;
@@ -96,16 +97,19 @@ export async function obterDetalhesDivergencia(
     if (it.cfop !== cfop) continue;
     const chave = doc.chaveNfe || doc.numeroDoc || `DOC-${doc.id}`;
     spedAgrupado.set(chave, (spedAgrupado.get(chave) || 0) + (it.valorOperacao || 0));
+    if (doc.numeroDoc) spedNumeros.set(chave, doc.numeroDoc);
   }
   let xmlNotas = await db.xml_notas.where({ dataEmissao: data }).toArray();
   if (cnpjRef) xmlNotas = xmlNotas.filter((n) => (n.cnpjRef || "") === cnpjRef);
   const xmlAgrupado = new Map<string, number>();
+  const xmlNumeros = new Map<string, string>();
   for (const nota of xmlNotas) {
     const somaCfop = (nota.itens || [])
       .filter((i) => i.cfop === cfop)
       .reduce((acc, i) => acc + (i.vProd || 0), 0);
     if (somaCfop > 0) {
       xmlAgrupado.set(nota.chave, (xmlAgrupado.get(nota.chave) || 0) + somaCfop);
+      if (nota.numero) xmlNumeros.set(nota.chave, nota.numero);
     }
   }
   const chaves = new Set<string>([...xmlAgrupado.keys(), ...spedAgrupado.keys()]);
@@ -116,8 +120,10 @@ export async function obterDetalhesDivergencia(
     const tipo: DivergenciaNotaResumo["tipo"] =
       vXml > 0 && vSped > 0 ? "AMBOS" : vXml > 0 ? "SOMENTE_XML" : "SOMENTE_SPED";
     const diff = vXml - vSped;
+    const numero = xmlNumeros.get(chave) || spedNumeros.get(chave);
     notas.push({
       chave,
+      numero,
       valorXml: vXml || undefined,
       valorSped: vSped || undefined,
       diff,

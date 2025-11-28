@@ -278,6 +278,7 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
                   <table className="min-w-full border text-[11px]">
                     <thead className="bg-muted/50">
                       <tr>
+                        <th className="px-2 py-1 text-left">Nº Nota</th>
                         <th className="px-2 py-1 text-left">Chave</th>
                         <th className="px-2 py-1 text-right">Valor XML</th>
                         <th className="px-2 py-1 text-right">Valor SPED</th>
@@ -291,6 +292,9 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
                         const crit = Math.abs(diff) > 0.009;
                         return (
                           <tr key={i} className={i % 2 ? "bg-muted/30" : ""}>
+                            <td className="px-2 py-1 text-left tabular-nums font-medium">
+                              {n.numero || "-"}
+                            </td>
                             <td
                               className="px-2 py-1 font-mono whitespace-nowrap max-w-[200px] truncate"
                               title={n.chave}

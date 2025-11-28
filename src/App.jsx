@@ -291,7 +291,9 @@ function App() {
                   className="h-8 w-8 sm:h-9 sm:w-9 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
                 />
                 <div className="ml-2 sm:ml-3 text-left">
-                  <h1 className="text-base sm:text-lg font-semibold">Analizador SPED</h1>
+                  <h1 className="text-base sm:text-lg font-semibold">
+                    Analizador SPED
+                  </h1>
                   <p className="text-xs text-muted-foreground hidden sm:block">
                     Detalhamento de entradas e saídas
                   </p>
@@ -326,7 +328,10 @@ function App() {
       <main className="flex-1 w-full overflow-auto">
         {showManager ? (
           <div className="h-full px-2 sm:px-3 lg:px-4 py-4">
-            <SpedManager onBack={() => setShowManager(false)} onLoad={handleLoadFromDb} />
+            <SpedManager
+              onBack={() => setShowManager(false)}
+              onLoad={handleLoadFromDb}
+            />
           </div>
         ) : !dadosProcessados ? (
           <div className="h-full flex flex-col justify-center px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
@@ -340,7 +345,8 @@ function App() {
                   Análise Detalhada SPED Fiscal
                 </h2>
                 <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
-                  Upload do arquivo SPED para análises de entradas e saídas por dia e CFOP
+                  Upload do arquivo SPED para análises de entradas e saídas por dia e
+                  CFOP
                 </p>
               </div>
 
@@ -368,8 +374,12 @@ function App() {
                         className={`h-4 w-4 sm:h-5 sm:w-5 ${FEATURE_COLORS[color].split(" ").slice(2).join(" ")}`}
                       />
                     </div>
-                    <h3 className="text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">{title}</h3>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight hidden sm:block">{description}</p>
+                    <h3 className="text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">
+                      {title}
+                    </h3>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight hidden sm:block">
+                      {description}
+                    </p>
                   </div>
                 ))}
               </div>

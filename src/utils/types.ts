@@ -206,6 +206,7 @@ export interface XmlComparativoLinha {
 export type DivergenciaLinhaTipo = "AMBOS" | "SOMENTE_XML" | "SOMENTE_SPED";
 export interface DivergenciaNotaResumo {
   chave: string;
+  numero?: string;
   valorXml?: number;
   valorSped?: number;
   diff?: number;
