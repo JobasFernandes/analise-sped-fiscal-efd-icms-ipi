@@ -489,6 +489,71 @@ export async function updateSpedTotals(
   await db.sped_files.update(id, updateData);
 }
 
+export async function updateSpedDocuments(
+  spedId: number,
+  editedDocs: Record<string, Record<string, any>>
+): Promise<void> {
+  if (!spedId || Object.keys(editedDocs).length === 0) return;
+
+  const allDocs = await db.documents.where({ spedId }).toArray();
+
+  const entradas = allDocs
+    .filter((d) => d.indicadorOperacao === "0")
+    .sort((a, b) => (a.id || "").localeCompare(b.id || ""));
+  const saidas = allDocs
+    .filter((d) => d.indicadorOperacao === "1")
+    .sort((a, b) => (a.id || "").localeCompare(b.id || ""));
+
+  const updates: { id: string; changes: Partial<DocumentRow> }[] = [];
+
+  for (const [docId, changes] of Object.entries(editedDocs)) {
+    let doc: DocumentRow | undefined;
+
+    if (docId.startsWith("saida-")) {
+      const index = parseInt(docId.replace("saida-", ""), 10);
+      doc = saidas[index];
+    } else if (docId.startsWith("entrada-")) {
+      const index = parseInt(docId.replace("entrada-", ""), 10);
+      doc = entradas[index];
+    }
+
+    if (doc?.id) {
+      const updateFields: Partial<DocumentRow> = {};
+
+      if ("valorDocumento" in changes) {
+        updateFields.valorDocumento = Number(changes.valorDocumento) || 0;
+      }
+      if ("situacao" in changes) {
+        updateFields.situacao = String(changes.situacao);
+      }
+      if ("numeroDoc" in changes) {
+        updateFields.numeroDoc = String(changes.numeroDoc);
+      }
+      if ("chaveNfe" in changes) {
+        updateFields.chaveNfe = String(changes.chaveNfe);
+      }
+      if ("dataDocumento" in changes && changes.dataDocumento) {
+        const d = new Date(changes.dataDocumento);
+        if (!isNaN(d.getTime())) {
+          updateFields.dataDocumento = d.toISOString().slice(0, 10);
+        }
+      }
+
+      if (Object.keys(updateFields).length > 0) {
+        updates.push({ id: doc.id, changes: updateFields });
+      }
+    }
+  }
+
+  if (updates.length > 0) {
+    await db.transaction("rw", db.documents, async () => {
+      for (const upd of updates) {
+        await db.documents.update(upd.id, upd.changes);
+      }
+    });
+  }
+}
+
 export async function saveSpedAggregations(
   spedId: number,
   data: {

@@ -6,6 +6,7 @@ import {
   TrendingDown,
   ArrowDownCircle,
   ArrowUpCircle,
+  Edit3,
 } from "lucide-react";
 import {
   formatarMoeda,
@@ -22,7 +23,7 @@ import Card from "./ui/Card";
 import Button from "./ui/Button";
 import DateInput from "./ui/date-input";
 
-const Dashboard = ({ dados, arquivo }) => {
+const Dashboard = ({ dados, arquivo, onOpenEditor }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -214,6 +215,19 @@ const Dashboard = ({ dados, arquivo }) => {
           </div>
 
           <div className="flex flex-wrap items-end gap-3">
+            {onOpenEditor && (
+              <div className="min-w-[140px]">
+                <Button
+                  onClick={onOpenEditor}
+                  className="w-full h-9 flex items-center justify-center gap-2"
+                  variant="outline"
+                >
+                  <Edit3 className="h-4 w-4" />
+                  Editor SPED
+                </Button>
+              </div>
+            )}
+
             <div className="min-w-[120px]">
               <label className="block text-xs font-medium text-muted-foreground mb-1">
                 Visão

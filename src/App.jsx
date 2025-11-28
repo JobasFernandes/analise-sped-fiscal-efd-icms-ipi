@@ -28,6 +28,7 @@ import { toProcessedData } from "./db/adapters/toProcessedData";
 import { db } from "./db";
 import XmlUpload from "./components/XmlUpload";
 import SpedXmlComparison from "./components/SpedXmlComparison";
+import SpedEditor from "./components/editor/SpedEditor";
 
 const FEATURES = [
   {
@@ -66,6 +67,7 @@ function App() {
   const [savedSpedId, setSavedSpedId] = useState(null);
   const workerRef = useRef(null);
   const [showManager, setShowManager] = useState(false);
+  const [showEditor, setShowEditor] = useState(false);
   const [xmlVersion, setXmlVersion] = useState(0);
   const [duplicateSped, setDuplicateSped] = useState(null);
   const [pendingSpedId, setPendingSpedId] = useState(null);
@@ -137,7 +139,6 @@ function App() {
       return;
     }
 
-    // Create SPED record immediately
     let currentSpedId = null;
     try {
       currentSpedId = await createSpedFile({
@@ -164,7 +165,6 @@ function App() {
         if (existing) {
           setDuplicateSped(existing);
           setPendingSpedId(currentSpedId);
-          // Worker waits for "continue" signal
         } else {
           worker.postMessage({ type: "continue" });
         }
@@ -209,7 +209,6 @@ function App() {
     const idToDelete = duplicateSped?.id;
     setDuplicateSped(null);
 
-    // Small delay to allow UI to update and modal to close
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     if (idToDelete) {
@@ -227,6 +226,7 @@ function App() {
     setError(null);
     setProgress(0);
     setShowManager(false);
+    setShowEditor(false);
   }, []);
 
   const periodoFormatado = useMemo(
@@ -291,7 +291,9 @@ function App() {
                   className="h-8 w-8 sm:h-9 sm:w-9 object-contain drop-shadow-sm transition-transform group-hover:scale-105"
                 />
                 <div className="ml-2 sm:ml-3 text-left">
-                  <h1 className="text-base sm:text-lg font-semibold">Analizador SPED</h1>
+                  <h1 className="text-base sm:text-lg font-semibold">
+                    Analizador SPED
+                  </h1>
                   <p className="text-xs text-muted-foreground hidden sm:block">
                     Detalhamento de entradas e saídas
                   </p>
@@ -324,9 +326,22 @@ function App() {
       </header>
 
       <main className="flex-1 w-full overflow-auto">
-        {showManager ? (
+        {showEditor ? (
+          <SpedEditor
+            spedData={dadosProcessados}
+            arquivoInfo={arquivoInfo}
+            spedId={savedSpedId}
+            onBack={() => setShowEditor(false)}
+            onDataChange={(updatedData) => {
+              setDadosProcessados(updatedData);
+            }}
+          />
+        ) : showManager ? (
           <div className="h-full px-2 sm:px-3 lg:px-4 py-4">
-            <SpedManager onBack={() => setShowManager(false)} onLoad={handleLoadFromDb} />
+            <SpedManager
+              onBack={() => setShowManager(false)}
+              onLoad={handleLoadFromDb}
+            />
           </div>
         ) : !dadosProcessados ? (
           <div className="h-full flex flex-col justify-center px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
@@ -340,7 +355,8 @@ function App() {
                   Análise Detalhada SPED Fiscal
                 </h2>
                 <p className="text-sm sm:text-base text-muted-foreground max-w-xl mx-auto leading-relaxed">
-                  Upload do arquivo SPED para análises de entradas e saídas por dia e CFOP
+                  Upload do arquivo SPED para análises de entradas e saídas por dia e
+                  CFOP
                 </p>
               </div>
 
@@ -368,8 +384,12 @@ function App() {
                         className={`h-4 w-4 sm:h-5 sm:w-5 ${FEATURE_COLORS[color].split(" ").slice(2).join(" ")}`}
                       />
                     </div>
-                    <h3 className="text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">{title}</h3>
-                    <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight hidden sm:block">{description}</p>
+                    <h3 className="text-xs sm:text-sm font-medium mb-0.5 sm:mb-1">
+                      {title}
+                    </h3>
+                    <p className="text-[10px] sm:text-xs text-muted-foreground leading-tight hidden sm:block">
+                      {description}
+                    </p>
                   </div>
                 ))}
               </div>
@@ -382,6 +402,7 @@ function App() {
                 dados={dadosProcessados}
                 arquivo={arquivoInfo}
                 savedSpedId={savedSpedId}
+                onOpenEditor={() => setShowEditor(true)}
               />
               {savedSpedId && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
