@@ -8,6 +8,11 @@ import { useToast } from "./ui/use-toast";
 import { importarXmlNotas, limparXmlDados } from "../db/daos/xmlDao";
 import Switch from "./ui/Switch";
 import { FiscalInsight, FiscalHelpSection } from "./ui/FiscalInsight";
+import { ReportButton } from "./ui/ReportButton";
+import {
+  gerarRelatorioXmlsIgnorados,
+  generateReportConfig,
+} from "../utils/reportExporter";
 import {
   Dialog,
   DialogBody,
@@ -66,6 +71,7 @@ export default function XmlUpload({
   cnpjBase,
   periodo,
   cfopsVendaPermitidos,
+  company,
 }) {
   const { toast } = useToast();
   const [arquivos, setArquivos] = useState([]);
@@ -415,6 +421,52 @@ export default function XmlUpload({
 
   const podeMostrarDetalhes = detalhesSemItensValidos.length > 0;
 
+  const todosItensIgnorados = useMemo(() => {
+    if (!resumoImportacao?.detalhes) return [];
+    const itens = [];
+    for (const key of MOTIVO_ORDER) {
+      const detalhes = resumoImportacao.detalhes[key] || [];
+      for (const det of detalhes) {
+        itens.push({
+          arquivo: det.arquivo || "",
+          chave: det.chave || "",
+          numero: det.numero || "",
+          serie: det.serie || "",
+          dataEmissao: det.dataEmissao || "",
+          motivo: key,
+          cfopsOriginais: det.cfopsOriginais || [],
+        });
+      }
+    }
+    return itens;
+  }, [resumoImportacao]);
+
+  const handleExportReportIgnorados = (format) => {
+    if (!resumoImportacao?.motivos) return;
+    gerarRelatorioXmlsIgnorados(
+      todosItensIgnorados,
+      resumoImportacao.motivos,
+      { company, cnpj: cnpjBase },
+      format
+    );
+  };
+
+  const getXmlsIgnoradosReportConfig = () => {
+    if (!resumoImportacao?.motivos || todosItensIgnorados.length === 0) return null;
+    return generateReportConfig({
+      reportType: "xmls-ignorados",
+      title: "Relatorio de XMLs Ignorados na Importacao",
+      company,
+      cnpj: cnpjBase,
+      filename: `xmls_ignorados_${Date.now()}`,
+      customData: {
+        items: todosItensIgnorados,
+        totaisPorMotivo: resumoImportacao.motivos,
+      },
+      orientation: "landscape",
+    });
+  };
+
   return (
     <Card className="p-4 space-y-4">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -615,7 +667,13 @@ export default function XmlUpload({
             </div>
           )}
           {podeMostrarDetalhes && (
-            <div className="flex justify-end pt-2">
+            <div className="flex justify-end gap-2 pt-2">
+              <ReportButton
+                onExport={handleExportReportIgnorados}
+                reportConfig={getXmlsIgnoradosReportConfig()}
+                label="Relatório"
+                size="sm"
+              />
               <Button
                 size="sm"
                 variant="outline"

@@ -137,7 +137,6 @@ function App() {
       return;
     }
 
-    // Create SPED record immediately
     let currentSpedId = null;
     try {
       currentSpedId = await createSpedFile({
@@ -164,7 +163,6 @@ function App() {
         if (existing) {
           setDuplicateSped(existing);
           setPendingSpedId(currentSpedId);
-          // Worker waits for "continue" signal
         } else {
           worker.postMessage({ type: "continue" });
         }
@@ -209,7 +207,6 @@ function App() {
     const idToDelete = duplicateSped?.id;
     setDuplicateSped(null);
 
-    // Small delay to allow UI to update and modal to close
     await new Promise((resolve) => setTimeout(resolve, 100));
 
     if (idToDelete) {
@@ -401,11 +398,14 @@ function App() {
                     cnpjBase={dadosProcessados?.cnpj}
                     periodo={periodoFormatado}
                     cfopsVendaPermitidos={cfopsPermitidos}
+                    company={dadosProcessados?.companyName}
                   />
                   <SpedXmlComparison
                     spedId={savedSpedId}
                     reloadKey={xmlVersion}
                     periodo={periodoFormatado}
+                    company={dadosProcessados?.companyName}
+                    cnpj={dadosProcessados?.cnpj}
                   />
                 </div>
               )}

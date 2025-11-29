@@ -37,6 +37,14 @@ export default defineConfig({
     port: 3001,
     open: true,
   },
+  worker: {
+    format: "es",
+    rollupOptions: {
+      output: {
+        inlineDynamicImports: true,
+      },
+    },
+  },
   build: {
     outDir: "dist",
     sourcemap: true,

@@ -14,6 +14,10 @@ import {
   filtrarDadosProcessadosPorPeriodo,
   formatarData,
 } from "../utils/dataProcessor";
+import {
+  gerarRelatorioResumoExecutivo,
+  generateReportConfig,
+} from "../utils/reportExporter";
 import EntradasSaidasComparativoChart from "./charts/EntradasSaidasComparativoChart";
 import VendasPorDiaChart from "./charts/VendasPorDiaChart";
 import DistribuicaoCfopChart from "./charts/DistribuicaoCfopChart";
@@ -21,6 +25,7 @@ import CfopDetalhes from "./CfopDetalhes";
 import Card from "./ui/Card";
 import Button from "./ui/Button";
 import DateInput from "./ui/date-input";
+import { ReportButton } from "./ui/ReportButton";
 import { FiscalHelpSection } from "./ui/FiscalInsight";
 
 const Dashboard = ({ dados }) => {
@@ -65,142 +70,41 @@ const Dashboard = ({ dados }) => {
     ? formatarData(dados.periodo.fim, "yyyy-MM-dd")
     : "";
 
-  const formatarValorCSV = (valor) => {
-    if (valor === undefined || valor === null) return "";
-    return Number(valor).toFixed(2).replace(".", ",");
-  };
+  const getReportConfigTodosCfops = (tipo) => {
+    const cfopsArray =
+      tipo === "saidas"
+        ? dadosFiltrados.saidasPorCfopArray
+        : dadosFiltrados.entradasPorCfopArray;
 
-  const removerAcentos = (texto) => {
-    if (!texto) return "";
-    return texto
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9\s\-_.,;/]/g, "");
-  };
+    if (!cfopsArray || cfopsArray.length === 0) return null;
 
-  const coletarItensDeNotas = (notas, filtroTipo) => {
-    const itens = [];
-    for (const nota of notas || []) {
-      if (!nota.itens) continue;
-      if (filtroTipo === "entrada" && nota.indicadorOperacao !== "0") continue;
-      if (filtroTipo === "saida" && nota.indicadorOperacao !== "1") continue;
-      for (const item of nota.itens) {
-        itens.push({
-          cfop: item.cfop,
-          cstIcms: item.cstIcms,
-          aliqIcms: item.aliqIcms,
-          valorOperacao: item.valorOperacao,
-          valorBcIcms: item.valorBcIcms,
-          valorIcms: item.valorIcms,
-          numeroDoc: nota.numeroDoc,
-          chaveNfe: nota.chaveNfe,
-          dataDocumento: nota.dataDocumento,
-          dataEntradaSaida: nota.dataEntradaSaida,
-          situacao: nota.situacao,
-        });
-      }
-    }
-    return itens;
-  };
+    const total = cfopsArray.reduce((acc, c) => acc + (c.valor || 0), 0);
+    const data = cfopsArray.map((item) => ({
+      cfop: item.cfop,
+      descricao: item.descricao || "",
+      valor: item.valor || 0,
+      percentual: total > 0 ? ((item.valor || 0) / total) * 100 : 0,
+    }));
 
-  const gerarCsvGeral = (tipo) => {
-    const indice = dadosFiltrados.itensPorCfopIndex;
-    let itens = [];
-    if (indice) {
-      for (const cfopChave of Object.keys(indice)) {
-        for (const item of indice[cfopChave]) {
-          const isEntrada = parseInt(cfopChave, 10) < 4000;
-          if ((tipo === "entradas" && isEntrada) || (tipo === "saidas" && !isEntrada)) {
-            itens.push(item);
-          }
-        }
-      }
-    } else {
-      itens = coletarItensDeNotas(
-        [
-          ...dadosFiltrados.entradas,
-          ...dadosFiltrados.saidas,
-          ...(dadosFiltrados.vendas || []),
-        ],
-        tipo === "entradas" ? "entrada" : "saida"
-      );
-    }
-
-    if (!itens.length) return;
-
-    let worker;
-    try {
-      // @ts-ignore
-      worker = new Worker(new URL("../workers/csvExportWorker.ts", import.meta.url), {
-        type: "module",
-      });
-    } catch (e) {
-      worker = null;
-    }
-
-    if (!worker) {
-      const headers = [
-        "Tipo",
-        "CFOP",
-        "Numero NF",
-        "Chave NFe",
-        "Data Doc",
-        "CST ICMS",
-        "Aliq ICMS (%)",
-        "Valor Operacao",
-        "BC ICMS",
-        "Valor ICMS",
-      ];
-      const linhas = itens.map((it) => [
-        parseInt(it.cfop, 10) < 4000 ? "Entrada" : "Saida",
-        removerAcentos(it.cfop),
-        removerAcentos(it.numeroDoc),
-        removerAcentos(it.chaveNfe),
-        it.dataDocumento ? formatarData(it.dataDocumento) : "",
-        removerAcentos(it.cstIcms),
-        formatarValorCSV(it.aliqIcms),
-        formatarValorCSV(it.valorOperacao),
-        formatarValorCSV(it.valorBcIcms),
-        formatarValorCSV(it.valorIcms),
-      ]);
-      const csv = [headers, ...linhas]
-        .map((l) => l.map((c) => `"${c || ""}"`).join(";"))
-        .join("\n");
-      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const link = document.createElement("a");
-      const periodoTag = resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
-      link.href = URL.createObjectURL(blob);
-      link.download = `cfops_${tipo}_${periodoTag}.csv`;
-      link.click();
-      return;
-    }
-
-    const encoder = new TextEncoder();
-    const partes = [];
-    const periodoTag = resumo.periodoAnalise?.replace(/\s|\//g, "_") || "periodo";
-    const filename = `cfops_${tipo}_${periodoTag}.csv`;
-
-    const onMessage = (e) => {
-      const msg = e.data;
-      if (!msg || !msg.type) return;
-      if (msg.type === "chunk") {
-        partes.push(encoder.encode(msg.chunk || ""));
-      } else if (msg.type === "done") {
-        const blob = new Blob(partes, { type: "text/csv;charset=utf-8;" });
-        const link = document.createElement("a");
-        link.href = URL.createObjectURL(blob);
-        link.download = filename;
-        link.click();
-        worker.removeEventListener("message", onMessage);
-        worker.terminate();
-      } else if (msg.type === "error") {
-        console.error("Erro no csvExportWorker:", msg.error);
-        worker.removeEventListener("message", onMessage);
-        worker.terminate();
-      }
+    const tipoLabel = tipo === "saidas" ? "Saidas" : "Entradas";
+    return {
+      reportType: "todosCfops",
+      title: `Relatorio de CFOPs - ${tipoLabel}`,
+      subtitle: `Resumo de todos os CFOPs de ${tipoLabel.toLowerCase()} do periodo`,
+      company: dados.razaoSocial || dados.empresa || "",
+      cnpj: dados.cnpj || "",
+      period: formatarPeriodo(dataInicio, dataFim) || resumo.periodoAnalise || "",
+      columns: [
+        { header: "CFOP", key: "cfop", width: 10 },
+        { header: "Descricao", key: "descricao", width: 40 },
+        { header: "Valor", key: "valor", format: "currency", width: 18 },
+        { header: "% do Total", key: "percentual", format: "percent", width: 12 },
+      ],
+      data: data,
+      totals: { valor: total },
+      filename: `cfops_${tipo}_${Date.now()}`,
+      orientation: "portrait",
     };
-    worker.addEventListener("message", onMessage);
-    worker.postMessage({ type: "exportCsvAll", items: itens, filename });
   };
 
   const formatarPeriodo = (inicio, fim) => {
@@ -213,7 +117,109 @@ const Dashboard = ({ dados }) => {
       return d;
     };
     if (!inicio && !fim) return "";
-    return `${formatarData(inicio)} → ${formatarData(fim)}`;
+    return `${formatarData(inicio)} a ${formatarData(fim)}`;
+  };
+
+  const handleExportResumo = (format) => {
+    const entradasArray = dadosFiltrados.entradasPorDiaArray || [];
+    const saidasArray =
+      dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray || [];
+    const totalGeral = resumo.totalEntradas + resumo.totalSaidas;
+
+    const cfopsSaida = (dadosFiltrados.saidasPorCfopArray || []).map((c) => ({
+      cfop: c.cfop,
+      valor: c.valor,
+      percentual: totalGeral > 0 ? (c.valor / totalGeral) * 100 : 0,
+    }));
+    const cfopsEntrada = (dadosFiltrados.entradasPorCfopArray || []).map((c) => ({
+      cfop: c.cfop,
+      valor: c.valor,
+      percentual: totalGeral > 0 ? (c.valor / totalGeral) * 100 : 0,
+    }));
+    const topCfops = [...cfopsSaida, ...cfopsEntrada]
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 10);
+
+    const dadosResumo = {
+      totalEntradas: resumo.totalEntradas,
+      totalSaidas: resumo.totalSaidas,
+      totalGeral,
+      numeroNotasEntrada: resumo.numeroNotasEntrada,
+      numeroNotasSaida: resumo.numeroNotasSaida,
+      ticketMedioEntrada:
+        resumo.numeroNotasEntrada > 0
+          ? resumo.totalEntradas / resumo.numeroNotasEntrada
+          : 0,
+      ticketMedioSaida:
+        resumo.numeroNotasSaida > 0 ? resumo.totalSaidas / resumo.numeroNotasSaida : 0,
+      topCfops,
+      entradasPorDia: entradasArray.map((e) => ({ data: e.data, valor: e.valor })),
+      saidasPorDia: saidasArray.map((s) => ({ data: s.data, valor: s.valor })),
+    };
+
+    const periodoLabel = formatarPeriodo(
+      dataInicio || dados?.periodo?.inicio,
+      dataFim || dados?.periodo?.fim
+    );
+
+    gerarRelatorioResumoExecutivo(
+      dadosResumo,
+      { company: dados?.companyName, cnpj: dados?.cnpj, period: periodoLabel },
+      format
+    );
+  };
+
+  const getResumoReportConfig = () => {
+    const entradasArray = dadosFiltrados.entradasPorDiaArray || [];
+    const saidasArray =
+      dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray || [];
+    const totalGeral = resumo.totalEntradas + resumo.totalSaidas;
+
+    const cfopsSaida = (dadosFiltrados.saidasPorCfopArray || []).map((c) => ({
+      cfop: c.cfop,
+      valor: c.valor,
+      percentual: totalGeral > 0 ? (c.valor / totalGeral) * 100 : 0,
+    }));
+    const cfopsEntrada = (dadosFiltrados.entradasPorCfopArray || []).map((c) => ({
+      cfop: c.cfop,
+      valor: c.valor,
+      percentual: totalGeral > 0 ? (c.valor / totalGeral) * 100 : 0,
+    }));
+    const topCfops = [...cfopsSaida, ...cfopsEntrada]
+      .sort((a, b) => b.valor - a.valor)
+      .slice(0, 10);
+
+    const periodoLabel = formatarPeriodo(
+      dataInicio || dados?.periodo?.inicio,
+      dataFim || dados?.periodo?.fim
+    );
+
+    return generateReportConfig({
+      reportType: "resumo-executivo",
+      title: "Resumo Executivo",
+      company: dados?.companyName,
+      cnpj: dados?.cnpj,
+      period: periodoLabel,
+      filename: `resumo_executivo_${Date.now()}`,
+      customData: {
+        totalEntradas: resumo.totalEntradas,
+        totalSaidas: resumo.totalSaidas,
+        totalGeral,
+        numeroNotasEntrada: resumo.numeroNotasEntrada,
+        numeroNotasSaida: resumo.numeroNotasSaida,
+        ticketMedioEntrada:
+          resumo.numeroNotasEntrada > 0
+            ? resumo.totalEntradas / resumo.numeroNotasEntrada
+            : 0,
+        ticketMedioSaida:
+          resumo.numeroNotasSaida > 0
+            ? resumo.totalSaidas / resumo.numeroNotasSaida
+            : 0,
+        topCfops,
+        entradasPorDia: entradasArray.map((e) => ({ data: e.data, valor: e.valor })),
+        saidasPorDia: saidasArray.map((s) => ({ data: s.data, valor: s.valor })),
+      },
+    });
   };
 
   return (
@@ -277,6 +283,13 @@ const Dashboard = ({ dados }) => {
                 {resumo.periodoAnalise || "Não identificado"}
               </p>
             </div>
+
+            <ReportButton
+              onExport={handleExportResumo}
+              reportConfig={getResumoReportConfig()}
+              label="Resumo"
+              size="default"
+            />
           </div>
         </div>
       </Card>
@@ -404,15 +417,12 @@ const Dashboard = ({ dados }) => {
                 Detalhes por CFOP - Saídas
               </h2>
               <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => gerarCsvGeral("saidas")}
-                  disabled={!dadosFiltrados.saidasPorCfopArray?.length}
-                  variant="outline"
-                  className="text-blue-600 border-blue-600 hover:bg-blue-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                <ReportButton
+                  reportConfig={() => getReportConfigTodosCfops("saidas")}
+                  label="Exportar"
                   size="sm"
-                >
-                  Exportar Todos (CSV)
-                </Button>
+                  disabled={!dadosFiltrados.saidasPorCfopArray?.length}
+                />
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -488,15 +498,12 @@ const Dashboard = ({ dados }) => {
                 Detalhes por CFOP - Entradas
               </h2>
               <div className="flex items-center gap-2">
-                <Button
-                  onClick={() => gerarCsvGeral("entradas")}
-                  disabled={!dadosFiltrados.entradasPorCfopArray?.length}
-                  variant="outline"
-                  className="text-green-600 border-green-600 hover:bg-green-50 disabled:opacity-40 disabled:cursor-not-allowed"
+                <ReportButton
+                  reportConfig={() => getReportConfigTodosCfops("entradas")}
+                  label="Exportar"
                   size="sm"
-                >
-                  Exportar Todos (CSV)
-                </Button>
+                  disabled={!dadosFiltrados.entradasPorCfopArray?.length}
+                />
               </div>
             </div>
             <div className="overflow-x-auto">
@@ -608,6 +615,12 @@ const Dashboard = ({ dados }) => {
           cfop={cfopSelecionado}
           dados={dadosFiltrados}
           onFechar={() => setCfopSelecionado(null)}
+          company={dados?.companyName}
+          cnpj={dados?.cnpj}
+          period={formatarPeriodo(
+            dataInicio || dados?.periodo?.inicio,
+            dataFim || dados?.periodo?.fim
+          )}
         />
       )}
     </div>

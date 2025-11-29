@@ -3,14 +3,22 @@ import Card from "./ui/Card";
 import Button from "./ui/Button";
 import DateInput from "./ui/date-input";
 import { FiscalInsight, FiscalBadge } from "./ui/FiscalInsight";
+import { ReportButton } from "./ui/ReportButton";
 import {
   gerarComparativoSpedXml,
   obterDetalhesDivergencia,
 } from "../utils/comparisonService";
 import { formatarMoeda } from "../utils/dataProcessor";
+import { gerarRelatorioDivergenciasDetalhado } from "../utils/reportExporter";
 import Spinner from "./ui/spinner";
 
-export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
+export default function SpedXmlComparison({
+  spedId,
+  periodo,
+  reloadKey,
+  company,
+  cnpj,
+}) {
   const [dataInicio, setDataInicio] = useState(periodo?.inicio || "");
   const [dataFim, setDataFim] = useState(periodo?.fim || "");
   const [linhas, setLinhas] = useState([]);
@@ -65,6 +73,58 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
     }
   };
 
+  const formatarPeriodoLabel = () => {
+    const fmt = (d) => {
+      if (!d) return "";
+      if (/^\d{4}-\d{2}-\d{2}$/.test(d)) {
+        const [y, m, dia] = d.split("-");
+        return `${dia}/${m}/${y}`;
+      }
+      return d;
+    };
+    const ini = dataInicio || periodo?.inicio;
+    const fim = dataFim || periodo?.fim;
+    if (!ini && !fim) return "";
+    return `${fmt(ini)} a ${fmt(fim)}`;
+  };
+
+  const handleExportReport = async (format) => {
+    if (!linhas.length || !spedId) return;
+
+    const divergenciasComDetalhes = await Promise.all(
+      linhas.map(async (l) => {
+        const temDivergencia = Math.abs(l.diffPerc) > 0;
+        let notas = undefined;
+
+        if (temDivergencia) {
+          try {
+            const detalhes = await obterDetalhesDivergencia(spedId, l.data, l.cfop);
+            notas = detalhes.notas;
+          } catch (e) {
+            console.warn(`Erro ao buscar detalhes para ${l.data}/${l.cfop}:`, e);
+          }
+        }
+
+        return {
+          data: l.data,
+          cfop: l.cfop,
+          valorXml: l.xmlVProd,
+          valorSped: l.spedValorOperacao,
+          diferenca: l.diffAbs,
+          diferencaPercent: l.diffPerc,
+          status: temDivergencia ? "Divergente" : "OK",
+          notas,
+        };
+      })
+    );
+
+    gerarRelatorioDivergenciasDetalhado(
+      divergenciasComDetalhes,
+      { company, cnpj, period: formatarPeriodoLabel() },
+      format
+    );
+  };
+
   return (
     <Card className="p-4 space-y-4">
       <div className="flex flex-wrap items-end gap-4 justify-between">
@@ -93,6 +153,12 @@ export default function SpedXmlComparison({ spedId, periodo, reloadKey }) {
               "Atualizar"
             )}
           </Button>
+          <ReportButton
+            onExport={handleExportReport}
+            disabled={loading || linhas.length === 0}
+            label="Relatorio"
+            size="default"
+          />
         </div>
       </div>
 

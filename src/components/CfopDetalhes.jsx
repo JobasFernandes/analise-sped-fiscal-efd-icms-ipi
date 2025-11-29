@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
-import { Download, Filter, Search, FileText, DollarSign } from "lucide-react";
+import { Filter, Search, FileText, DollarSign } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -9,23 +9,11 @@ import {
   DialogDescription,
 } from "./ui/dialog";
 import Button from "./ui/Button";
+import { ReportButton } from "./ui/ReportButton";
 import { formatarMoeda, formatarData, formatarNumero } from "../utils/dataProcessor";
 import { FiscalInsight } from "./ui/FiscalInsight";
 
-const removerAcentos = (texto) => {
-  if (!texto) return "";
-  return texto
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-zA-Z0-9\s\-_.,;/]/g, "");
-};
-
-const formatarValorCSV = (valor) => {
-  if (!valor && valor !== 0) return "";
-  return valor.toFixed(2).replace(".", ",");
-};
-
-const CfopDetalhes = ({ cfop, dados, onFechar }) => {
+const CfopDetalhes = ({ cfop, dados, onFechar, company, cnpj, period }) => {
   const [filtroTextoInput, setFiltroTextoInput] = useState("");
   const [filtroTextoDebounced, setFiltroTextoDebounced] = useState("");
   const [ordenacao, setOrdenacao] = useState({
@@ -49,11 +37,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     if (!hasData) return [];
     let base = (dados.itensPorCfopIndex && dados.itensPorCfopIndex[cfop.cfop]) || null;
     if (!base) {
-      const todasNotas = [
-        ...(dados.entradas || []),
-        ...(dados.saidas || []),
-        ...(dados.vendas || []),
-      ];
+      const todasNotas = [...(dados.entradas || []), ...(dados.saidas || [])];
       const coletados = [];
       for (const nota of todasNotas) {
         if (!nota.itens) continue;
@@ -137,11 +121,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
 
   const notaCompletaSelecionada = useMemo(() => {
     if (!notaSelecionada || !dados) return null;
-    const todasNotas = [
-      ...(dados.entradas || []),
-      ...(dados.saidas || []),
-      ...(dados.vendas || []),
-    ];
+    const todasNotas = [...(dados.entradas || []), ...(dados.saidas || [])];
     return (
       todasNotas.find(
         (n) =>
@@ -165,48 +145,6 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
     }));
   };
 
-  const exportarCSV = () => {
-    const headers = [
-      "Numero NF",
-      "Chave NFe",
-      "Data Documento",
-      "CFOP",
-      "CST ICMS",
-      "Valor Operacao",
-      "Aliq ICMS (%)",
-      "BC ICMS",
-      "Valor ICMS",
-    ];
-
-    const itensParaExportar = [...itensOrdenados].sort((a, b) => {
-      const numA = parseInt(a.numeroDoc) || 0;
-      const numB = parseInt(b.numeroDoc) || 0;
-      return numA - numB;
-    });
-
-    const linhas = itensParaExportar.map((item) => [
-      removerAcentos(item.numeroDoc),
-      removerAcentos(item.chaveNfe),
-      removerAcentos(formatarData(item.dataDocumento)),
-      removerAcentos(item.cfop),
-      removerAcentos(item.cstIcms),
-      formatarValorCSV(item.valorOperacao),
-      formatarValorCSV(item.aliqIcms),
-      formatarValorCSV(item.valorBcIcms),
-      formatarValorCSV(item.valorIcms),
-    ]);
-
-    const csv = [headers, ...linhas]
-      .map((linha) => linha.map((campo) => `"${campo || ""}"`).join(";"))
-      .join("\n");
-
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `detalhes_cfop_${cfop.cfop}.csv`;
-    link.click();
-  };
-
   const valorTotalFiltrado = useMemo(
     () => itensOrdenados.reduce((acc, item) => acc + (item.valorOperacao || 0), 0),
     [itensOrdenados]
@@ -224,6 +162,112 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
       return { tipo: "Saída", cor: "text-blue-600", bg: "bg-blue-100" };
     }
     return { tipo: "Indefinido", cor: "text-gray-600", bg: "bg-gray-100" };
+  };
+
+  const hasC170Data = useMemo(() => {
+    if (!dados) return false;
+    const todasNotas = [...(dados.entradas || []), ...(dados.saidas || [])];
+    return todasNotas.some((n) => n.itensC170 && n.itensC170.length > 0);
+  }, [dados]);
+
+  const itensComC170 = useMemo(() => {
+    if (!hasData || !hasC170Data) return null;
+    const todasNotas = [...(dados.entradas || []), ...(dados.saidas || [])];
+    const coletados = [];
+    for (const nota of todasNotas) {
+      if (!nota.itensC170?.length) continue;
+      for (const itemC170 of nota.itensC170) {
+        if (itemC170.cfop === cfop.cfop) {
+          coletados.push({
+            numeroDoc: nota.numeroDoc,
+            chaveNfe: nota.chaveNfe,
+            dataDocumento: nota.dataDocumento,
+            cfop: itemC170.cfop,
+            codItem: itemC170.codItem,
+            descricaoItem: itemC170.descrCompl,
+            quantidade: itemC170.quantidade,
+            unidade: itemC170.unidade,
+            valorUnitario:
+              itemC170.valorItem && itemC170.quantidade
+                ? itemC170.valorItem / itemC170.quantidade
+                : undefined,
+            valorOperacao: itemC170.valorItem || 0,
+            cstIcms: itemC170.cstIcms,
+            valorBcIcms: itemC170.valorBcIcms,
+            valorIcms: itemC170.valorIcms,
+          });
+        }
+      }
+    }
+    return coletados.length > 0 ? coletados : null;
+  }, [dados, cfop, hasData, hasC170Data]);
+
+  const getReportConfig = (_format) => {
+    const itensParaExportar = itensComC170 || itensOrdenados;
+    const temC170 = !!itensComC170;
+
+    const itemsFormatados = itensParaExportar.map((item) => ({
+      numeroDoc: item.numeroDoc || "",
+      dataDocumento: item.dataDocumento
+        ? typeof item.dataDocumento === "string"
+          ? item.dataDocumento
+          : item.dataDocumento.toISOString().split("T")[0]
+        : "",
+      cstIcms: item.cstIcms || "",
+      aliqIcms: item.aliqIcms || 0,
+      valorOperacao: item.valorOperacao || 0,
+      valorBcIcms: item.valorBcIcms || 0,
+      valorIcms: item.valorIcms || 0,
+      codItem: item.codItem || "",
+      descricaoItem: item.descricaoItem || "",
+      quantidade: item.quantidade || 0,
+      unidade: item.unidade || "",
+      valorUnitario: item.valorUnitario || 0,
+    }));
+
+    const columnsBasic = [
+      { header: "N Doc", key: "numeroDoc", width: 10 },
+      { header: "Data", key: "dataDocumento", format: "date", width: 12 },
+      { header: "CST", key: "cstIcms", width: 6 },
+      { header: "Aliq.", key: "aliqIcms", format: "number", width: 8 },
+      { header: "Valor Op.", key: "valorOperacao", format: "currency", width: 14 },
+      { header: "BC ICMS", key: "valorBcIcms", format: "currency", width: 14 },
+      { header: "Valor ICMS", key: "valorIcms", format: "currency", width: 14 },
+    ];
+
+    const columnsC170 = [
+      { header: "N Doc", key: "numeroDoc", width: 10 },
+      { header: "Data", key: "dataDocumento", format: "date", width: 12 },
+      { header: "Cod. Item", key: "codItem", width: 12 },
+      { header: "Descricao", key: "descricaoItem", width: 25 },
+      { header: "Qtd", key: "quantidade", format: "number", width: 10 },
+      { header: "Unid.", key: "unidade", width: 6 },
+      { header: "Vlr Unit.", key: "valorUnitario", format: "currency", width: 12 },
+      { header: "Valor Op.", key: "valorOperacao", format: "currency", width: 14 },
+      { header: "CST", key: "cstIcms", width: 6 },
+      { header: "BC ICMS", key: "valorBcIcms", format: "currency", width: 12 },
+      { header: "Valor ICMS", key: "valorIcms", format: "currency", width: 12 },
+    ];
+
+    return {
+      title: `Relatorio CFOP ${cfop.cfop}`,
+      subtitle: cfop.descricao || "",
+      company: company || "",
+      cnpj: cnpj || "",
+      period: period || "",
+      columns: temC170 ? columnsC170 : columnsBasic,
+      data: itemsFormatados,
+      totals: {
+        valorOperacao: itemsFormatados.reduce(
+          (acc, i) => acc + (i.valorOperacao || 0),
+          0
+        ),
+        valorBcIcms: itemsFormatados.reduce((acc, i) => acc + (i.valorBcIcms || 0), 0),
+        valorIcms: itemsFormatados.reduce((acc, i) => acc + (i.valorIcms || 0), 0),
+      },
+      filename: `relatorio_cfop_${cfop.cfop}_${Date.now()}`,
+      orientation: "landscape",
+    };
   };
 
   const getDicaFiscalCfop = (cfopCode) => {
@@ -334,14 +378,12 @@ const CfopDetalhes = ({ cfop, dados, onFechar }) => {
                 <p className="text-sm text-muted-foreground">{cfop.descricao}</p>
               </div>
             </div>
-            <div className="flex items-center space-x-3">
-              <Button
-                onClick={exportarCSV}
-                className="inline-flex items-center gap-2 bg-green-600 hover:bg-green-700"
-              >
-                <Download className="h-4 w-4" />
-                <span>Exportar CSV</span>
-              </Button>
+            <div className="flex items-center space-x-2">
+              <ReportButton
+                reportConfig={getReportConfig}
+                label="Relatorio"
+                size="default"
+              />
             </div>
           </DialogHeader>
 

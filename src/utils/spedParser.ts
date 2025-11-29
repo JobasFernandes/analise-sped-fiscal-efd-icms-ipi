@@ -136,21 +136,15 @@ export class SpedParser {
       const dtFim = this.parseDate(dtFimStr);
       if (dtIni) this.data.periodo.inicio = dtIni;
       if (dtFim) this.data.periodo.fim = dtFim;
-      // Tentativa de extrair CNPJ e Razão Social (layout EFD ICMS IPI)
-      // Estrutura típica: |0000|<COD_VER>|<COD_FIN>|<DT_INI>|<DT_FIN>|<NOME>|<CNPJ>|<...>
-      // Indices podem variar se houver campos vazios, então usamos heurística:
-      // Procurar primeiro campo que parece CNPJ (14 dígitos) após DT_FIN; nome presumido antes dele.
       const maybeCnpj = campos.find((c: string) => /\d{14}/.test(c));
       if (maybeCnpj && /\d{14}/.test(maybeCnpj)) {
         this.data.cnpj = maybeCnpj.padStart(14, "0");
-        // Nome: campo imediatamente anterior ao CNPJ que não é data e contém letras
         const idx = campos.indexOf(maybeCnpj);
         if (idx > 0) {
           const nome = campos[idx - 1];
           if (nome && /[A-Za-zÀ-ÿ]/.test(nome)) this.data.companyName = nome.trim();
         }
       } else {
-        // fallback: posição 5 e 6 conforme layout
         if (campos[5]) this.data.companyName = campos[5];
         if (campos[6] && /\d{14}/.test(campos[6])) this.data.cnpj = campos[6];
       }
@@ -273,7 +267,6 @@ export class SpedParser {
     const rawBc12 = safe(12);
     const rawAliq13 = safe(13);
     const rawIcms14 = safe(14);
-    const rawBc14 = safe(14);
     const rawIcms15 = safe(15);
 
     const looksLikeCfop = (s?: string) => !!(s && /^\d{4}$/.test(s));
@@ -289,9 +282,9 @@ export class SpedParser {
       : looksLikeCst(rawCst9)
         ? rawCst9
         : rawCst11 || rawCst9 || "";
-    const valorBcIcms = this.parseValor(rawBc12 ?? rawBc14);
+    const valorBcIcms = this.parseValor(rawBc12);
     const aliqIcms = this.parseValor(rawAliq13);
-    const valorIcms = this.parseValor(rawIcms15 ?? rawIcms14);
+    const valorIcms = this.parseValor(rawIcms14 ?? rawIcms15);
 
     const item: NotaItemC170 = {
       numItem,
