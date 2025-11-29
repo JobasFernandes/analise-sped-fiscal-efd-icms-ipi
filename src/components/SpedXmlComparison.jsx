@@ -10,6 +10,8 @@ import {
 } from "../utils/comparisonService";
 import { formatarMoeda } from "../utils/dataProcessor";
 import Spinner from "./ui/spinner";
+import { useFilters } from "../contexts/FilterContext";
+import FilterBar from "./ui/FilterBar";
 
 export default function SpedXmlComparison({
   spedId,
@@ -27,15 +29,20 @@ export default function SpedXmlComparison({
   const [detalheLoading, setDetalheLoading] = useState(false);
   const [detalhe, setDetalhe] = useState(null);
   const [linhaSelecionada, setLinhaSelecionada] = useState(null);
+  const { filters } = useFilters();
 
   const carregar = async () => {
     if (!spedId) return;
     setLoading(true);
     try {
-      const r = await gerarComparativoSpedXml(spedId, {
-        inicio: dataInicio || undefined,
-        fim: dataFim || undefined,
-      });
+      const r = await gerarComparativoSpedXml(
+        spedId,
+        {
+          inicio: dataInicio || undefined,
+          fim: dataFim || undefined,
+        },
+        filters
+      );
       setLinhas(r.linhas);
       setTotais({ totalSped: r.totalSped, totalXml: r.totalXml });
     } finally {
@@ -45,7 +52,7 @@ export default function SpedXmlComparison({
 
   useEffect(() => {
     carregar(); // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [spedId, reloadKey]);
+  }, [spedId, reloadKey, filters]);
 
   const resumo = React.useMemo(() => {
     const totalXml = totais.totalXml;
@@ -163,6 +170,8 @@ export default function SpedXmlComparison({
           />
         </div>
       </div>
+
+      <FilterBar />
 
       {/* Status do comparativo */}
       <div className="flex items-center gap-3 text-sm">

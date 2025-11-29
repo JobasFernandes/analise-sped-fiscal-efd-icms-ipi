@@ -6,14 +6,25 @@ import type {
   DivergenciaNotaResumo,
 } from "./types";
 
+export interface ComparisonFilters {
+  minDifferenceValue?: number;
+  ignoredCfops?: string[];
+  onlyFavorFisco?: boolean;
+}
+
 export async function gerarComparativoSpedXml(
   spedId: number,
-  periodo?: { inicio?: string; fim?: string }
+  periodo?: { inicio?: string; fim?: string },
+  filters?: ComparisonFilters
 ): Promise<{ linhas: XmlComparativoLinha[]; totalSped: number; totalXml: number }> {
   const spedMeta = await db.sped_files.get(spedId);
   const cnpjRef = spedMeta?.cnpj ? spedMeta.cnpj.replace(/\D/g, "") : undefined;
   const spedDayCfop = await db.day_cfop_aggs.where({ spedId }).toArray();
-  const cfopsExcluir = new Set(["5929", "6929"]);
+
+  const cfopsExcluir = new Set(filters?.ignoredCfops || ["5929", "6929"]);
+  const tolerance = filters?.minDifferenceValue ?? 0.01;
+  const onlyFavorFisco = filters?.onlyFavorFisco ?? false;
+
   const inicio = periodo?.inicio;
   const fim = periodo?.fim;
   const filtrados = spedDayCfop.filter((r) => {
@@ -35,7 +46,7 @@ export async function gerarComparativoSpedXml(
     cnpjRef,
     tpNF: "1",
   });
-  const linhas: XmlComparativoLinha[] = [];
+  let linhas: XmlComparativoLinha[] = [];
   const usados = new Set<string>();
 
   for (const a of xmlAgg) {
@@ -43,9 +54,12 @@ export async function gerarComparativoSpedXml(
     const k = `${a.data}|${a.cfop}`;
     const spedValor = mapSped.get(k) || 0;
     let diffAbs = a.vProd - spedValor;
-    if (Math.abs(diffAbs) < 0.00001) diffAbs = 0;
+
+    if (Math.abs(diffAbs) <= tolerance) diffAbs = 0;
+
     let diffPerc = spedValor === 0 ? 0 : (diffAbs / spedValor) * 100;
     if (Math.abs(diffPerc) < 0.00001) diffPerc = 0;
+
     linhas.push({
       data: a.data,
       cfop: a.cfop,
@@ -61,9 +75,12 @@ export async function gerarComparativoSpedXml(
     const [data, cfop] = k.split("|");
     if (cfopsExcluir.has(cfop)) continue;
     let diffAbs = 0 - spedValor;
-    if (Math.abs(diffAbs) < 0.00001) diffAbs = 0;
+
+    if (Math.abs(diffAbs) <= tolerance) diffAbs = 0;
+
     let diffPerc = spedValor === 0 ? 0 : (-spedValor / spedValor) * 100;
     if (Math.abs(diffPerc) < 0.00001) diffPerc = 0;
+
     linhas.push({
       data,
       cfop,
@@ -73,6 +90,11 @@ export async function gerarComparativoSpedXml(
       diffPerc,
     });
   }
+
+  if (onlyFavorFisco) {
+    linhas = linhas.filter((l) => l.diffAbs > 0);
+  }
+
   const sorted = linhas.sort(
     (a, b) => a.data.localeCompare(b.data) || a.cfop.localeCompare(b.cfop)
   );
