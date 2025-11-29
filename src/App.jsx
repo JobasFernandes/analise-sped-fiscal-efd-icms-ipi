@@ -37,6 +37,7 @@ const Dashboard = lazy(() => import("./components/Dashboard"));
 const SpedManager = lazy(() => import("./components/SpedManager"));
 const XmlUpload = lazy(() => import("./components/XmlUpload"));
 const SpedXmlComparison = lazy(() => import("./components/SpedXmlComparison"));
+const OrphanList = lazy(() => import("./components/audit/OrphanList"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center p-8">
@@ -431,6 +432,11 @@ function App() {
                     />
                   </Suspense>
                 </div>
+              )}
+              {savedSpedId && (
+                <Suspense fallback={<LoadingFallback />}>
+                  <OrphanList spedId={savedSpedId} reloadKey={xmlVersion} />
+                </Suspense>
               )}
             </div>
           </div>
