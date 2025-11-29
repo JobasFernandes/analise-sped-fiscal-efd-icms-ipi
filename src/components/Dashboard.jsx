@@ -6,6 +6,7 @@ import {
   TrendingDown,
   ArrowDownCircle,
   ArrowUpCircle,
+  BarChart3,
 } from "lucide-react";
 import {
   formatarMoeda,
@@ -24,8 +25,16 @@ import Button from "./ui/Button";
 import DateInput from "./ui/date-input";
 import { ReportButton } from "./ui/ReportButton";
 import { FiscalHelpSection } from "./ui/FiscalInsight";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "./ui/dialog";
+import AbcAnalysis from "./analytics/AbcAnalysis";
 
-const Dashboard = ({ dados }) => {
+const Dashboard = ({ dados, savedSpedId }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
@@ -275,12 +284,22 @@ const Dashboard = ({ dados }) => {
               />
             </div>
 
-            <div className="min-w-[140px] text-right">
-              <p className="text-xs font-medium text-muted-foreground mb-1">Período</p>
-              <p className="text-sm font-semibold text-foreground h-9 flex items-center justify-end">
-                {resumo.periodoAnalise || "Não identificado"}
-              </p>
-            </div>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="outline" className="h-9 gap-2">
+                  <BarChart3 className="h-4 w-4" />
+                  <span className="hidden sm:inline">Curva ABC</span>
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-[95vw] w-full h-[90vh] p-0 overflow-hidden flex flex-col">
+                <DialogHeader className="px-6 py-4 flex-shrink-0">
+                  <DialogTitle>Análise de Curva ABC</DialogTitle>
+                </DialogHeader>
+                <div className="flex-1 overflow-y-auto p-6 bg-muted/10">
+                  <AbcAnalysis spedId={savedSpedId} />
+                </div>
+              </DialogContent>
+            </Dialog>
 
             <ReportButton
               onExport={handleExportResumo}
