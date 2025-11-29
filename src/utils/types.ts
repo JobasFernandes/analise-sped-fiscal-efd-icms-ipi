@@ -179,6 +179,7 @@ export interface XmlNotaResumo {
   numero: string;
   cnpjEmit?: string;
   cnpjDest?: string;
+  tpNF?: string;
   autorizada: boolean;
   valorTotalProduto: number;
   qBCMonoRetTotal?: number;

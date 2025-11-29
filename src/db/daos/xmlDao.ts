@@ -94,27 +94,23 @@ export async function importarXmlNotas(
     lista.push({ motivo, ...detalhe });
   };
 
-  // Pré-carregar chaves existentes para evitar queries individuais
   const chavesExistentes = new Set<string>();
   const notasExistentes = await db.xml_notas.toArray();
   for (const n of notasExistentes) {
     chavesExistentes.add(n.chave);
   }
 
-  // Acumular notas para bulk insert
   const notasParaInserir: XmlNotaRow[] = [];
 
-  // Acumular agregações em memória (chave: cnpjRef|data|cfop)
   const aggMap = new Map<
     string,
     { vProd: number; qBCMonoRet: number; vICMSMonoRet: number }
   >();
 
-  // Pré-carregar agregações existentes
   const aggsExistentes = await db.xml_day_cfop_aggs.toArray();
-  const aggIdMap = new Map<string, number>(); // chave -> id existente
+  const aggIdMap = new Map<string, number>();
   for (const agg of aggsExistentes) {
-    const k = `${agg.cnpjRef || ""}|${agg.data}|${agg.cfop}`;
+    const k = `${agg.cnpjRef || ""}|${agg.data}|${agg.cfop}|${agg.tpNF || ""}`;
     aggMap.set(k, {
       vProd: agg.vProd,
       qBCMonoRet: agg.qBCMonoRet || 0,
@@ -123,7 +119,6 @@ export async function importarXmlNotas(
     if (agg.id) aggIdMap.set(k, agg.id);
   }
 
-  // Processar cada arquivo
   for (const a of arquivos) {
     let nota;
     try {
@@ -181,7 +176,6 @@ export async function importarXmlNotas(
       });
       continue;
     }
-    // Verificar duplicata em memória (sem query)
     if (chavesExistentes.has(nota.chave)) {
       registrarIgnorada("duplicada", {
         chave: nota.chave,
@@ -195,7 +189,13 @@ export async function importarXmlNotas(
     const itensFiltrados = (nota.itens || []).filter((i) => {
       if (!i.cfop) return false;
       if (excluirSet.has(i.cfop)) return false;
+
+      const cnpjBase = opts.cnpjBase ? opts.cnpjBase.replace(/\D/g, "") : "";
+      const emit = (nota.cnpjEmit || "").replace(/\D/g, "");
+      const isEmitente = cnpjBase && emit === cnpjBase;
+
       if (
+        isEmitente &&
         opts.somenteVendasDiretas &&
         vendasPermitidasSet.size > 0 &&
         !vendasPermitidasSet.has(i.cfop)
@@ -228,6 +228,7 @@ export async function importarXmlNotas(
       cnpjEmit: nota.cnpjEmit,
       cnpjDest: nota.cnpjDest,
       cnpjRef,
+      tpNF: nota.tpNF,
       valorTotalProduto: nota.valorTotalProduto,
       qBCMonoRetTotal: nota.qBCMonoRetTotal,
       vICMSMonoRetTotal: nota.vICMSMonoRetTotal,
@@ -241,11 +242,10 @@ export async function importarXmlNotas(
     };
 
     notasParaInserir.push(row);
-    chavesExistentes.add(nota.chave); // Marcar como inserida para evitar duplicatas no mesmo batch
+    chavesExistentes.add(nota.chave);
 
-    // Acumular agregações em memória
     for (const it of row.itens || []) {
-      const k = `${cnpjRef || ""}|${row.dataEmissao}|${it.cfop}`;
+      const k = `${cnpjRef || ""}|${row.dataEmissao}|${it.cfop}|${row.tpNF || ""}`;
       const existing = aggMap.get(k);
       if (existing) {
         existing.vProd += it.vProd;
@@ -262,21 +262,18 @@ export async function importarXmlNotas(
     inseridas++;
   }
 
-  // Bulk insert em transação única
   if (notasParaInserir.length > 0 || aggMap.size > 0) {
     await db.transaction("rw", [db.xml_notas, db.xml_day_cfop_aggs], async () => {
-      // Bulk insert das notas
       if (notasParaInserir.length > 0) {
         await db.xml_notas.bulkAdd(notasParaInserir);
       }
 
-      // Atualizar/inserir agregações
       const aggsParaInserir: XmlDayCfopAggRow[] = [];
       const aggsParaAtualizar: { id: number; changes: Partial<XmlDayCfopAggRow> }[] =
         [];
 
       for (const [k, val] of aggMap.entries()) {
-        const [ref, data, cfop] = k.split("|");
+        const [ref, data, cfop, tpNF] = k.split("|");
         const existingId = aggIdMap.get(k);
         if (existingId) {
           aggsParaAtualizar.push({
@@ -292,6 +289,7 @@ export async function importarXmlNotas(
             cnpjRef: ref || undefined,
             data,
             cfop,
+            tpNF: tpNF || undefined,
             vProd: val.vProd,
             qBCMonoRet: val.qBCMonoRet || undefined,
             vICMSMonoRet: val.vICMSMonoRet || undefined,
@@ -299,7 +297,6 @@ export async function importarXmlNotas(
         }
       }
 
-      // Bulk operations
       if (aggsParaInserir.length > 0) {
         await db.xml_day_cfop_aggs.bulkAdd(aggsParaInserir);
       }
@@ -316,6 +313,7 @@ export interface XmlAggConsultaFiltro {
   dataInicio?: string;
   dataFim?: string;
   cnpjRef?: string;
+  tpNF?: string;
 }
 
 export async function listarAggDiaCfop(
@@ -325,6 +323,9 @@ export async function listarAggDiaCfop(
   if (filtro.cnpjRef) {
     const cnpjRef = filtro.cnpjRef.replace(/\D/g, "");
     coll = coll.filter((r) => (r.cnpjRef || "") === cnpjRef);
+  }
+  if (filtro.tpNF) {
+    coll = coll.filter((r) => r.tpNF === filtro.tpNF);
   }
   if (filtro.dataInicio) coll = coll.filter((r) => r.data >= filtro.dataInicio!);
   if (filtro.dataFim) coll = coll.filter((r) => r.data <= filtro.dataFim!);

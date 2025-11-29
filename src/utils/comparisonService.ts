@@ -29,7 +29,12 @@ export async function gerarComparativoSpedXml(
     mapSped.set(k, (mapSped.get(k) || 0) + r.valor);
   }
 
-  const xmlAgg = await listarAggDiaCfop({ dataInicio: inicio, dataFim: fim, cnpjRef });
+  const xmlAgg = await listarAggDiaCfop({
+    dataInicio: inicio,
+    dataFim: fim,
+    cnpjRef,
+    tpNF: "1",
+  });
   const linhas: XmlComparativoLinha[] = [];
   const usados = new Set<string>();
 
@@ -101,6 +106,8 @@ export async function obterDetalhesDivergencia(
   }
   let xmlNotas = await db.xml_notas.where({ dataEmissao: data }).toArray();
   if (cnpjRef) xmlNotas = xmlNotas.filter((n) => (n.cnpjRef || "") === cnpjRef);
+  xmlNotas = xmlNotas.filter((n) => n.tpNF === "1");
+
   const xmlAgrupado = new Map<string, number>();
   const xmlNumeros = new Map<string, string>();
   for (const nota of xmlNotas) {

@@ -113,6 +113,18 @@ export class SpedDB extends Dexie {
     this.version(7).stores({
       xml_notas: "id, chave, dataEmissao, cnpjEmit, cnpjDest, cnpjRef",
     });
+    // v8: adicionar tpNF para classificar entrada/saida
+    this.version(8).stores({
+      xml_notas: "id, chave, dataEmissao, cnpjEmit, cnpjDest, cnpjRef, tpNF",
+    });
+    // v9: adicionar tpNF na agregação para separar entrada/saida
+    this.version(9)
+      .stores({
+        xml_day_cfop_aggs: "++id, [cnpjRef+data+cfop+tpNF], cnpjRef, data, cfop, tpNF",
+      })
+      .upgrade(async (trans) => {
+        await trans.table("xml_day_cfop_aggs").clear();
+      });
   }
 }
 
@@ -153,6 +165,7 @@ export interface XmlNotaRow {
   cnpjEmit?: string;
   cnpjDest?: string;
   cnpjRef?: string;
+  tpNF?: string;
   valorTotalProduto: number;
   qBCMonoRetTotal?: number;
   vICMSMonoRetTotal?: number;
@@ -170,6 +183,7 @@ export interface XmlDayCfopAggRow {
   cnpjRef?: string; // segmentação
   data: string; // yyyy-MM-dd
   cfop: string;
+  tpNF?: string; // "0" | "1"
   vProd: number;
   qBCMonoRet?: number;
   vICMSMonoRet?: number;

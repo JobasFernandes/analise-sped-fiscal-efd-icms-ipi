@@ -1,12 +1,10 @@
 import { XmlNotaResumo, XmlItemResumo } from "./types";
 
-// Helper para extrair texto de um elemento
 function getText(parent: Element | Document, tagName: string): string | null {
   const el = parent.getElementsByTagName(tagName)[0];
   return el?.textContent?.trim() || null;
 }
 
-// Helper para extrair atributo de um elemento
 function getAttr(
   parent: Element | Document,
   tagName: string,
@@ -16,12 +14,10 @@ function getAttr(
   return el?.getAttribute(attr) || null;
 }
 
-// Helper para obter primeiro elemento filho por tag
 function getElement(parent: Element | Document, tagName: string): Element | null {
   return parent.getElementsByTagName(tagName)[0] || null;
 }
 
-// Helper para obter todos elementos por tag
 function getElements(parent: Element | Document, tagName: string): Element[] {
   return Array.from(parent.getElementsByTagName(tagName));
 }
@@ -32,7 +28,6 @@ function toNumber(v?: string | null): number {
   return isNaN(n) ? 0 : n;
 }
 
-// Fallback regex para casos onde DOMParser falha
 function extractRegex(tag: string, xml: string): string | null {
   try {
     const re = new RegExp(`<${tag}>([\\s\\S]*?)<\\/${tag}>`);
@@ -45,56 +40,48 @@ function extractRegex(tag: string, xml: string): string | null {
 
 export function parseXmlNfe(content: string): XmlNotaResumo | null {
   try {
-    // Remover BOM se presente
     let xml = content;
     if (xml.charCodeAt(0) === 0xfeff) {
       xml = xml.slice(1);
     }
 
-    // Tentar usar DOMParser nativo (mais robusto e rápido)
     const parser = new DOMParser();
     const doc = parser.parseFromString(xml, "application/xml");
 
-    // Verificar se houve erro de parsing
     const parseError = doc.querySelector("parsererror");
     if (parseError) {
-      // Fallback para regex se DOMParser falhar
       return parseXmlNfeRegex(content);
     }
 
-    // Extrair cStat para verificar se está autorizada
     const cStat = getText(doc, "cStat");
     const autorizada = cStat === "100";
 
-    // Extrair chave da NFe
     const infNFeId = getAttr(doc, "infNFe", "Id") || "";
     const chave = getText(doc, "chNFe") || infNFeId.replace(/^NFe/, "");
 
-    // Datas
+    const ideEl = getElement(doc, "ide");
+    const tpNF = ideEl ? getText(ideEl, "tpNF") || "" : "";
+
     const dhEmi = getText(doc, "dhEmi") || "";
     const dhRecbto = getText(doc, "dhRecbto") || "";
     const usado = dhEmi || dhRecbto;
     const dataEmissao = usado ? usado.slice(0, 10) : "";
 
-    // Dados básicos
     const modelo = getText(doc, "mod") || "";
     const serie = getText(doc, "serie") || "";
     const numero = getText(doc, "nNF") || "";
 
-    // CNPJs
     const emitEl = getElement(doc, "emit");
     const cnpjEmit = emitEl ? getText(emitEl, "CNPJ") || undefined : undefined;
 
     const destEl = getElement(doc, "dest");
     const cnpjDest = destEl ? getText(destEl, "CNPJ") || undefined : undefined;
 
-    // Totais
     const totalEl = getElement(doc, "ICMSTot");
     const vProd = totalEl ? toNumber(getText(totalEl, "vProd")) : 0;
     const qBCMonoRetTotal = totalEl ? toNumber(getText(totalEl, "qBCMonoRet")) : 0;
     const vICMSMonoRetTotal = totalEl ? toNumber(getText(totalEl, "vICMSMonoRet")) : 0;
 
-    // Itens (det)
     const detElements = getElements(doc, "det");
     const itens: XmlItemResumo[] = detElements
       .map((detEl) => {
@@ -126,6 +113,7 @@ export function parseXmlNfe(content: string): XmlNotaResumo | null {
       numero,
       cnpjEmit,
       cnpjDest,
+      tpNF,
       autorizada,
       valorTotalProduto: vProd,
       qBCMonoRetTotal: qBCMonoRetTotal || undefined,
@@ -140,7 +128,6 @@ export function parseXmlNfe(content: string): XmlNotaResumo | null {
   }
 }
 
-// Fallback com regex para XMLs malformados
 function parseXmlNfeRegex(content: string): XmlNotaResumo | null {
   try {
     const xml = content.replace(/xmlns(:\w+)?="[^"]*"/g, "");
@@ -151,6 +138,8 @@ function parseXmlNfeRegex(content: string): XmlNotaResumo | null {
     const infNFeMatch = xml.match(/<infNFe[^>]*Id="([^"]+)"/);
     const infNFeId = infNFeMatch ? infNFeMatch[1] : "";
     const chave = extractRegex("chNFe", xml) || infNFeId.replace(/^NFe/, "");
+
+    const tpNF = extractRegex("tpNF", xml) || "";
 
     const dhEmi = extractRegex("dhEmi", xml) || "";
     const dhRecbto = extractRegex("dhRecbto", xml) || "";
@@ -215,6 +204,7 @@ function parseXmlNfeRegex(content: string): XmlNotaResumo | null {
       numero,
       cnpjEmit,
       cnpjDest,
+      tpNF,
       autorizada,
       valorTotalProduto: vProd,
       qBCMonoRetTotal: qBCMonoRetTotal || undefined,

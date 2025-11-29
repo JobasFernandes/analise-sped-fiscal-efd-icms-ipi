@@ -610,10 +610,13 @@ export default function XmlUpload({
       <div className="flex flex-col gap-2 rounded-md border border-muted-foreground/25 bg-muted/5 p-3">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <p className="text-sm font-semibold">Apenas CFOPs presentes no SPED</p>
+            <p className="text-sm font-semibold">
+              Apenas CFOPs presentes no SPED (Saídas)
+            </p>
             <p className="text-xs text-muted-foreground">
-              Quando ativo, somente CFOPs detectados no SPED carregado serão importados.
-              Desative para permitir CFOPs adicionais como 5929/6929.
+              Quando ativo, somente CFOPs de venda detectados no SPED serão importados
+              para notas de Saída. Notas de Entrada (Fornecedores) serão importadas
+              integralmente.
             </p>
             {!possuiCfopsSped && (
               <p className="text-[11px] text-muted-foreground/80 mt-1">
@@ -788,9 +791,9 @@ export default function XmlUpload({
       )}
 
       <p className="text-xs text-muted-foreground">
-        Apenas notas autorizadas (cStat=100) dentro do período e CNPJ do SPED, filtrando
-        CFOPs de venda direta, são consideradas. Dados armazenados localmente em formato
-        resumido.
+        Apenas notas autorizadas (cStat=100) dentro do período e vinculadas ao CNPJ do
+        SPED (Emitente ou Destinatário) são consideradas. Dados armazenados localmente
+        em formato resumido.
       </p>
 
       <FiscalInsight
