@@ -38,6 +38,7 @@ const SpedManager = lazy(() => import("./components/SpedManager"));
 const XmlUpload = lazy(() => import("./components/XmlUpload"));
 const SpedXmlComparison = lazy(() => import("./components/SpedXmlComparison"));
 const OrphanList = lazy(() => import("./components/audit/OrphanList"));
+const GapList = lazy(() => import("./components/audit/GapList"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center p-8">
@@ -434,9 +435,14 @@ function App() {
                 </div>
               )}
               {savedSpedId && (
-                <Suspense fallback={<LoadingFallback />}>
-                  <OrphanList spedId={savedSpedId} reloadKey={xmlVersion} />
-                </Suspense>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  <Suspense fallback={<LoadingFallback />}>
+                    <OrphanList spedId={savedSpedId} reloadKey={xmlVersion} />
+                  </Suspense>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <GapList spedId={savedSpedId} />
+                  </Suspense>
+                </div>
               )}
             </div>
           </div>

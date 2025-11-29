@@ -5,6 +5,8 @@ import Spinner from "../ui/spinner";
 import { FiscalInsight, FiscalBadge } from "../ui/FiscalInsight";
 import { db } from "../../db";
 import { formatarMoeda, formatarData } from "../../utils/dataProcessor";
+import { ReportButton } from "../ui/ReportButton";
+import { generateReportConfig } from "../../utils/reportExporter";
 
 export default function OrphanList({ spedId, reloadKey }) {
   const [loading, setLoading] = useState(false);
@@ -85,6 +87,39 @@ export default function OrphanList({ spedId, reloadKey }) {
     });
   }, [result, tab, filterDir]);
 
+  const getReportConfig = () => {
+    if (!filteredList || filteredList.length === 0) return null;
+
+    const title =
+      tab === "xmlSemSped"
+        ? "Relatório de XMLs sem Escrituração no SPED"
+        : "Relatório de Lançamentos SPED sem XML";
+
+    const data = filteredList.map((item) => ({
+      data: formatarData(item.dataEmissao || item.dataDocumento),
+      numero: item.numero || item.numeroDoc,
+      chave: item.chave || item.chaveNfe,
+      tipo: (item.tpNF || item.indicadorOperacao) === "0" ? "Entrada" : "Saída",
+      valor: item.valorTotalProduto || item.valorDocumento,
+    }));
+
+    return generateReportConfig({
+      title,
+      filename: `auditoria_orfaos_${tab}`,
+      columns: [
+        { header: "Data", key: "data", width: 12 },
+        { header: "Número", key: "numero", width: 10 },
+        { header: "Chave de Acesso", key: "chave", width: 45 },
+        { header: "Tipo", key: "tipo", width: 10 },
+        { header: "Valor", key: "valor", format: "currency", width: 15 },
+      ],
+      data,
+      totals: {
+        valor: data.reduce((acc, item) => acc + (Number(item.valor) || 0), 0),
+      },
+    });
+  };
+
   if (!result && !loading) return null;
 
   return (
@@ -98,6 +133,11 @@ export default function OrphanList({ spedId, reloadKey }) {
           </p>
         </div>
         <div className="flex gap-2">
+          <ReportButton
+            reportConfig={getReportConfig}
+            disabled={!filteredList || filteredList.length === 0}
+            size="sm"
+          />
           <Button
             variant={filterDir === "all" ? "default" : "outline"}
             size="sm"
@@ -150,7 +190,7 @@ export default function OrphanList({ spedId, reloadKey }) {
 
       <div className="overflow-auto max-h-[400px] border rounded-md">
         <table className="min-w-full text-sm">
-          <thead className="bg-muted/50 text-xs uppercase tracking-wide sticky top-0">
+          <thead className="bg-muted text-xs uppercase tracking-wide sticky top-0 z-10">
             <tr>
               <th className="px-3 py-2 text-left">Data</th>
               <th className="px-3 py-2 text-left">Número</th>

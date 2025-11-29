@@ -37,6 +37,7 @@ export function FiscalInsight({
     info: Info,
     tip: Lightbulb,
     warning: AlertTriangle,
+    error: AlertTriangle,
     help: HelpCircle,
   };
 
@@ -45,6 +46,8 @@ export function FiscalInsight({
     tip: "bg-amber-50 dark:bg-amber-950/30 border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200",
     warning:
       "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200",
+    error:
+      "bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800 text-red-800 dark:text-red-200",
     help: "bg-purple-50 dark:bg-purple-950/30 border-purple-200 dark:border-purple-800 text-purple-800 dark:text-purple-200",
   };
 
@@ -52,6 +55,7 @@ export function FiscalInsight({
     info: "text-blue-500 dark:text-blue-400",
     tip: "text-amber-500 dark:text-amber-400",
     warning: "text-red-500 dark:text-red-400",
+    error: "text-red-500 dark:text-red-400",
     help: "text-purple-500 dark:text-purple-400",
   };
 
