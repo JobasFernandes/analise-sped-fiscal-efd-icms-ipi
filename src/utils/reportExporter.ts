@@ -2,6 +2,11 @@ import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
 
+function formatCnpjForFilename(cnpj?: string): string {
+  if (!cnpj) return "";
+  return cnpj.replace(/\D/g, "");
+}
+
 export interface ReportColumn {
   header: string;
   key: string;
@@ -320,7 +325,7 @@ export function gerarRelatorioDivergencias(
       valorSped: divergencias.reduce((acc, d) => acc + d.valorSped, 0),
       diferenca: divergencias.reduce((acc, d) => acc + d.diferenca, 0),
     },
-    filename: `divergencias_sped_xml_${Date.now()}`,
+    filename: `divergencias_sped_xml_${formatCnpjForFilename(meta.cnpj)}`,
     orientation: "landscape",
   };
 
@@ -517,7 +522,7 @@ export function gerarRelatorioDivergenciasDetalhado(
     doc.text(`Diferenca Total: ${formatters.currency(totalDif)}`, 150, yPos);
     doc.text(`Divergencias: ${qtdDivergentes} de ${divergencias.length}`, 220, yPos);
 
-    doc.save(`divergencias_detalhado_${Date.now()}.pdf`);
+    doc.save(`divergencias_detalhado_${formatCnpjForFilename(meta.cnpj)}.pdf`);
   } else {
     const wb = XLSX.utils.book_new();
 
@@ -591,7 +596,10 @@ export function gerarRelatorioDivergenciasDetalhado(
       XLSX.utils.book_append_sheet(wb, wsDetalhes, "Detalhes Divergencias");
     }
 
-    XLSX.writeFile(wb, `divergencias_detalhado_${Date.now()}.xlsx`);
+    XLSX.writeFile(
+      wb,
+      `divergencias_detalhado_${formatCnpjForFilename(meta.cnpj)}.xlsx`
+    );
   }
 }
 
@@ -699,7 +707,7 @@ export function gerarRelatorioResumoExecutivo(
       });
     }
 
-    doc.save(`resumo_executivo_${Date.now()}.pdf`);
+    doc.save(`resumo_executivo_${formatCnpjForFilename(meta.cnpj)}.pdf`);
   } else {
     const wb = XLSX.utils.book_new();
 
@@ -756,7 +764,7 @@ export function gerarRelatorioResumoExecutivo(
       XLSX.utils.book_append_sheet(wb, wsMov, "Movimentacao Diaria");
     }
 
-    XLSX.writeFile(wb, `resumo_executivo_${Date.now()}.xlsx`);
+    XLSX.writeFile(wb, `resumo_executivo_${formatCnpjForFilename(meta.cnpj)}.xlsx`);
   }
 }
 
@@ -825,7 +833,7 @@ export function gerarRelatorioPorCfop(
       valorBcIcms: items.reduce((acc, i) => acc + (i.valorBcIcms || 0), 0),
       valorIcms: items.reduce((acc, i) => acc + (i.valorIcms || 0), 0),
     },
-    filename: `relatorio_cfop_${cfop}_${Date.now()}`,
+    filename: `relatorio_cfop_${cfop}_${formatCnpjForFilename(meta.cnpj)}`,
     orientation: "landscape",
   };
 
@@ -934,7 +942,7 @@ export function gerarRelatorioXmlsIgnorados(
       });
     }
 
-    doc.save(`xmls_ignorados_${Date.now()}.pdf`);
+    doc.save(`xmls_ignorados_${formatCnpjForFilename(meta.cnpj)}.pdf`);
   } else {
     const wb = XLSX.utils.book_new();
 
@@ -987,7 +995,7 @@ export function gerarRelatorioXmlsIgnorados(
       XLSX.utils.book_append_sheet(wb, wsDetalhes, "Detalhes");
     }
 
-    XLSX.writeFile(wb, `xmls_ignorados_${Date.now()}.xlsx`);
+    XLSX.writeFile(wb, `xmls_ignorados_${formatCnpjForFilename(meta.cnpj)}.xlsx`);
   }
 }
 
@@ -1028,7 +1036,7 @@ export function gerarRelatorioNotas(
     totals: {
       valorTotal: notas.reduce((acc, n) => acc + (n.valorTotal || 0), 0),
     },
-    filename: `notas_fiscais_${Date.now()}`,
+    filename: `notas_fiscais_${formatCnpjForFilename(meta.cnpj)}`,
     orientation: "landscape",
   };
 
@@ -1072,7 +1080,7 @@ export function gerarRelatorioTodosCfops(
     totals: {
       valor: total,
     },
-    filename: `cfops_${tipo}_${Date.now()}`,
+    filename: `cfops_${tipo}_${formatCnpjForFilename(meta.cnpj)}`,
     orientation: "portrait",
   };
 

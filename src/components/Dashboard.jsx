@@ -14,10 +14,7 @@ import {
   filtrarDadosProcessadosPorPeriodo,
   formatarData,
 } from "../utils/dataProcessor";
-import {
-  gerarRelatorioResumoExecutivo,
-  generateReportConfig,
-} from "../utils/reportExporter";
+import { generateReportConfig } from "../utils/reportExporter";
 import EntradasSaidasComparativoChart from "./charts/EntradasSaidasComparativoChart";
 import VendasPorDiaChart from "./charts/VendasPorDiaChart";
 import DistribuicaoCfopChart from "./charts/DistribuicaoCfopChart";
@@ -102,7 +99,7 @@ const Dashboard = ({ dados }) => {
       ],
       data: data,
       totals: { valor: total },
-      filename: `cfops_${tipo}_${Date.now()}`,
+      filename: `cfops_${tipo}_${(dados.cnpj || "").replace(/\D/g, "")}`,
       orientation: "portrait",
     };
   };
@@ -120,7 +117,7 @@ const Dashboard = ({ dados }) => {
     return `${formatarData(inicio)} a ${formatarData(fim)}`;
   };
 
-  const handleExportResumo = (format) => {
+  const handleExportResumo = async (format) => {
     const entradasArray = dadosFiltrados.entradasPorDiaArray || [];
     const saidasArray =
       dadosFiltrados.saidasPorDiaArray || dadosFiltrados.vendasPorDiaArray || [];
@@ -162,6 +159,7 @@ const Dashboard = ({ dados }) => {
       dataFim || dados?.periodo?.fim
     );
 
+    const { gerarRelatorioResumoExecutivo } = await import("../utils/reportExporter");
     gerarRelatorioResumoExecutivo(
       dadosResumo,
       { company: dados?.companyName, cnpj: dados?.cnpj, period: periodoLabel },
@@ -200,7 +198,7 @@ const Dashboard = ({ dados }) => {
       company: dados?.companyName,
       cnpj: dados?.cnpj,
       period: periodoLabel,
-      filename: `resumo_executivo_${Date.now()}`,
+      filename: `resumo_executivo_${(dados?.cnpj || "").replace(/\D/g, "")}`,
       customData: {
         totalEntradas: resumo.totalEntradas,
         totalSaidas: resumo.totalSaidas,

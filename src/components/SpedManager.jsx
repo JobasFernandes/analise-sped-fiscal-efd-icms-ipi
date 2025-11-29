@@ -12,7 +12,6 @@ import {
   contarXmlsExportaveisPorCnpj,
 } from "../db/daos/xmlDao";
 import { exportDbToJson, importDbFromJson } from "../db/backup";
-import JSZip from "jszip";
 import Button from "./ui/Button";
 import {
   Dialog,
@@ -40,6 +39,8 @@ import {
   HelpCircle,
   FileArchive,
 } from "lucide-react";
+
+const loadJSZip = () => import("jszip").then((m) => m.default);
 
 export default function SpedManager({ onLoad, onBack }) {
   const { toast } = useToast();
@@ -240,6 +241,7 @@ export default function SpedManager({ onLoad, onBack }) {
         return;
       }
 
+      const JSZip = await loadJSZip();
       const zip = new JSZip();
       for (const xml of xmls) {
         const filename = `${xml.chave}.xml`;

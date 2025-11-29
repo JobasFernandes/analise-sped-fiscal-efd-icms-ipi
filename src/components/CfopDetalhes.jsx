@@ -265,7 +265,7 @@ const CfopDetalhes = ({ cfop, dados, onFechar, company, cnpj, period }) => {
         valorBcIcms: itemsFormatados.reduce((acc, i) => acc + (i.valorBcIcms || 0), 0),
         valorIcms: itemsFormatados.reduce((acc, i) => acc + (i.valorIcms || 0), 0),
       },
-      filename: `relatorio_cfop_${cfop.cfop}_${Date.now()}`,
+      filename: `relatorio_cfop_${cfop.cfop}_${(cnpj || "").replace(/\D/g, "")}`,
       orientation: "landscape",
     };
   };

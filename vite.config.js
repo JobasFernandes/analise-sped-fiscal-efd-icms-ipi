@@ -48,7 +48,7 @@ export default defineConfig({
   build: {
     outDir: "dist",
     sourcemap: true,
-    chunkSizeWarningLimit: 1000,
+    chunkSizeWarningLimit: 500,
     rollupOptions: {
       output: {
         manualChunks(id) {
@@ -58,6 +58,14 @@ export default defineConfig({
             if (id.includes("dexie")) return "dexie";
             if (id.includes("@radix-ui")) return "radix";
             if (id.includes("date-fns")) return "date-fns";
+            if (id.includes("jspdf") || id.includes("jspdf-autotable")) return "pdf";
+            if (id.includes("xlsx") || id.includes("sheetjs")) return "xlsx";
+            if (id.includes("jszip")) return "jszip";
+            if (id.includes("html2canvas")) return "html2canvas";
+            if (id.includes("dompurify")) return "purify";
+            if (id.includes("lucide-react")) return "icons";
+            if (id.includes("react-dom")) return "react-dom";
+            if (id.includes("react") && !id.includes("react-")) return "react";
           }
         },
       },

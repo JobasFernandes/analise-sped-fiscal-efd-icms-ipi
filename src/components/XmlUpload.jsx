@@ -1,5 +1,4 @@
 import React, { useState, useRef, useCallback, useMemo } from "react";
-import JSZip from "jszip";
 import Button from "./ui/Button";
 import { Progress } from "./ui/Progress";
 import Card from "./ui/Card";
@@ -9,10 +8,7 @@ import { importarXmlNotas, limparXmlDados } from "../db/daos/xmlDao";
 import Switch from "./ui/Switch";
 import { FiscalInsight, FiscalHelpSection } from "./ui/FiscalInsight";
 import { ReportButton } from "./ui/ReportButton";
-import {
-  gerarRelatorioXmlsIgnorados,
-  generateReportConfig,
-} from "../utils/reportExporter";
+import { generateReportConfig } from "../utils/reportExporter";
 import {
   Dialog,
   DialogBody,
@@ -22,6 +18,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "./ui/dialog";
+
+const loadJSZip = () => import("jszip").then((m) => m.default);
 
 const CFOPS_EXCLUIR_PADRAO = ["5929", "6929"];
 const MAX_DETALHES_UI = 1000;
@@ -95,6 +93,7 @@ export default function XmlUpload({
   };
 
   const extrairZip = async (file) => {
+    const JSZip = await loadJSZip();
     const zip = await JSZip.loadAsync(file);
     const xmlFiles = [];
 
@@ -441,8 +440,9 @@ export default function XmlUpload({
     return itens;
   }, [resumoImportacao]);
 
-  const handleExportReportIgnorados = (format) => {
+  const handleExportReportIgnorados = async (format) => {
     if (!resumoImportacao?.motivos) return;
+    const { gerarRelatorioXmlsIgnorados } = await import("../utils/reportExporter");
     gerarRelatorioXmlsIgnorados(
       todosItensIgnorados,
       resumoImportacao.motivos,
@@ -458,7 +458,7 @@ export default function XmlUpload({
       title: "Relatorio de XMLs Ignorados na Importacao",
       company,
       cnpj: cnpjBase,
-      filename: `xmls_ignorados_${Date.now()}`,
+      filename: `xmls_ignorados_${(cnpjBase || "").replace(/\D/g, "")}`,
       customData: {
         items: todosItensIgnorados,
         totaisPorMotivo: resumoImportacao.motivos,

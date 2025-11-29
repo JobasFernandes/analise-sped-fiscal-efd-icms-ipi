@@ -1,6 +1,13 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from "react";
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  useMemo,
+  useCallback,
+  Suspense,
+  lazy,
+} from "react";
 import FileUpload from "./components/FileUpload";
-import Dashboard from "./components/Dashboard";
 import { FileText, BarChart3, Upload } from "lucide-react";
 import ThemeToggle from "./components/ThemeToggle";
 import Button from "./components/ui/Button";
@@ -20,14 +27,22 @@ import {
   DialogDescription,
   DialogFooter,
 } from "./components/ui/dialog";
-import SpedManager from "./components/SpedManager";
 import { formatarData } from "./utils/dataProcessor";
 import { getSped } from "./db/daos/spedDao";
 import { getSpedProcessed } from "./db/daos/spedProcessedDao";
 import { toProcessedData } from "./db/adapters/toProcessedData";
 import { db } from "./db";
-import XmlUpload from "./components/XmlUpload";
-import SpedXmlComparison from "./components/SpedXmlComparison";
+
+const Dashboard = lazy(() => import("./components/Dashboard"));
+const SpedManager = lazy(() => import("./components/SpedManager"));
+const XmlUpload = lazy(() => import("./components/XmlUpload"));
+const SpedXmlComparison = lazy(() => import("./components/SpedXmlComparison"));
+
+const LoadingFallback = () => (
+  <div className="flex items-center justify-center p-8">
+    <div className="animate-spin h-8 w-8 border-4 border-blue-500 border-t-transparent rounded-full" />
+  </div>
+);
 
 const FEATURES = [
   {
@@ -325,10 +340,12 @@ function App() {
       <main className="flex-1 w-full overflow-auto">
         {showManager ? (
           <div className="h-full px-2 sm:px-3 lg:px-4 py-4">
-            <SpedManager
-              onBack={() => setShowManager(false)}
-              onLoad={handleLoadFromDb}
-            />
+            <Suspense fallback={<LoadingFallback />}>
+              <SpedManager
+                onBack={() => setShowManager(false)}
+                onLoad={handleLoadFromDb}
+              />
+            </Suspense>
           </div>
         ) : !dadosProcessados ? (
           <div className="h-full flex flex-col justify-center px-3 sm:px-4 lg:px-6 py-3 sm:py-4">
@@ -385,28 +402,34 @@ function App() {
         ) : (
           <div className="h-full overflow-auto px-2 sm:px-3 lg:px-4 py-4">
             <div className="space-y-6">
-              <Dashboard
-                dados={dadosProcessados}
-                arquivo={arquivoInfo}
-                savedSpedId={savedSpedId}
-              />
+              <Suspense fallback={<LoadingFallback />}>
+                <Dashboard
+                  dados={dadosProcessados}
+                  arquivo={arquivoInfo}
+                  savedSpedId={savedSpedId}
+                />
+              </Suspense>
               {savedSpedId && (
                 <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                  <XmlUpload
-                    onImported={handleXmlChange}
-                    onXmlReset={handleXmlChange}
-                    cnpjBase={dadosProcessados?.cnpj}
-                    periodo={periodoFormatado}
-                    cfopsVendaPermitidos={cfopsPermitidos}
-                    company={dadosProcessados?.companyName}
-                  />
-                  <SpedXmlComparison
-                    spedId={savedSpedId}
-                    reloadKey={xmlVersion}
-                    periodo={periodoFormatado}
-                    company={dadosProcessados?.companyName}
-                    cnpj={dadosProcessados?.cnpj}
-                  />
+                  <Suspense fallback={<LoadingFallback />}>
+                    <XmlUpload
+                      onImported={handleXmlChange}
+                      onXmlReset={handleXmlChange}
+                      cnpjBase={dadosProcessados?.cnpj}
+                      periodo={periodoFormatado}
+                      cfopsVendaPermitidos={cfopsPermitidos}
+                      company={dadosProcessados?.companyName}
+                    />
+                  </Suspense>
+                  <Suspense fallback={<LoadingFallback />}>
+                    <SpedXmlComparison
+                      spedId={savedSpedId}
+                      reloadKey={xmlVersion}
+                      periodo={periodoFormatado}
+                      company={dadosProcessados?.companyName}
+                      cnpj={dadosProcessados?.cnpj}
+                    />
+                  </Suspense>
                 </div>
               )}
             </div>

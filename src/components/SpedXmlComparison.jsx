@@ -9,7 +9,6 @@ import {
   obterDetalhesDivergencia,
 } from "../utils/comparisonService";
 import { formatarMoeda } from "../utils/dataProcessor";
-import { gerarRelatorioDivergenciasDetalhado } from "../utils/reportExporter";
 import Spinner from "./ui/spinner";
 
 export default function SpedXmlComparison({
@@ -118,6 +117,9 @@ export default function SpedXmlComparison({
       })
     );
 
+    const { gerarRelatorioDivergenciasDetalhado } = await import(
+      "../utils/reportExporter"
+    );
     gerarRelatorioDivergenciasDetalhado(
       divergenciasComDetalhes,
       { company, cnpj, period: formatarPeriodoLabel() },
