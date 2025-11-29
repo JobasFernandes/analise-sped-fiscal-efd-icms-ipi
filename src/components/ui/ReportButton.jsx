@@ -3,6 +3,30 @@ import { FileText, FileSpreadsheet, ChevronDown, Download, X } from "lucide-reac
 import { Progress } from "./Progress";
 import { Dialog, DialogContent } from "./dialog";
 
+// Classes de tamanho consistentes com Button.jsx
+const sizeClasses = {
+  xs: "h-7 px-2 text-xs gap-1",
+  sm: "h-8 px-3 text-xs gap-1.5",
+  default: "h-9 px-4 text-sm gap-2",
+  md: "h-10 px-4 text-sm gap-2",
+  lg: "h-11 px-5 text-base gap-2",
+};
+
+// Classes de variante consistentes com Button.jsx - design moderno com bordas mínimas e hover transparente
+const variantClasses = {
+  default:
+    "border border-blue-500 text-blue-600 bg-transparent hover:bg-blue-500/10 dark:border-blue-400 dark:text-blue-400 dark:hover:bg-blue-400/15",
+  outline:
+    "border border-gray-300 text-gray-600 bg-transparent hover:bg-gray-500/10 hover:border-gray-400 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-400/10 dark:hover:border-gray-500",
+  ghost:
+    "text-gray-600 bg-transparent hover:bg-gray-500/10 dark:text-gray-300 dark:hover:bg-gray-400/10",
+  success:
+    "border border-emerald-500 text-emerald-600 bg-transparent hover:bg-emerald-500/10 dark:border-emerald-400 dark:text-emerald-400 dark:hover:bg-emerald-400/15",
+};
+
+const baseClasses =
+  "inline-flex items-center justify-center font-medium leading-none transition-all duration-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-blue-500 disabled:opacity-50 disabled:pointer-events-none rounded-lg";
+
 export function ReportButton({
   onExport,
   disabled = false,
@@ -132,26 +156,6 @@ export function ReportButton({
     setGenerating(false);
   };
 
-  const sizeClasses = {
-    sm: "px-2 py-1 text-xs gap-1",
-    default: "px-3 py-1.5 text-sm gap-1.5",
-    lg: "px-4 py-2 text-base gap-2",
-  };
-
-  const variantClasses = {
-    outline:
-      "border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700",
-    ghost: "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700",
-    primary:
-      "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600",
-  };
-
-  const baseClasses = `
-    inline-flex items-center justify-center rounded-md font-medium
-    transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-    disabled:opacity-50 disabled:pointer-events-none
-  `;
-
   return (
     <>
       <div className={`relative inline-block ${className}`} ref={dropdownRef}>
@@ -159,32 +163,34 @@ export function ReportButton({
           type="button"
           onClick={() => setIsOpen(!isOpen)}
           disabled={disabled || generating}
-          className={`${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]}`}
+          className={`${baseClasses} ${sizeClasses[size] || sizeClasses.default} ${variantClasses[variant] || variantClasses.outline}`}
         >
           <Download className="h-4 w-4" />
           <span>{label}</span>
           <ChevronDown
-            className={`h-3.5 w-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`}
+            className={`h-3.5 w-3.5 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`}
           />
         </button>
 
         {/* Dropdown */}
         {isOpen && (
-          <div className="absolute z-50 mt-1 right-0 w-40 bg-white dark:bg-gray-800 rounded-md shadow-lg border border-gray-200 dark:border-gray-700 py-1 animate-in fade-in-0 zoom-in-95">
+          <div className="absolute z-50 mt-1.5 right-0 w-44 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1.5 animate-in fade-in-0 zoom-in-95">
             <button
               type="button"
               onClick={() => handleSelect("pdf")}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-900/20 dark:hover:text-red-400 transition-colors rounded-md mx-auto"
+              style={{ width: "calc(100% - 8px)", marginLeft: "4px" }}
             >
-              <FileText className="h-4 w-4 text-red-500" />
+              <FileText className="h-4 w-4" />
               <span>Exportar PDF</span>
             </button>
             <button
               type="button"
               onClick={() => handleSelect("excel")}
-              className="w-full flex items-center gap-2 px-3 py-2 text-sm text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
+              className="w-full flex items-center gap-2.5 px-3 py-2 text-sm text-gray-600 dark:text-gray-300 hover:bg-emerald-50 hover:text-emerald-600 dark:hover:bg-emerald-900/20 dark:hover:text-emerald-400 transition-colors rounded-md mx-auto"
+              style={{ width: "calc(100% - 8px)", marginLeft: "4px" }}
             >
-              <FileSpreadsheet className="h-4 w-4 text-green-500" />
+              <FileSpreadsheet className="h-4 w-4" />
               <span>Exportar Excel</span>
             </button>
           </div>
@@ -235,7 +241,7 @@ export function ReportButton({
             <button
               type="button"
               onClick={handleCancel}
-              className="inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium rounded-md border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+              className="inline-flex items-center justify-center gap-2 h-9 px-4 text-sm font-medium rounded-lg border border-gray-300 text-gray-600 bg-transparent hover:bg-gray-500/10 hover:border-gray-400 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-400/10 dark:hover:border-gray-500 transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
             >
               <X className="h-4 w-4" />
               Cancelar
@@ -257,35 +263,14 @@ export function SimpleExportButton({
   variant = "outline",
   className = "",
 }) {
-  const sizeClasses = {
-    sm: "px-2 py-1 text-xs gap-1",
-    default: "px-3 py-1.5 text-sm gap-1.5",
-    lg: "px-4 py-2 text-base gap-2",
-  };
-
-  const variantClasses = {
-    outline:
-      "border border-gray-300 dark:border-gray-600 bg-white dark:bg-gray-800 text-gray-700 dark:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-700",
-    ghost: "text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-700",
-    primary:
-      "bg-blue-600 text-white hover:bg-blue-700 dark:bg-blue-500 dark:hover:bg-blue-600",
-  };
-
-  const baseClasses = `
-    inline-flex items-center justify-center rounded-md font-medium
-    transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-    disabled:opacity-50 disabled:pointer-events-none
-  `;
-
   const Icon = format === "pdf" ? FileText : FileSpreadsheet;
-  const iconColor = format === "pdf" ? "text-red-500" : "text-green-500";
 
   return (
     <button
       type="button"
       onClick={onClick}
       disabled={disabled || loading}
-      className={`${baseClasses} ${sizeClasses[size]} ${variantClasses[variant]} ${className}`}
+      className={`${baseClasses} ${sizeClasses[size] || sizeClasses.default} ${variantClasses[variant] || variantClasses.outline} ${className}`}
     >
       {loading ? (
         <svg
@@ -309,7 +294,7 @@ export function SimpleExportButton({
           />
         </svg>
       ) : (
-        <Icon className={`h-4 w-4 ${iconColor}`} />
+        <Icon className="h-4 w-4" />
       )}
       <span>{label}</span>
     </button>
