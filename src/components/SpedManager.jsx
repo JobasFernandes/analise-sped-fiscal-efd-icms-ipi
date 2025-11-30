@@ -5,6 +5,7 @@ import {
   recalcularIndicadores,
   recalcularIndicadoresTodos,
   possuiIndicadores,
+  getSpedContent,
 } from "../db/daos/spedDao";
 import {
   contarXmlsPorCnpj,
@@ -38,6 +39,7 @@ import {
   Zap,
   HelpCircle,
   FileArchive,
+  FileDown,
 } from "lucide-react";
 
 const loadJSZip = () => import("jszip").then((m) => m.default);
@@ -56,9 +58,13 @@ export default function SpedManager({ onLoad, onBack }) {
     deleting: null,
     loading: null,
     exportingXml: null,
+    exportingSped: null,
   });
 
   const [deleteId, setDeleteId] = useState(null);
+  const [exportSpedOpen, setExportSpedOpen] = useState(false);
+  const [selectedSpedForExport, setSelectedSpedForExport] = useState(null);
+  const [exportOptionC170, setExportOptionC170] = useState(true);
   const [importOpen, setImportOpen] = useState(false);
   const [importClear, setImportClear] = useState(true);
   const [importFile, setImportFile] = useState(null);
@@ -70,11 +76,30 @@ export default function SpedManager({ onLoad, onBack }) {
     loadingStates.reindexing !== null ||
     loadingStates.deleting !== null ||
     loadingStates.loading !== null ||
-    loadingStates.exportingXml !== null;
+    loadingStates.exportingXml !== null ||
+    loadingStates.exportingSped !== null;
 
   const setLoadingState = useCallback((key, value) => {
     setLoadingStates((prev) => ({ ...prev, [key]: value }));
   }, []);
+
+  const readFileAsText = (blob, encoding) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.onerror = (e) => reject(e);
+      reader.readAsText(blob, encoding);
+    });
+  };
+
+  const stringToIso88591Blob = (str) => {
+    const buf = new Uint8Array(str.length);
+    for (let i = 0; i < str.length; i++) {
+      const code = str.charCodeAt(i);
+      buf[i] = code < 256 ? code : 63;
+    }
+    return new Blob([buf], { type: "text/plain;charset=iso-8859-1" });
+  };
 
   const load = async () => {
     try {
@@ -271,6 +296,60 @@ export default function SpedManager({ onLoad, onBack }) {
       setError(e?.message || "Falha ao exportar XMLs");
     } finally {
       setLoadingState("exportingXml", null);
+    }
+  };
+
+  const handleExportSpedTxt = async () => {
+    if (!selectedSpedForExport) return;
+    const spedId = selectedSpedForExport.id;
+    setLoadingState("exportingSped", spedId);
+
+    try {
+      const contentBlob = await getSpedContent(spedId);
+      if (!contentBlob) {
+        toast({
+          title: "Arquivo original não encontrado",
+          description:
+            "Este SPED foi importado antes da atualização que salva o arquivo original. Reimporte-o para habilitar esta função.",
+          variant: "warning",
+        });
+        setExportSpedOpen(false);
+        return;
+      }
+
+      let finalBlob = contentBlob;
+      let filename =
+        selectedSpedForExport.filename ||
+        `sped_${selectedSpedForExport.cnpj}_${selectedSpedForExport.periodoInicio}.txt`;
+
+      if (!exportOptionC170) {
+        const text = await readFileAsText(contentBlob, "iso-8859-1");
+        const lines = text.split(/\r?\n/);
+        const filteredLines = lines.filter((line) => !line.startsWith("|C170|"));
+        const filteredText = filteredLines.join("\r\n");
+        finalBlob = stringToIso88591Blob(filteredText);
+        filename = filename.replace(".txt", "_sem_c170.txt");
+        if (!filename.endsWith(".txt")) filename += ".txt";
+      }
+
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(finalBlob);
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(a.href);
+
+      toast({
+        title: "Exportação concluída",
+        description: "Arquivo SPED exportado com sucesso.",
+        variant: "success",
+      });
+      setExportSpedOpen(false);
+    } catch (e) {
+      setError(e?.message || "Falha ao exportar SPED");
+    } finally {
+      setLoadingState("exportingSped", null);
     }
   };
 
@@ -605,6 +684,24 @@ export default function SpedManager({ onLoad, onBack }) {
                             <Button
                               variant="outline"
                               size="icon"
+                              onClick={() => {
+                                setSelectedSpedForExport(s);
+                                setExportOptionC170(true);
+                                setExportSpedOpen(true);
+                              }}
+                              disabled={isAnyBusy}
+                            >
+                              <FileDown className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent>Exportar arquivo TXT</TooltipContent>
+                        </Tooltip>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              variant="outline"
+                              size="icon"
                               onClick={() => setDeleteId(s.id)}
                               disabled={isAnyBusy}
                               className="text-destructive hover:text-destructive hover:bg-destructive/10 hover:border-destructive/50"
@@ -634,6 +731,93 @@ export default function SpedManager({ onLoad, onBack }) {
             backups regularmente para não perder seus dados.
           </p>
         </div>
+
+        {/* Dialog de Exportação de SPED */}
+        <Dialog open={exportSpedOpen} onOpenChange={setExportSpedOpen}>
+          <DialogContent className="max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <FileDown className="h-5 w-5 text-primary" />
+                Exportar SPED TXT
+              </DialogTitle>
+              <DialogDescription>
+                Escolha as opções de exportação para o arquivo.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogBody>
+              <div className="space-y-4 py-2">
+                <p className="text-sm text-muted-foreground">
+                  Arquivo:{" "}
+                  <span className="font-medium text-foreground">
+                    {selectedSpedForExport?.filename || "SPED"}
+                  </span>
+                </p>
+
+                <div className="space-y-2">
+                  <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+                    <input
+                      type="radio"
+                      name="exportOption"
+                      checked={exportOptionC170}
+                      onChange={() => setExportOptionC170(true)}
+                      className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
+                    />
+                    <div>
+                      <span className="text-sm font-medium">Arquivo Completo</span>
+                      <p className="text-xs text-muted-foreground">
+                        Mantém todos os registros originais
+                      </p>
+                    </div>
+                  </label>
+
+                  <label className="flex items-center gap-3 p-3 rounded-lg border cursor-pointer hover:bg-muted/50 transition-colors">
+                    <input
+                      type="radio"
+                      name="exportOption"
+                      checked={!exportOptionC170}
+                      onChange={() => setExportOptionC170(false)}
+                      className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
+                    />
+                    <div>
+                      <span className="text-sm font-medium">Remover Itens (C170)</span>
+                      <p className="text-xs text-muted-foreground">
+                        Remove todos os registros C170 para reduzir tamanho
+                      </p>
+                    </div>
+                  </label>
+                </div>
+              </div>
+            </DialogBody>
+            <DialogFooter>
+              <div className="flex justify-end gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => setExportSpedOpen(false)}
+                  disabled={loadingStates.exportingSped !== null}
+                >
+                  Cancelar
+                </Button>
+                <Button
+                  onClick={handleExportSpedTxt}
+                  disabled={loadingStates.exportingSped !== null}
+                  className="gap-2"
+                >
+                  {loadingStates.exportingSped !== null ? (
+                    <>
+                      <Spinner className="h-4 w-4" />
+                      Exportando…
+                    </>
+                  ) : (
+                    <>
+                      <Download className="h-4 w-4" />
+                      Exportar
+                    </>
+                  )}
+                </Button>
+              </div>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Dialog de exclusão */}
         <Dialog open={Boolean(deleteId)} onOpenChange={(o) => !o && setDeleteId(null)}>

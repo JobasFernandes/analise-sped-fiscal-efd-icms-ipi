@@ -13,7 +13,7 @@ export const DialogDescription = DialogPrimitive.Description;
 export function DialogContent({ className, children, ...props }) {
   return (
     <DialogPortal>
-      <DialogPrimitive.Overlay className="fixed inset-0 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
+      <DialogPrimitive.Overlay className="fixed inset-0 z-40 bg-black/40 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0" />
       <DialogPrimitive.Content
         className={clsx(
           "fixed left-1/2 top-1/2 z-50 flex flex-col w-[98vw] max-w-[1400px] max-h-[92vh] translate-x-[-50%] translate-y-[-50%] border bg-card text-card-foreground shadow-lg duration-200 p-0 rounded-lg overflow-hidden",

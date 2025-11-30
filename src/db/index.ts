@@ -140,6 +140,10 @@ export class SpedDB extends Dexie {
         "id, spedId, numeroDoc, chaveNfe, dataDocumento, indicadorOperacao, [spedId+chaveNfe]",
       items: "id, spedId, documentId, cfop, [spedId+documentId]",
     });
+    // v12: adicionar tabela para armazenar conteúdo original do SPED
+    this.version(12).stores({
+      sped_contents: "id, spedId", // id (uuid), spedId (FK)
+    });
   }
 }
 
@@ -167,6 +171,12 @@ export interface DayCfopAggRow {
   cfop: string;
   dir: "0" | "1";
   valor: number;
+}
+
+export interface SpedContentRow {
+  id?: string; // uuid
+  spedId: number;
+  content: Blob | File;
 }
 
 // ---------------- XML STORAGE (v5) -----------------

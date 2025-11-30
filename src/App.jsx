@@ -160,6 +160,7 @@ function App() {
         filename: fileData.name,
         size: fileData.size,
         contentHash: null,
+        file: fileData.file,
       });
       setSavedSpedId(currentSpedId);
     } catch (e) {

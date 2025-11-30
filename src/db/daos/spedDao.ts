@@ -14,6 +14,7 @@ export interface AddSpedMetadata {
   filename: string;
   size: number;
   contentHash?: string | null;
+  file?: File;
 }
 
 export async function findSpedByCnpjAndPeriod(
@@ -26,6 +27,11 @@ export async function findSpedByCnpjAndPeriod(
     .equals(cnpj)
     .and((item) => item.periodoInicio === inicio && item.periodoFim === fim)
     .first();
+}
+
+export async function getSpedContent(spedId: number): Promise<Blob | File | undefined> {
+  const row = await db.table("sped_contents").where({ spedId }).first();
+  return row?.content;
 }
 
 export async function addSped(
@@ -76,6 +82,7 @@ export async function addSped(
       db.day_aggs,
       db.cfop_aggs,
       db.day_cfop_aggs,
+      db.table("sped_contents"),
     ],
     async () => {
       const spedId = await db.sped_files.add({
@@ -93,6 +100,14 @@ export async function addSped(
         companyName: (data as any).companyName || null,
         cnpj: (data as any).cnpj || null,
       } as SpedFileRow);
+
+      if (meta.file) {
+        await db.table("sped_contents").add({
+          id: genId(),
+          spedId,
+          content: meta.file,
+        });
+      }
 
       const dayAggMap = new Map<string, number>();
       const cfopAggMap = new Map<string, number>();
@@ -350,21 +365,40 @@ export async function createSpedFile(meta: AddSpedMetadata): Promise<number> {
     return `${Y}-${M}-${D}T${h}:${m}:${s}${sign}${hh}:${mm}`;
   };
 
-  const id = await db.sped_files.add({
-    filename: meta.filename,
-    size: meta.size,
-    importedAt: toLocalISOWithOffset(),
-    periodoInicio: null,
-    periodoFim: null,
-    totalEntradas: 0,
-    totalSaidas: 0,
-    totalGeral: 0,
-    numeroNotasEntrada: 0,
-    numeroNotasSaida: 0,
-    hash: meta.contentHash || null,
-    companyName: null,
-    cnpj: null,
-  } as SpedFileRow);
+  const genId = () =>
+    (globalThis as any).crypto?.randomUUID?.() ||
+    `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+
+  const id = await db.transaction(
+    "rw",
+    [db.sped_files, db.table("sped_contents")],
+    async () => {
+      const spedId = await db.sped_files.add({
+        filename: meta.filename,
+        size: meta.size,
+        importedAt: toLocalISOWithOffset(),
+        periodoInicio: null,
+        periodoFim: null,
+        totalEntradas: 0,
+        totalSaidas: 0,
+        totalGeral: 0,
+        numeroNotasEntrada: 0,
+        numeroNotasSaida: 0,
+        hash: meta.contentHash || null,
+        companyName: null,
+        cnpj: null,
+      } as SpedFileRow);
+
+      if (meta.file) {
+        await db.table("sped_contents").add({
+          id: genId(),
+          spedId,
+          content: meta.file,
+        });
+      }
+      return spedId;
+    }
+  );
 
   return id;
 }
