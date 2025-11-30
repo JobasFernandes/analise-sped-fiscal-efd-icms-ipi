@@ -7,6 +7,7 @@ export interface NotaItem {
   aliqIcms: number;
   valorBcIcms: number;
   valorIcms: number;
+  valorIpi?: number;
 }
 
 export interface NotaItemC170 {
@@ -22,6 +23,9 @@ export interface NotaItemC170 {
   aliqIcms?: number;
   valorBcIcms?: number;
   valorIcms?: number;
+  valorIpi?: number;
+  valorPis?: number;
+  valorCofins?: number;
 }
 
 export interface Nota {

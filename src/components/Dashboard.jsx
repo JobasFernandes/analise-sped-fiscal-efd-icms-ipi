@@ -33,6 +33,7 @@ import {
   DialogTrigger,
 } from "./ui/dialog";
 import AbcAnalysis from "./analytics/AbcAnalysis";
+import TaxCharts from "./dashboard/TaxCharts";
 
 const Dashboard = ({ dados, savedSpedId }) => {
   const [cfopSelecionado, setCfopSelecionado] = useState(null);
@@ -255,6 +256,7 @@ const Dashboard = ({ dados, savedSpedId }) => {
                 <option value="saidas">Saídas</option>
                 <option value="entradas">Entradas</option>
                 <option value="ambas">Comparativo</option>
+                <option value="tributos">Tributos</option>
               </select>
             </div>
 
@@ -425,7 +427,10 @@ const Dashboard = ({ dados, savedSpedId }) => {
         </div>
       )}
 
+      {visao === "tributos" && <TaxCharts spedId={savedSpedId} />}
+
       {visao !== "entradas" &&
+        visao !== "tributos" &&
         dadosFiltrados.saidasPorCfopArray &&
         dadosFiltrados.saidasPorCfopArray.length > 0 && (
           <Card>
@@ -507,6 +512,7 @@ const Dashboard = ({ dados, savedSpedId }) => {
         )}
 
       {visao !== "saidas" &&
+        visao !== "tributos" &&
         dadosFiltrados.entradasPorCfopArray &&
         dadosFiltrados.entradasPorCfopArray.length > 0 && (
           <Card>

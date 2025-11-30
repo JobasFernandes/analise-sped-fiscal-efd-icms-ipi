@@ -216,6 +216,7 @@ export class SpedParser {
         aliqIcms: this.parseValor(campos[3]),
         valorBcIcms: this.parseValor(campos[5]),
         valorIcms: this.parseValor(campos[6]),
+        valorIpi: this.parseValor(campos[10]),
       };
       nota.itens.push(item);
       if (!this.data.itensPorCfop.has(cfop)) this.data.itensPorCfop.set(cfop, []);
@@ -268,6 +269,9 @@ export class SpedParser {
     const rawAliq13 = safe(13);
     const rawIcms14 = safe(14);
     const rawIcms15 = safe(15);
+    const rawIpi23 = safe(23);
+    const rawPis29 = safe(29);
+    const rawCofins35 = safe(35);
 
     const looksLikeCfop = (s?: string) => !!(s && /^\d{4}$/.test(s));
     const looksLikeCst = (s?: string) => !!(s && /^\d{2,3}$/.test(s));
@@ -285,6 +289,9 @@ export class SpedParser {
     const valorBcIcms = this.parseValor(rawBc12);
     const aliqIcms = this.parseValor(rawAliq13);
     const valorIcms = this.parseValor(rawIcms14 ?? rawIcms15);
+    const valorIpi = this.parseValor(rawIpi23);
+    const valorPis = this.parseValor(rawPis29);
+    const valorCofins = this.parseValor(rawCofins35);
 
     const item: NotaItemC170 = {
       numItem,
@@ -299,6 +306,9 @@ export class SpedParser {
       aliqIcms: isNaN(aliqIcms) ? undefined : aliqIcms,
       valorBcIcms: isNaN(valorBcIcms) ? undefined : valorBcIcms,
       valorIcms: isNaN(valorIcms) ? undefined : valorIcms,
+      valorIpi: isNaN(valorIpi) ? undefined : valorIpi,
+      valorPis: isNaN(valorPis) ? undefined : valorPis,
+      valorCofins: isNaN(valorCofins) ? undefined : valorCofins,
     };
     if (!nota.itensC170) nota.itensC170 = [];
     nota.itensC170.push(item);

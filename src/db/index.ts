@@ -40,6 +40,7 @@ export interface ItemRow {
   aliqIcms: number;
   valorBcIcms: number;
   valorIcms: number;
+  valorIpi?: number;
 }
 
 export interface ItemC170Row {
@@ -58,6 +59,9 @@ export interface ItemC170Row {
   aliqIcms?: number;
   valorBcIcms?: number;
   valorIcms?: number;
+  valorIpi?: number;
+  valorPis?: number;
+  valorCofins?: number;
 }
 
 export class SpedDB extends Dexie {
