@@ -86,6 +86,7 @@ async function seed() {
     cnpjEmit: "12345678000199",
     cnpjDest: "11111111000111",
     cnpjRef: "12345678000199",
+    tpNF: "1",
     valorTotalProduto: 50,
     itens: [{ cfop: "5102", vProd: 50 }],
   } as any);
@@ -99,6 +100,7 @@ async function seed() {
     cnpjEmit: "12345678000199",
     cnpjDest: "11111111000111",
     cnpjRef: "12345678000199",
+    tpNF: "1",
     valorTotalProduto: 120,
     itens: [{ cfop: "5102", vProd: 120 }],
   } as any);

@@ -20,6 +20,7 @@ const SAMPLE_XML = `<?xml version="1.0" encoding="UTF-8"?>
       <ide>
         <dhEmi>2024-01-15T10:00:00-03:00</dhEmi>
         <dhRecbto>2024-01-15T11:00:00-03:00</dhRecbto>
+        <tpNF>1</tpNF>
         <mod>55</mod>
         <serie>1</serie>
         <nNF>123</nNF>
