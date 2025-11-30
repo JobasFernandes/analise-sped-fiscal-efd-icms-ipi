@@ -70,6 +70,7 @@ export class SpedDB extends Dexie {
   day_cfop_aggs!: Table<DayCfopAggRow, number>;
   xml_notas!: Table<XmlNotaRow, string>;
   xml_day_cfop_aggs!: Table<XmlDayCfopAggRow, number>;
+  divergences!: Table<DivergenceRow, number>;
 
   constructor() {
     super("sped-db");
@@ -125,6 +126,10 @@ export class SpedDB extends Dexie {
       .upgrade(async (trans) => {
         await trans.table("xml_day_cfop_aggs").clear();
       });
+    // v10: adicionar tabela de divergências
+    this.version(10).stores({
+      divergences: "++id, accessKey, type, status, updatedAt",
+    });
   }
 }
 
@@ -187,4 +192,13 @@ export interface XmlDayCfopAggRow {
   vProd: number;
   qBCMonoRet?: number;
   vICMSMonoRet?: number;
+}
+
+export interface DivergenceRow {
+  id?: number;
+  accessKey: string; // Chave única para identificar a divergência (ex: "DATA|CFOP" ou Chave NFe)
+  type: string; // "SPED_XML_CFOP", "ORPHAN_XML", etc.
+  status: "PENDING" | "RESOLVED" | "IGNORED" | "JUSTIFIED";
+  comment?: string;
+  updatedAt: string; // ISO
 }

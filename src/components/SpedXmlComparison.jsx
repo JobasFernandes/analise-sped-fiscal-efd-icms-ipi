@@ -12,6 +12,8 @@ import { formatarMoeda } from "../utils/dataProcessor";
 import Spinner from "./ui/spinner";
 import { useFilters } from "../contexts/FilterContext";
 import FilterBar from "./ui/FilterBar";
+import DivergenceStatusBadge from "./DivergenceStatusBadge";
+import XmlViewerModal from "./XmlViewerModal";
 
 export default function SpedXmlComparison({
   spedId,
@@ -29,6 +31,7 @@ export default function SpedXmlComparison({
   const [detalheLoading, setDetalheLoading] = useState(false);
   const [detalhe, setDetalhe] = useState(null);
   const [linhaSelecionada, setLinhaSelecionada] = useState(null);
+  const [xmlViewerChave, setXmlViewerChave] = useState(null);
   const { filters } = useFilters();
 
   const carregar = async () => {
@@ -238,19 +241,20 @@ export default function SpedXmlComparison({
               <th className="px-2 py-1 text-right">Valor SPED</th>
               <th className="px-2 py-1 text-right">Dif. R$</th>
               <th className="px-2 py-1 text-right">Dif. %</th>
+              <th className="px-2 py-1 text-center">Status</th>
             </tr>
           </thead>
           <tbody>
             {loading && (
               <tr>
-                <td colSpan={6} className="p-4 text-center">
+                <td colSpan={7} className="p-4 text-center">
                   <Spinner />
                 </td>
               </tr>
             )}
             {!loading && linhas.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-4 text-center text-muted-foreground">
+                <td colSpan={7} className="p-4 text-center text-muted-foreground">
                   Sem dados
                 </td>
               </tr>
@@ -286,6 +290,12 @@ export default function SpedXmlComparison({
                       className={`px-2 py-1 text-right tabular-nums ${critico ? "text-red-600 dark:text-red-400 font-semibold" : ""}`}
                     >
                       {diffPercFmt}%
+                    </td>
+                    <td
+                      className="px-2 py-1 text-center"
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      <DivergenceStatusBadge accessKey={`${l.data}|${l.cfop}`} />
                     </td>
                   </tr>
                 );
@@ -347,9 +357,14 @@ export default function SpedXmlComparison({
             <div className="flex items-center justify-between p-4 border-b">
               <div>
                 <h4 className="font-semibold text-base">Detalhes Dia+CFOP</h4>
-                <p className="text-xs text-muted-foreground">
-                  {linhaSelecionada?.data} / CFOP {linhaSelecionada?.cfop}
-                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <p className="text-xs text-muted-foreground">
+                    {linhaSelecionada?.data} / CFOP {linhaSelecionada?.cfop}
+                  </p>
+                  <DivergenceStatusBadge
+                    accessKey={`${linhaSelecionada?.data}|${linhaSelecionada?.cfop}`}
+                  />
+                </div>
               </div>
             </div>
             <div className="p-4 overflow-auto text-sm grow">
@@ -431,6 +446,15 @@ export default function SpedXmlComparison({
                               title={n.chave}
                             >
                               {n.chave}
+                              {n.tipo !== "SOMENTE_SPED" && (
+                                <button
+                                  onClick={() => setXmlViewerChave(n.chave)}
+                                  className="ml-2 text-[10px] bg-primary/10 hover:bg-primary/20 text-primary px-1 rounded border border-primary/20"
+                                  title="Visualizar XML Original"
+                                >
+                                  XML
+                                </button>
+                              )}
                             </td>
                             <td className="px-2 py-1 text-right tabular-nums">
                               {formatarMoeda(n.valorXml || 0)}
@@ -536,6 +560,13 @@ export default function SpedXmlComparison({
             </div>
           </div>
         </div>
+      )}
+
+      {xmlViewerChave && (
+        <XmlViewerModal
+          chave={xmlViewerChave}
+          onClose={() => setXmlViewerChave(null)}
+        />
       )}
     </Card>
   );
