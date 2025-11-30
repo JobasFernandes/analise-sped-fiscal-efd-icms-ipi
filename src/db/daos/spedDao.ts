@@ -235,10 +235,10 @@ export async function deleteSped(spedId: number): Promise<void> {
       db.documents,
       db.items,
       db.items_c170,
-      db.items_c170,
       db.day_aggs,
       db.cfop_aggs,
       db.day_cfop_aggs,
+      db.table("sped_contents"),
     ],
     async () => {
       const docs = await db.documents.where({ spedId }).toArray();
@@ -251,6 +251,7 @@ export async function deleteSped(spedId: number): Promise<void> {
       await db.day_aggs.where({ spedId }).delete();
       await db.cfop_aggs.where({ spedId }).delete();
       await db.day_cfop_aggs.where({ spedId }).delete();
+      await db.table("sped_contents").where({ spedId }).delete();
       await db.sped_files.delete(spedId);
     }
   );

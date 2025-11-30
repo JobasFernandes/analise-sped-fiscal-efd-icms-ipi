@@ -13,6 +13,7 @@ import {
   contarXmlsExportaveisPorCnpj,
 } from "../db/daos/xmlDao";
 import { exportDbToJson, importDbFromJson } from "../db/backup";
+import { filterSpedContent } from "../utils/spedExportUtils";
 import Button from "./ui/Button";
 import {
   Dialog,
@@ -82,24 +83,6 @@ export default function SpedManager({ onLoad, onBack }) {
   const setLoadingState = useCallback((key, value) => {
     setLoadingStates((prev) => ({ ...prev, [key]: value }));
   }, []);
-
-  const readFileAsText = (blob, encoding) => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.onerror = (e) => reject(e);
-      reader.readAsText(blob, encoding);
-    });
-  };
-
-  const stringToIso88591Blob = (str) => {
-    const buf = new Uint8Array(str.length);
-    for (let i = 0; i < str.length; i++) {
-      const code = str.charCodeAt(i);
-      buf[i] = code < 256 ? code : 63;
-    }
-    return new Blob([buf], { type: "text/plain;charset=iso-8859-1" });
-  };
 
   const load = async () => {
     try {
@@ -317,17 +300,13 @@ export default function SpedManager({ onLoad, onBack }) {
         return;
       }
 
-      let finalBlob = contentBlob;
       let filename =
         selectedSpedForExport.filename ||
         `sped_${selectedSpedForExport.cnpj}_${selectedSpedForExport.periodoInicio}.txt`;
 
+      let finalBlob = await filterSpedContent(contentBlob, !exportOptionC170);
+
       if (!exportOptionC170) {
-        const text = await readFileAsText(contentBlob, "iso-8859-1");
-        const lines = text.split(/\r?\n/);
-        const filteredLines = lines.filter((line) => !line.startsWith("|C170|"));
-        const filteredText = filteredLines.join("\r\n");
-        finalBlob = stringToIso88591Blob(filteredText);
         filename = filename.replace(".txt", "_sem_c170.txt");
         if (!filename.endsWith(".txt")) filename += ".txt";
       }
