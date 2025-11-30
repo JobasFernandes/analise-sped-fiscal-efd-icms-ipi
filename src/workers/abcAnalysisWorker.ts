@@ -45,12 +45,13 @@ self.onmessage = (e: MessageEvent<AbcInput>) => {
   let acumulado = 0;
   const result: AbcResult[] = sorted.map((item) => {
     const percentual = totalGeral > 0 ? (item.valorTotal / totalGeral) * 100 : 0;
-    acumulado += percentual;
+
     let classe: "A" | "B" | "C" = "C";
 
-    // Adjust class boundaries slightly to handle edge cases
-    if (acumulado <= 80.0001) classe = "A";
-    else if (acumulado <= 95.0001) classe = "B";
+    if (acumulado < 80) classe = "A";
+    else if (acumulado < 95) classe = "B";
+
+    acumulado += percentual;
 
     return {
       ...item,
