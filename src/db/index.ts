@@ -134,6 +134,12 @@ export class SpedDB extends Dexie {
     this.version(10).stores({
       divergences: "++id, accessKey, type, status, updatedAt",
     });
+    // v11: adicionar índices compostos para performance
+    this.version(11).stores({
+      documents:
+        "id, spedId, numeroDoc, chaveNfe, dataDocumento, indicadorOperacao, [spedId+chaveNfe]",
+      items: "id, spedId, documentId, cfop, [spedId+documentId]",
+    });
   }
 }
 

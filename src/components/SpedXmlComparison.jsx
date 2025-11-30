@@ -14,6 +14,11 @@ import { useFilters } from "../contexts/FilterContext";
 import FilterBar from "./ui/FilterBar";
 import DivergenceStatusBadge from "./DivergenceStatusBadge";
 import XmlViewerModal from "./XmlViewerModal";
+import { generateRiskReportPDF } from "../utils/riskReportGenerator";
+import { db } from "../db";
+import { FileWarning, FilePlus } from "lucide-react";
+import { useToast } from "./ui/use-toast";
+import { addSpedLineFromXml } from "../utils/spedUpdater";
 
 export default function SpedXmlComparison({
   spedId,
@@ -22,6 +27,7 @@ export default function SpedXmlComparison({
   company,
   cnpj,
 }) {
+  const { toast } = useToast();
   const [dataInicio, setDataInicio] = useState(periodo?.inicio || "");
   const [dataFim, setDataFim] = useState(periodo?.fim || "");
   const [linhas, setLinhas] = useState([]);
@@ -137,6 +143,44 @@ export default function SpedXmlComparison({
     );
   };
 
+  const handleRiskReport = () => {
+    if (!linhas.length) return;
+    generateRiskReportPDF(linhas, formatarPeriodoLabel(), cnpj);
+  };
+
+  const handleAddToSped = async (chave) => {
+    try {
+      const nota = await db.xml_notas.where({ chave }).first();
+      if (!nota || !nota.xmlContent) {
+        toast({
+          title: "XML não encontrado",
+          description:
+            "O conteúdo XML desta nota não foi encontrado no banco de dados.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      await addSpedLineFromXml(spedId, nota.xmlContent, cnpj);
+
+      toast({
+        title: "Adicionado ao SPED!",
+        description: "A nota foi inserida no SPED e os totais foram atualizados.",
+        variant: "success",
+      });
+
+      carregar();
+      setDetalheAberto(false);
+    } catch (e) {
+      console.error("Erro ao adicionar linha SPED:", e);
+      toast({
+        title: "Erro ao adicionar",
+        description: e.message || "Não foi possível adicionar a nota ao SPED.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <Card className="p-4 space-y-4">
       <div className="flex flex-wrap items-end gap-4 justify-between">
@@ -171,6 +215,15 @@ export default function SpedXmlComparison({
             label="Relatorio"
             size="default"
           />
+          <Button
+            variant="outline"
+            onClick={handleRiskReport}
+            disabled={loading || linhas.length === 0}
+            title="Gerar Relatório de Riscos Fiscais"
+          >
+            <FileWarning className="w-4 h-4 mr-2" />
+            Riscos
+          </Button>
         </div>
       </div>
 
@@ -442,19 +495,34 @@ export default function SpedXmlComparison({
                               {n.numero || "-"}
                             </td>
                             <td
-                              className="px-2 py-1 font-mono whitespace-nowrap max-w-[200px] truncate"
+                              className="px-2 py-1 font-mono whitespace-nowrap max-w-[350px]"
                               title={n.chave}
                             >
-                              {n.chave}
-                              {n.tipo !== "SOMENTE_SPED" && (
-                                <button
-                                  onClick={() => setXmlViewerChave(n.chave)}
-                                  className="ml-2 text-[10px] bg-primary/10 hover:bg-primary/20 text-primary px-1 rounded border border-primary/20"
-                                  title="Visualizar XML Original"
-                                >
-                                  XML
-                                </button>
-                              )}
+                              <div className="flex items-center justify-between w-full">
+                                <span className="truncate">{n.chave}</span>
+                                {n.tipo !== "SOMENTE_SPED" && (
+                                  <div className="flex items-center gap-1 ml-2 shrink-0">
+                                    <button
+                                      onClick={() => setXmlViewerChave(n.chave)}
+                                      className="text-[10px] bg-primary/10 hover:bg-primary/20 text-primary px-1 rounded border border-primary/20"
+                                      title="Visualizar XML Original"
+                                    >
+                                      XML
+                                    </button>
+                                    {(n.tipo === "SOMENTE_XML" ||
+                                      (n.tipo === "AMBOS" && crit)) && (
+                                      <button
+                                        onClick={() => handleAddToSped(n.chave)}
+                                        className="text-[10px] bg-green-100 hover:bg-green-200 text-green-700 px-1 rounded border border-green-200 flex items-center gap-1"
+                                        title="Adicionar Nota ao SPED (C100+C170)"
+                                      >
+                                        <FilePlus className="w-3 h-3" />
+                                        Add SPED
+                                      </button>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
                             </td>
                             <td className="px-2 py-1 text-right tabular-nums">
                               {formatarMoeda(n.valorXml || 0)}
