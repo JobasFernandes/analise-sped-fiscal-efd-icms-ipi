@@ -12,12 +12,14 @@ import {
   FileWarning,
   CheckCircle2,
   ExternalLink,
+  Download,
 } from "lucide-react";
 import Card from "./ui/Card";
 import Button from "./ui/Button";
 import Spinner from "./ui/spinner";
 import DateInput from "./ui/date-input";
 import ComparativoDialog from "./ComparativoDialog";
+import { ReportButton } from "./ui/ReportButton";
 import {
   getMovimentacoesDiariasBySpedId,
   getTotaisPorProduto,
@@ -29,6 +31,7 @@ import {
   gerarResumoInconsistencias,
   getDescricaoTipoInconsistencia,
 } from "../utils/combustivelService";
+import { gerarRelatorioInconsistenciasCombustivel } from "../utils/reportExporter";
 
 // =====================================================
 // HELPERS DE FORMATAÇÃO
@@ -102,6 +105,46 @@ const CombustivelDashboard = ({ spedId }) => {
     setDialogCodItem(codItem);
     setDialogDtMov(dtMov);
     setDialogOpen(true);
+  };
+
+  // Função para exportar relatório de inconsistências
+  const handleExportarInconsistencias = (format) => {
+    if (!inconsistencias || inconsistencias.length === 0) return;
+
+    const inconsistenciasFormatadas = inconsistencias.map((i) => ({
+      tipo: i.tipo,
+      tipoDescricao: getDescricaoTipoInconsistencia(i.tipo),
+      severidade: i.severidade,
+      codItem: i.codItem,
+      dtMov: i.dtMov,
+      valorEsperado: i.valorEsperado,
+      valorEncontrado: i.valorEncontrado,
+      diferenca: i.diferenca,
+      percentualDiferenca: i.percentualDiferenca,
+      descricao: i.descricao,
+    }));
+
+    const resumo = resumoInconsistencias || {
+      total: inconsistencias.length,
+      criticas: inconsistencias.filter((i) => i.severidade === "CRITICO").length,
+      avisos: inconsistencias.filter((i) => i.severidade === "AVISO").length,
+      informativas: inconsistencias.filter((i) => i.severidade === "INFO").length,
+      porTipo: {},
+    };
+
+    // Período baseado nas datas das inconsistências
+    const datas = inconsistencias.map((i) => i.dtMov).sort();
+    const periodo =
+      datas.length > 0
+        ? `${formatarData(datas[0])} a ${formatarData(datas[datas.length - 1])}`
+        : "";
+
+    gerarRelatorioInconsistenciasCombustivel(
+      inconsistenciasFormatadas,
+      resumo,
+      { period: periodo },
+      format
+    );
   };
 
   const carregarDados = async () => {
@@ -332,7 +375,9 @@ const CombustivelDashboard = ({ spedId }) => {
       {abaAtiva === "inconsistencias" && (
         <InconsistenciasTab
           inconsistencias={inconsistenciasFiltradas}
+          resumoInconsistencias={resumoInconsistencias}
           onCardClick={abrirComparativo}
+          onExport={(format) => handleExportarInconsistencias(format)}
         />
       )}
 
@@ -582,7 +627,12 @@ const MovimentacaoTab = ({ movimentacoes, onRowClick }) => {
 // ABA INCONSISTÊNCIAS
 // =====================================================
 
-const InconsistenciasTab = ({ inconsistencias, onCardClick }) => {
+const InconsistenciasTab = ({
+  inconsistencias,
+  resumoInconsistencias,
+  onCardClick,
+  onExport,
+}) => {
   // Ordenar por severidade e data
   const inconsistenciasOrdenadas = useMemo(() => {
     const ordemSeveridade = { CRITICO: 0, AVISO: 1, INFO: 2 };
@@ -610,9 +660,18 @@ const InconsistenciasTab = ({ inconsistencias, onCardClick }) => {
 
   return (
     <div className="space-y-4">
-      <div className="text-xs text-muted-foreground flex items-center gap-1">
-        <ExternalLink className="h-3 w-3" />
-        Clique em uma inconsistência para ver o comparativo detalhado
+      {/* Header com botão de exportar */}
+      <div className="flex items-center justify-between">
+        <div className="text-xs text-muted-foreground flex items-center gap-1">
+          <ExternalLink className="h-3 w-3" />
+          Clique em uma inconsistência para ver o comparativo detalhado
+        </div>
+        <ReportButton
+          label="Exportar Relatório"
+          size="sm"
+          variant="outline"
+          onExport={onExport}
+        />
       </div>
       {inconsistenciasOrdenadas.map((i, idx) => {
         const IconeSeveridade = iconesSeveridade[i.severidade];

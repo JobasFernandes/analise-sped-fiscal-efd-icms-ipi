@@ -17,14 +17,17 @@ import {
   Minus,
   Droplets,
   Gauge,
+  Download,
 } from "lucide-react";
 import Spinner from "./ui/spinner";
 import { FiscalInsight } from "./ui/FiscalInsight";
+import { ReportButton } from "./ui/ReportButton";
 import {
   getComparativoVendasDia,
   getMovimentacaoDia,
   getDescricaoTipoInconsistencia,
 } from "../utils/combustivelService";
+import { gerarRelatorioComparativoDiario } from "../utils/reportExporter";
 
 export default function ComparativoDialog({
   open,
@@ -92,6 +95,62 @@ export default function ComparativoDialog({
     if (valor > 0) return <TrendingUp className="h-4 w-4 text-red-500" />;
     if (valor < 0) return <TrendingDown className="h-4 w-4 text-amber-500" />;
     return <Minus className="h-4 w-4 text-green-500" />;
+  };
+
+  // Função para exportar relatório diário detalhado
+  const handleExportarRelatorio = (format) => {
+    if (!movimentacao && !comparativo) return;
+
+    const dados = {
+      codItem,
+      dtMov,
+      // Dados do 1300
+      estoqueInicial: movimentacao?.qtdIni || 0,
+      entradas: movimentacao?.qtdEntr || 0,
+      disponivel: movimentacao?.qtdDisponivel || 0,
+      vendasSped: movimentacao?.qtdVendas || comparativo?.vendasSped || 0,
+      perdas: movimentacao?.qtdPerda || 0,
+      sobras: movimentacao?.qtdSobra || 0,
+      estoqueFinal: movimentacao?.qtdFimContabil || 0,
+      // Dados dos documentos
+      vendasNfce: comparativo?.vendasNfce || 0,
+      vendasNfe: comparativo?.vendasNfe || 0,
+      totalDocumentos: comparativo?.totalDocumentos || 0,
+      diferenca: comparativo?.diferenca || 0,
+      percentualDiferenca: comparativo?.percentualDiferenca || 0,
+      // Tanques
+      tanques: tanques.map((t) => ({
+        numTanque: t.numTanque,
+        estoqueInicial: t.qtdIni,
+        entradas: t.qtdEntr,
+        vendas: t.qtdVendas,
+        estoqueFinal: t.qtdFimContabil,
+      })),
+      // Bicos
+      bicos: bicos.map((b) => ({
+        numBico: b.numBico,
+        numTanque: b.numTanque,
+        encerranteIni: b.encerranteIni,
+        encerranteFim: b.encerranteFim,
+        vendas: b.qtdVendas,
+      })),
+      // Documentos
+      documentos: (comparativo?.documentosVenda || []).map((d) => ({
+        tipo: d.tipo,
+        numero: d.numero,
+        quantidade: d.quantidade,
+        valor: d.valor,
+      })),
+      // Inconsistências
+      inconsistencias: inconsistencias.map((i) => ({
+        tipo: getDescricaoTipoInconsistencia(i.tipo),
+        severidade: i.severidade,
+        descricao: i.descricao,
+        diferenca: i.diferenca,
+      })),
+    };
+
+    gerarRelatorioComparativoDiario(dados, {}, format);
   };
 
   return (
@@ -442,16 +501,26 @@ export default function ComparativoDialog({
         </DialogBody>
 
         <DialogFooter>
-          <div className="flex items-center justify-between w-full text-xs">
-            <span>
-              Produto: <strong>{codItem}</strong>
-            </span>
-            <span>
-              Data: <strong>{formatarData(dtMov)}</strong>
-            </span>
-            <span>
-              Limite ANP: <strong>0,6%</strong> (Res. ANP nº 23/2004)
-            </span>
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-4 text-xs">
+              <span>
+                Produto: <strong>{codItem}</strong>
+              </span>
+              <span>
+                Data: <strong>{formatarData(dtMov)}</strong>
+              </span>
+              <span>
+                Limite ANP: <strong>0,6%</strong> (Res. ANP nº 23/2004)
+              </span>
+            </div>
+            {!loading && (movimentacao || comparativo) && (
+              <ReportButton
+                label="Exportar"
+                size="sm"
+                variant="outline"
+                onExport={handleExportarRelatorio}
+              />
+            )}
           </div>
         </DialogFooter>
       </DialogContent>

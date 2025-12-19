@@ -1086,3 +1086,716 @@ export function gerarRelatorioTodosCfops(
 
   exportReport(config, format);
 }
+
+// =====================================================
+// RELATÓRIOS DE COMBUSTÍVEIS (LMC)
+// =====================================================
+
+export interface InconsistenciaCombustivelReport {
+  tipo: string;
+  tipoDescricao: string;
+  severidade: "INFO" | "AVISO" | "CRITICO";
+  codItem: string;
+  dtMov: string;
+  valorEsperado: number;
+  valorEncontrado: number;
+  diferenca: number;
+  percentualDiferenca: number;
+  descricao: string;
+}
+
+export interface ResumoInconsistenciasReport {
+  total: number;
+  criticas: number;
+  avisos: number;
+  informativas: number;
+  porTipo: Record<string, number>;
+}
+
+/**
+ * Gera relatório geral de inconsistências de combustíveis
+ */
+export function gerarRelatorioInconsistenciasCombustivel(
+  inconsistencias: InconsistenciaCombustivelReport[],
+  resumo: ResumoInconsistenciasReport,
+  meta: { company?: string; cnpj?: string; period?: string },
+  format: "pdf" | "excel"
+): void {
+  if (format === "pdf") {
+    const doc = new jsPDF({ orientation: "landscape", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 15;
+
+    // Cabeçalho
+    doc.setFontSize(16);
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório de Inconsistências - LMC Combustíveis", pageWidth / 2, yPos, {
+      align: "center",
+    });
+    yPos += 7;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      "Análise de movimentação diária de combustíveis (Registros 1300/1310/1320)",
+      pageWidth / 2,
+      yPos,
+      {
+        align: "center",
+      }
+    );
+    yPos += 5;
+
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    if (meta.company) {
+      doc.text(meta.company, pageWidth / 2, yPos, { align: "center" });
+      yPos += 4;
+    }
+    if (meta.cnpj) {
+      doc.text(`CNPJ: ${meta.cnpj}`, pageWidth / 2, yPos, { align: "center" });
+      yPos += 4;
+    }
+    if (meta.period) {
+      doc.text(`Período: ${meta.period}`, pageWidth / 2, yPos, { align: "center" });
+      yPos += 4;
+    }
+    doc.setFontSize(8);
+    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, pageWidth / 2, yPos, {
+      align: "center",
+    });
+    yPos += 8;
+    doc.setTextColor(0);
+
+    // Resumo
+    doc.setFillColor(240, 240, 240);
+    doc.rect(15, yPos, pageWidth - 30, 20, "F");
+    yPos += 5;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("Resumo das Inconsistências", 20, yPos);
+    yPos += 5;
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    const resumoTexto = `Total: ${resumo.total} | Críticas: ${resumo.criticas} | Avisos: ${resumo.avisos} | Informativas: ${resumo.informativas}`;
+    doc.text(resumoTexto, 20, yPos);
+    yPos += 12;
+
+    // Tabela de inconsistências
+    const tableData = inconsistencias.map((i) => [
+      formatDateForPdf(i.dtMov),
+      i.codItem,
+      i.severidade,
+      i.tipoDescricao,
+      formatNumberForPdf(i.valorEsperado, 3),
+      formatNumberForPdf(i.valorEncontrado, 3),
+      formatNumberForPdf(i.diferenca, 3),
+      formatPercentForPdf(i.percentualDiferenca),
+    ]);
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [
+        [
+          "Data",
+          "Produto",
+          "Sev.",
+          "Tipo",
+          "Esperado (L)",
+          "Encontrado (L)",
+          "Diferença (L)",
+          "%",
+        ],
+      ],
+      body: tableData,
+      theme: "striped",
+      headStyles: { fillColor: [66, 66, 66], fontSize: 8 },
+      bodyStyles: { fontSize: 7 },
+      columnStyles: {
+        0: { cellWidth: 22 },
+        1: { cellWidth: 25 },
+        2: { cellWidth: 15 },
+        3: { cellWidth: 50 },
+        4: { cellWidth: 25, halign: "right" },
+        5: { cellWidth: 25, halign: "right" },
+        6: { cellWidth: 25, halign: "right" },
+        7: { cellWidth: 18, halign: "right" },
+      },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.column.index === 2) {
+          const sev = data.cell.raw as string;
+          if (sev === "CRITICO") {
+            data.cell.styles.fillColor = [254, 226, 226];
+            data.cell.styles.textColor = [185, 28, 28];
+          } else if (sev === "AVISO") {
+            data.cell.styles.fillColor = [254, 249, 195];
+            data.cell.styles.textColor = [161, 98, 7];
+          } else {
+            data.cell.styles.fillColor = [219, 234, 254];
+            data.cell.styles.textColor = [30, 64, 175];
+          }
+        }
+      },
+    });
+
+    // Rodapé com limite ANP
+    const finalY =
+      (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 10;
+    doc.setFontSize(8);
+    doc.setTextColor(100);
+    doc.text(
+      "Limite de perda/sobra permitido: 0,6% (Resolução ANP nº 23/2004)",
+      15,
+      finalY
+    );
+
+    doc.save(`inconsistencias_combustivel_${formatCnpjForFilename(meta.cnpj)}.pdf`);
+  } else {
+    // Excel
+    const config: ReportConfig = {
+      title: "Relatório de Inconsistências - LMC Combustíveis",
+      subtitle: "Análise de movimentação diária de combustíveis",
+      company: meta.company,
+      cnpj: meta.cnpj,
+      period: meta.period,
+      columns: [
+        { header: "Data", key: "dtMov", format: "date", width: 12 },
+        { header: "Produto", key: "codItem", width: 15 },
+        { header: "Severidade", key: "severidade", width: 12 },
+        { header: "Tipo", key: "tipoDescricao", width: 40 },
+        { header: "Esperado (L)", key: "valorEsperado", format: "number", width: 15 },
+        {
+          header: "Encontrado (L)",
+          key: "valorEncontrado",
+          format: "number",
+          width: 15,
+        },
+        { header: "Diferença (L)", key: "diferenca", format: "number", width: 15 },
+        {
+          header: "Diferença %",
+          key: "percentualDiferenca",
+          format: "percent",
+          width: 12,
+        },
+        { header: "Descrição", key: "descricao", width: 50 },
+      ],
+      data: toRecordArray(inconsistencias),
+      filename: `inconsistencias_combustivel_${formatCnpjForFilename(meta.cnpj)}`,
+      orientation: "landscape",
+    };
+
+    exportReport(config, format);
+  }
+}
+
+export interface ComparativoDiarioReport {
+  codItem: string;
+  dtMov: string;
+  // Dados do 1300
+  estoqueInicial: number;
+  entradas: number;
+  disponivel: number;
+  vendasSped: number;
+  perdas: number;
+  sobras: number;
+  estoqueFinal: number;
+  // Dados dos documentos
+  vendasNfce: number;
+  vendasNfe: number;
+  totalDocumentos: number;
+  diferenca: number;
+  percentualDiferenca: number;
+  // Tanques
+  tanques: Array<{
+    numTanque: string;
+    estoqueInicial: number;
+    entradas: number;
+    vendas: number;
+    estoqueFinal: number;
+  }>;
+  // Bicos
+  bicos: Array<{
+    numBico: string;
+    numTanque: string;
+    encerranteIni: number;
+    encerranteFim: number;
+    vendas: number;
+  }>;
+  // Documentos
+  documentos: Array<{
+    tipo: string;
+    numero: string;
+    quantidade: number;
+    valor: number;
+  }>;
+  // Inconsistências
+  inconsistencias: Array<{
+    tipo: string;
+    severidade: string;
+    descricao: string;
+    diferenca: number;
+  }>;
+}
+
+/**
+ * Gera relatório diário detalhado de um produto/data específico
+ */
+export function gerarRelatorioComparativoDiario(
+  dados: ComparativoDiarioReport,
+  meta: { company?: string; cnpj?: string },
+  format: "pdf" | "excel"
+): void {
+  const dataFormatada = formatDateForPdf(dados.dtMov);
+
+  if (format === "pdf") {
+    const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+    const pageWidth = doc.internal.pageSize.getWidth();
+    let yPos = 15;
+
+    // Cabeçalho
+    doc.setFontSize(14);
+    doc.setFont("helvetica", "bold");
+    doc.text("Relatório Diário de Movimentação de Combustível", pageWidth / 2, yPos, {
+      align: "center",
+    });
+    yPos += 7;
+
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "normal");
+    doc.text(
+      `Produto: ${dados.codItem} | Data: ${dataFormatada}`,
+      pageWidth / 2,
+      yPos,
+      {
+        align: "center",
+      }
+    );
+    yPos += 5;
+
+    doc.setFontSize(9);
+    doc.setTextColor(100);
+    if (meta.company) {
+      doc.text(meta.company, pageWidth / 2, yPos, { align: "center" });
+      yPos += 4;
+    }
+    if (meta.cnpj) {
+      doc.text(`CNPJ: ${meta.cnpj}`, pageWidth / 2, yPos, { align: "center" });
+      yPos += 4;
+    }
+    doc.setFontSize(8);
+    doc.text(`Gerado em: ${new Date().toLocaleString("pt-BR")}`, pageWidth / 2, yPos, {
+      align: "center",
+    });
+    yPos += 10;
+    doc.setTextColor(0);
+
+    // Seção 1: Movimentação (Registro 1300)
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("1. Movimentação Diária (Registro 1300)", 15, yPos);
+    yPos += 6;
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Campo", "Valor (Litros)"]],
+      body: [
+        ["Estoque Inicial", formatNumberForPdf(dados.estoqueInicial, 3)],
+        ["Entradas", formatNumberForPdf(dados.entradas, 3)],
+        ["Total Disponível", formatNumberForPdf(dados.disponivel, 3)],
+        ["Vendas Declaradas", formatNumberForPdf(dados.vendasSped, 3)],
+        ["Perdas", formatNumberForPdf(dados.perdas, 3)],
+        ["Sobras", formatNumberForPdf(dados.sobras, 3)],
+        ["Estoque Final", formatNumberForPdf(dados.estoqueFinal, 3)],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [59, 130, 246], fontSize: 9 },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 40, halign: "right" },
+      },
+    });
+
+    yPos =
+      (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+
+    // Seção 2: Documentos Fiscais
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("2. Vendas em Documentos Fiscais", 15, yPos);
+    yPos += 6;
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["Fonte", "Quantidade (L)", "% do Total"]],
+      body: [
+        [
+          "NFC-e (Cupons)",
+          formatNumberForPdf(dados.vendasNfce, 3),
+          formatPercentForPdf(
+            dados.totalDocumentos > 0
+              ? (dados.vendasNfce / dados.totalDocumentos) * 100
+              : 0
+          ),
+        ],
+        [
+          "NF-e",
+          formatNumberForPdf(dados.vendasNfe, 3),
+          formatPercentForPdf(
+            dados.totalDocumentos > 0
+              ? (dados.vendasNfe / dados.totalDocumentos) * 100
+              : 0
+          ),
+        ],
+        ["TOTAL DOCUMENTOS", formatNumberForPdf(dados.totalDocumentos, 3), "100,00%"],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [34, 197, 94], fontSize: 9 },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 35, halign: "right" },
+        2: { cellWidth: 30, halign: "right" },
+      },
+    });
+
+    yPos =
+      (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+
+    // Seção 3: Comparativo
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "bold");
+    doc.text("3. Comparativo SPED x Documentos", 15, yPos);
+    yPos += 6;
+
+    const diferencaColor =
+      Math.abs(dados.diferenca) < 1
+        ? [34, 197, 94]
+        : dados.diferenca > 0
+          ? [239, 68, 68]
+          : [245, 158, 11];
+
+    autoTable(doc, {
+      startY: yPos,
+      head: [["", "Litros"]],
+      body: [
+        ["Vendas SPED (1300)", formatNumberForPdf(dados.vendasSped, 3)],
+        ["Vendas Documentos", formatNumberForPdf(dados.totalDocumentos, 3)],
+        ["DIFERENÇA", formatNumberForPdf(dados.diferenca, 3)],
+        ["Percentual", formatPercentForPdf(dados.percentualDiferenca)],
+      ],
+      theme: "grid",
+      headStyles: { fillColor: [100, 100, 100], fontSize: 9 },
+      bodyStyles: { fontSize: 9 },
+      columnStyles: {
+        0: { cellWidth: 50 },
+        1: { cellWidth: 40, halign: "right" },
+      },
+      didParseCell: (data) => {
+        if (data.section === "body" && data.row.index >= 2) {
+          data.cell.styles.fillColor = diferencaColor as [number, number, number];
+          data.cell.styles.textColor = [255, 255, 255];
+          data.cell.styles.fontStyle = "bold";
+        }
+      },
+    });
+
+    yPos =
+      (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+
+    // Seção 4: Tanques (se houver)
+    if (dados.tanques.length > 0) {
+      if (yPos > 230) {
+        doc.addPage();
+        yPos = 15;
+      }
+
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("4. Movimentação por Tanque (Registro 1310)", 15, yPos);
+      yPos += 6;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [["Tanque", "Est. Inicial", "Entradas", "Vendas", "Est. Final"]],
+        body: dados.tanques.map((t) => [
+          t.numTanque,
+          formatNumberForPdf(t.estoqueInicial, 3),
+          formatNumberForPdf(t.entradas, 3),
+          formatNumberForPdf(t.vendas, 3),
+          formatNumberForPdf(t.estoqueFinal, 3),
+        ]),
+        theme: "striped",
+        headStyles: { fillColor: [79, 70, 229], fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+      });
+
+      yPos =
+        (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+    }
+
+    // Seção 5: Bicos (se houver)
+    if (dados.bicos.length > 0) {
+      if (yPos > 230) {
+        doc.addPage();
+        yPos = 15;
+      }
+
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("5. Vendas por Bico (Registro 1320)", 15, yPos);
+      yPos += 6;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [["Bico", "Tanque", "Enc. Inicial", "Enc. Final", "Vendas (L)"]],
+        body: dados.bicos.map((b) => [
+          b.numBico,
+          b.numTanque,
+          formatNumberForPdf(b.encerranteIni, 0),
+          formatNumberForPdf(b.encerranteFim, 0),
+          formatNumberForPdf(b.vendas, 3),
+        ]),
+        theme: "striped",
+        headStyles: { fillColor: [168, 85, 247], fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+      });
+
+      yPos =
+        (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+    }
+
+    // Seção 6: Documentos de Venda (se houver)
+    if (dados.documentos.length > 0) {
+      if (yPos > 200) {
+        doc.addPage();
+        yPos = 15;
+      }
+
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.text("6. Documentos Fiscais de Venda", 15, yPos);
+      yPos += 6;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [["Tipo", "Número", "Quantidade (L)", "Valor (R$)"]],
+        body: dados.documentos
+          .slice(0, 30)
+          .map((d) => [
+            d.tipo,
+            d.numero,
+            formatNumberForPdf(d.quantidade, 3),
+            formatCurrencyForPdf(d.valor),
+          ]),
+        theme: "striped",
+        headStyles: { fillColor: [20, 184, 166], fontSize: 8 },
+        bodyStyles: { fontSize: 8 },
+      });
+
+      if (dados.documentos.length > 30) {
+        yPos =
+          (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY +
+          3;
+        doc.setFontSize(8);
+        doc.setTextColor(100);
+        doc.text(`... e mais ${dados.documentos.length - 30} documentos`, 15, yPos);
+      }
+
+      yPos =
+        (doc as jsPDF & { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+    }
+
+    // Seção 7: Inconsistências (se houver)
+    if (dados.inconsistencias.length > 0) {
+      if (yPos > 230) {
+        doc.addPage();
+        yPos = 15;
+      }
+
+      doc.setFontSize(11);
+      doc.setFont("helvetica", "bold");
+      doc.setTextColor(220, 38, 38);
+      doc.text("7. Inconsistências Detectadas", 15, yPos);
+      doc.setTextColor(0);
+      yPos += 6;
+
+      autoTable(doc, {
+        startY: yPos,
+        head: [["Severidade", "Tipo", "Diferença (L)", "Descrição"]],
+        body: dados.inconsistencias.map((i) => [
+          i.severidade,
+          i.tipo,
+          formatNumberForPdf(i.diferenca, 3),
+          i.descricao.substring(0, 60) + (i.descricao.length > 60 ? "..." : ""),
+        ]),
+        theme: "striped",
+        headStyles: { fillColor: [220, 38, 38], fontSize: 8 },
+        bodyStyles: { fontSize: 7 },
+        didParseCell: (data) => {
+          if (data.section === "body" && data.column.index === 0) {
+            const sev = data.cell.raw as string;
+            if (sev === "CRITICO") {
+              data.cell.styles.fillColor = [254, 226, 226];
+              data.cell.styles.textColor = [185, 28, 28];
+            } else if (sev === "AVISO") {
+              data.cell.styles.fillColor = [254, 249, 195];
+              data.cell.styles.textColor = [161, 98, 7];
+            }
+          }
+        },
+      });
+    }
+
+    // Rodapé
+    const pageCount = doc.getNumberOfPages();
+    for (let i = 1; i <= pageCount; i++) {
+      doc.setPage(i);
+      doc.setFontSize(8);
+      doc.setTextColor(128);
+      doc.text(
+        `Página ${i} de ${pageCount} | Limite ANP: 0,6% (Res. ANP nº 23/2004)`,
+        pageWidth / 2,
+        doc.internal.pageSize.getHeight() - 10,
+        { align: "center" }
+      );
+    }
+
+    doc.save(
+      `comparativo_diario_${dados.codItem}_${dados.dtMov}_${formatCnpjForFilename(meta.cnpj)}.pdf`
+    );
+  } else {
+    // Excel - Múltiplas abas
+    const wb = XLSX.utils.book_new();
+
+    // Aba 1: Resumo
+    const resumoData = [
+      ["Relatório Diário de Movimentação de Combustível"],
+      [`Produto: ${dados.codItem}`],
+      [`Data: ${dataFormatada}`],
+      [meta.company || ""],
+      [meta.cnpj ? `CNPJ: ${meta.cnpj}` : ""],
+      [`Gerado em: ${new Date().toLocaleString("pt-BR")}`],
+      [],
+      ["MOVIMENTAÇÃO (1300)", "Litros"],
+      ["Estoque Inicial", dados.estoqueInicial],
+      ["Entradas", dados.entradas],
+      ["Total Disponível", dados.disponivel],
+      ["Vendas Declaradas", dados.vendasSped],
+      ["Perdas", dados.perdas],
+      ["Sobras", dados.sobras],
+      ["Estoque Final", dados.estoqueFinal],
+      [],
+      ["DOCUMENTOS FISCAIS", "Litros"],
+      ["Vendas NFC-e", dados.vendasNfce],
+      ["Vendas NF-e", dados.vendasNfe],
+      ["Total Documentos", dados.totalDocumentos],
+      [],
+      ["COMPARATIVO", "Litros"],
+      ["Vendas SPED", dados.vendasSped],
+      ["Vendas Documentos", dados.totalDocumentos],
+      ["Diferença", dados.diferenca],
+      ["Diferença %", dados.percentualDiferenca],
+    ];
+    const wsResumo = XLSX.utils.aoa_to_sheet(resumoData);
+    XLSX.utils.book_append_sheet(wb, wsResumo, "Resumo");
+
+    // Aba 2: Tanques
+    if (dados.tanques.length > 0) {
+      const tanquesHeader = [
+        "Tanque",
+        "Est. Inicial",
+        "Entradas",
+        "Vendas",
+        "Est. Final",
+      ];
+      const tanquesData = dados.tanques.map((t) => [
+        t.numTanque,
+        t.estoqueInicial,
+        t.entradas,
+        t.vendas,
+        t.estoqueFinal,
+      ]);
+      const wsTanques = XLSX.utils.aoa_to_sheet([tanquesHeader, ...tanquesData]);
+      XLSX.utils.book_append_sheet(wb, wsTanques, "Tanques");
+    }
+
+    // Aba 3: Bicos
+    if (dados.bicos.length > 0) {
+      const bicosHeader = [
+        "Bico",
+        "Tanque",
+        "Enc. Inicial",
+        "Enc. Final",
+        "Vendas (L)",
+      ];
+      const bicosData = dados.bicos.map((b) => [
+        b.numBico,
+        b.numTanque,
+        b.encerranteIni,
+        b.encerranteFim,
+        b.vendas,
+      ]);
+      const wsBicos = XLSX.utils.aoa_to_sheet([bicosHeader, ...bicosData]);
+      XLSX.utils.book_append_sheet(wb, wsBicos, "Bicos");
+    }
+
+    // Aba 4: Documentos
+    if (dados.documentos.length > 0) {
+      const docsHeader = ["Tipo", "Número", "Quantidade (L)", "Valor (R$)"];
+      const docsData = dados.documentos.map((d) => [
+        d.tipo,
+        d.numero,
+        d.quantidade,
+        d.valor,
+      ]);
+      const wsDocs = XLSX.utils.aoa_to_sheet([docsHeader, ...docsData]);
+      XLSX.utils.book_append_sheet(wb, wsDocs, "Documentos");
+    }
+
+    // Aba 5: Inconsistências
+    if (dados.inconsistencias.length > 0) {
+      const incHeader = ["Severidade", "Tipo", "Diferença (L)", "Descrição"];
+      const incData = dados.inconsistencias.map((i) => [
+        i.severidade,
+        i.tipo,
+        i.diferenca,
+        i.descricao,
+      ]);
+      const wsInc = XLSX.utils.aoa_to_sheet([incHeader, ...incData]);
+      XLSX.utils.book_append_sheet(wb, wsInc, "Inconsistências");
+    }
+
+    XLSX.writeFile(
+      wb,
+      `comparativo_diario_${dados.codItem}_${dados.dtMov}_${formatCnpjForFilename(meta.cnpj)}.xlsx`
+    );
+  }
+}
+
+// Helpers para formatação nos PDFs
+function formatDateForPdf(dateStr: string): string {
+  if (!dateStr) return "-";
+  const [ano, mes, dia] = dateStr.split("-");
+  return `${dia}/${mes}/${ano}`;
+}
+
+function formatNumberForPdf(value: number, decimals: number): string {
+  if (value === null || value === undefined) return "-";
+  return value.toLocaleString("pt-BR", {
+    minimumFractionDigits: decimals,
+    maximumFractionDigits: decimals,
+  });
+}
+
+function formatPercentForPdf(value: number): string {
+  if (value === null || value === undefined) return "-";
+  return `${value.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`;
+}
+
+function formatCurrencyForPdf(value: number): string {
+  if (value === null || value === undefined) return "-";
+  return value.toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+}
