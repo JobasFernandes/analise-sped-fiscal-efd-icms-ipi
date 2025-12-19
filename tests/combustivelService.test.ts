@@ -84,7 +84,9 @@ describe("combustivelService", () => {
 
       const result = await analisarInconsistencias(spedId);
 
-      const perdaExcessiva = result.find((i: { tipo: string }) => i.tipo === "PERDA_ACIMA_LIMITE");
+      const perdaExcessiva = result.find(
+        (i: { tipo: string }) => i.tipo === "PERDA_ACIMA_LIMITE"
+      );
       expect(perdaExcessiva).toBeDefined();
       // 1% está entre 0.6% e 1.2% (2x limite), então é AVISO, não CRITICO
       expect(perdaExcessiva?.severidade).toBe("AVISO");
@@ -108,7 +110,9 @@ describe("combustivelService", () => {
 
       const result = await analisarInconsistencias(spedId);
 
-      const sobraExcessiva = result.find((i: { tipo: string }) => i.tipo === "SOBRA_ACIMA_LIMITE");
+      const sobraExcessiva = result.find(
+        (i: { tipo: string }) => i.tipo === "SOBRA_ACIMA_LIMITE"
+      );
       expect(sobraExcessiva).toBeDefined();
       // 1% está entre 0.6% e 1.2% (2x limite), então é AVISO, não CRITICO
       expect(sobraExcessiva?.severidade).toBe("AVISO");
@@ -132,7 +136,9 @@ describe("combustivelService", () => {
 
       const result = await analisarInconsistencias(spedId);
 
-      const perdaExcessiva = result.find((i: { tipo: string }) => i.tipo === "PERDA_ACIMA_LIMITE");
+      const perdaExcessiva = result.find(
+        (i: { tipo: string }) => i.tipo === "PERDA_ACIMA_LIMITE"
+      );
       expect(perdaExcessiva).toBeUndefined();
     });
 
