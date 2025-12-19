@@ -92,9 +92,9 @@ describe("SPED Export & Storage", () => {
       expect(text).toBe(input);
     });
 
-    it("filters C170 records from content", async () => {
+    it("filters C170 records from SAIDA documents only", async () => {
       const content = `|0000|...|
-|C100|...|
+|C100|1|0||65|00|001|123|...|
 |C170|Item 1|
 |C170|Item 2|
 |C190|...|
@@ -110,14 +110,58 @@ describe("SPED Export & Storage", () => {
       expect(filteredText).not.toContain("|C170|");
       expect(filteredText).toContain("|C100|");
       expect(filteredText).toContain("|C190|");
-      // Contadores devem ser atualizados
-      expect(filteredText).toContain("|C990|8|"); // 10 - 2 C170
-      expect(filteredText).toContain("|9999|12|"); // 15 - 2 C170 - 1 linha 9900 removida
+      expect(filteredText).toContain("|C990|8|");
+      expect(filteredText).toContain("|9999|12|");
     });
 
-    it("filters C170 and child records (C171-C179)", async () => {
+    it("keeps C170 records from ENTRADA documents", async () => {
       const content = `|0000|...|
-|C100|...|
+|C100|0|1|40052|55|00|003|456|...|
+|C170|Item Entrada 1|
+|C170|Item Entrada 2|
+|C190|...|
+|C990|10|
+|9900|C170|2|
+|9990|5|
+|9999|15|`;
+
+      const blob = stringToIso88591Blob(content);
+      const filteredBlob = await filterSpedContent(blob, true);
+      const filteredText = await readFileAsText(filteredBlob, "iso-8859-1");
+
+      expect(filteredText).toContain("|C170|Item Entrada 1|");
+      expect(filteredText).toContain("|C170|Item Entrada 2|");
+      expect(filteredText).toContain("|C100|");
+      expect(filteredText).toContain("|C190|");
+      expect(filteredText).toContain("|C990|10|");
+      expect(filteredText).toContain("|9999|15|");
+    });
+
+    it("filters C170 from SAIDA but keeps from ENTRADA in mixed content", async () => {
+      const content = `|0000|...|
+|C100|0|1|40052|55|00|003|111|...|
+|C170|Item Entrada|
+|C190|...|
+|C100|1|0||65|00|001|222|...|
+|C170|Item Saida|
+|C190|...|
+|C990|12|
+|9900|C170|2|
+|9990|5|
+|9999|18|`;
+
+      const blob = stringToIso88591Blob(content);
+      const filteredBlob = await filterSpedContent(blob, true);
+      const filteredText = await readFileAsText(filteredBlob, "iso-8859-1");
+
+      expect(filteredText).toContain("|C170|Item Entrada|");
+      expect(filteredText).not.toContain("|C170|Item Saida|");
+      expect(filteredText).toContain("|C990|11|");
+    });
+
+    it("filters C170 and child records (C171-C179) from SAIDA", async () => {
+      const content = `|0000|...|
+|C100|1|0||65|00|001|123|...|
 |C170|Item 1|
 |C171|002|5000,000|
 |C170|Item 2|
@@ -134,16 +178,152 @@ describe("SPED Export & Storage", () => {
       const filteredBlob = await filterSpedContent(blob, true);
       const filteredText = await readFileAsText(filteredBlob, "iso-8859-1");
 
-      // C170 e filhos devem ser removidos
       expect(filteredText).not.toContain("|C170|");
       expect(filteredText).not.toContain("|C171|");
       expect(filteredText).not.toContain("|C175|");
-      // Outros registros devem permanecer
       expect(filteredText).toContain("|C100|");
       expect(filteredText).toContain("|C190|");
-      // Contadores devem ser atualizados
-      expect(filteredText).toContain("|C990|8|"); // 12 - 4 (2 C170 + 1 C171 + 1 C175)
-      expect(filteredText).toContain("|9999|11|"); // 18 - 4 registros - 3 linhas 9900 removidas
+      expect(filteredText).toContain("|C990|8|");
+      expect(filteredText).toContain("|9999|11|");
+    });
+
+    it("keeps C170 and child records (C171-C179) from ENTRADA", async () => {
+      const content = `|0000|...|
+|C100|0|1|40052|55|00|003|456|...|
+|C170|Item Entrada|
+|C171|002|5000,000|
+|C190|...|
+|C990|10|
+|9900|C170|1|
+|9900|C171|1|
+|9990|6|
+|9999|16|`;
+
+      const blob = stringToIso88591Blob(content);
+      const filteredBlob = await filterSpedContent(blob, true);
+      const filteredText = await readFileAsText(filteredBlob, "iso-8859-1");
+
+      expect(filteredText).toContain("|C170|Item Entrada|");
+      expect(filteredText).toContain("|C171|002|5000,000|");
+      expect(filteredText).toContain("|C990|10|");
+      expect(filteredText).toContain("|9999|16|");
+    });
+
+    it("updates 9900|9900| counter when 9900 lines are removed", async () => {
+      const content = `|0000|...|
+|C100|1|0||65|00|001|123|...|
+|C170|Item 1|
+|C170|Item 2|
+|C190|...|
+|C990|10|
+|9900|0000|1|
+|9900|C100|1|
+|9900|C170|2|
+|9900|C190|1|
+|9900|C990|1|
+|9900|9900|8|
+|9900|9990|1|
+|9900|9999|1|
+|9990|8|
+|9999|18|`;
+
+      const blob = stringToIso88591Blob(content);
+      const filteredBlob = await filterSpedContent(blob, true);
+      const filteredText = await readFileAsText(filteredBlob, "iso-8859-1");
+
+      expect(filteredText).not.toContain("|C170|Item");
+
+      expect(filteredText).not.toContain("|9900|C170|");
+
+      expect(filteredText).toContain("|9900|9900|7|");
+
+      expect(filteredText).toContain("|C990|8|");
+      expect(filteredText).toContain("|9990|7|");
+      expect(filteredText).toContain("|9999|15|");
+    });
+
+    it("clears NFC-e C100 fields that are not allowed without items", async () => {
+      const c100 =
+        "|C100|1|0|PART123|65|00|A1|123|CHV|01122025|01122025|100,00|0|0,00|0,00|100,00|0|0,00|0,00|0,00|100,00|18,00|10,00|2,00|1,00|0,65|3,00|0,10|0,20|";
+
+      const content = `|0000|...|
+${c100}
+|C170|Item 1|
+|C190|...|
+|C990|5|
+|9999|7|`;
+
+      const blob = stringToIso88591Blob(content);
+      const filteredBlob = await filterSpedContent(blob, true);
+      const filteredText = await readFileAsText(filteredBlob, "iso-8859-1");
+
+      const c100Line = filteredText
+        .split(/\r?\n/)
+        .find((l) => l.trim().startsWith("|C100|"));
+      expect(c100Line).toBeTruthy();
+
+      const parts = (c100Line as string).split("|");
+      expect(parts[4]).toBe("");
+      expect(parts[5]).toBe("65");
+
+      expect(parts[23]).toBe("");
+      expect(parts[24]).toBe("");
+      expect(parts[25]).toBe("");
+      expect(parts[26]).toBe("");
+      expect(parts[27]).toBe("");
+      expect(parts[28]).toBe("");
+      expect(parts[29]).toBe("");
+    });
+
+    it("pads CST_ICMS to 3 digits in generated C190 for added docs", async () => {
+      const { generateC190Line } = await import("../src/utils/spedLineGenerator");
+
+      const line = generateC190Line({
+        cstIcms: "61",
+        cfop: "5656",
+        aliqIcms: 0,
+        valorOperacao: 100,
+        valorBcIcms: 0,
+        valorIcms: 0,
+        valorIpi: 0,
+      } as any);
+
+      expect(line).toContain("|C190|061|5656|");
+    });
+
+    it("sets IND_EMIT=0 for NFC-e (65) SAIDA added docs", async () => {
+      const { generateC100Line } = await import("../src/utils/spedLineGenerator");
+
+      const doc = {
+        indicadorOperacao: "1",
+        situacao: "00",
+        numeroDoc: "626684",
+        chaveNfe: "26251108106732000253650010006266841531307360",
+        dataDocumento: "2025-11-02",
+        dataEntradaSaida: "2025-11-02",
+        valorDocumento: 100,
+        valorMercadoria: 100,
+      } as any;
+
+      const line = generateC100Line(doc, []);
+      expect(line).toContain("|C100|1|0|");
+      expect(line).toContain("|65|");
+    });
+
+    it("fills mandatory C190 numeric fields with 0,00", async () => {
+      const { generateC190Line } = await import("../src/utils/spedLineGenerator");
+
+      const line = generateC190Line({
+        cstIcms: "061",
+        cfop: "5656",
+        aliqIcms: 0,
+        valorOperacao: 100,
+        valorBcIcms: 0,
+        valorIcms: 0,
+        valorIpi: 0,
+      } as any);
+
+      expect(line).toContain("|0,00|0,00|0,00|");
     });
 
     it("returns original content if filter is false", async () => {

@@ -28,6 +28,7 @@ export interface DocumentRow {
   situacao: string;
   valorDocumento: number;
   valorMercadoria: number;
+  source?: "imported" | "added"; // Origem
 }
 
 export interface ItemRow {
@@ -158,6 +159,11 @@ export class SpedDB extends Dexie {
     // v14: adicionar tabela de produtos (Registro 0200) para descrições
     this.version(14).stores({
       produtos: "++id, spedId, codItem, [spedId+codItem]",
+    });
+    // v15: adicionar campo source em documents para identificar documentos adicionados via XML
+    this.version(15).stores({
+      documents:
+        "id, spedId, numeroDoc, chaveNfe, dataDocumento, indicadorOperacao, [spedId+chaveNfe], [spedId+source]",
     });
   }
 

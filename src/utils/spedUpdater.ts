@@ -32,6 +32,7 @@ export async function addSpedLineFromXml(
     situacao: c100.codSit,
     valorDocumento: c100.vlDoc,
     valorMercadoria: c100.vlMerc,
+    source: "added", // Marca como adicionado via XML
   };
 
   const newItems: ItemC170Row[] = c170.map((item) => ({

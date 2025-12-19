@@ -304,7 +304,7 @@ export default function SpedManager({ onLoad, onBack }) {
         selectedSpedForExport.filename ||
         `sped_${selectedSpedForExport.cnpj}_${selectedSpedForExport.periodoInicio}.txt`;
 
-      let finalBlob = await filterSpedContent(contentBlob, !exportOptionC170);
+      let finalBlob = await filterSpedContent(contentBlob, !exportOptionC170, spedId);
 
       if (!exportOptionC170) {
         filename = filename.replace(".txt", "_sem_c170.txt");
@@ -758,9 +758,11 @@ export default function SpedManager({ onLoad, onBack }) {
                       className="h-4 w-4 text-primary border-gray-300 focus:ring-primary"
                     />
                     <div>
-                      <span className="text-sm font-medium">Remover Itens (C170)</span>
+                      <span className="text-sm font-medium">
+                        Remover Itens de Saída (C170)
+                      </span>
                       <p className="text-xs text-muted-foreground">
-                        Remove todos os registros C170 para reduzir tamanho
+                        Remove C170 de NFC-e/vendas, mantém C170 de NF-e/compras
                       </p>
                     </div>
                   </label>
