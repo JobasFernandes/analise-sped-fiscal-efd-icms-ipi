@@ -15,6 +15,7 @@ let saveMovimentacoesTanques: any;
 let saveVolumesBicos: any;
 let analisarInconsistencias: any;
 let gerarResumoInconsistencias: any;
+let getMovimentacaoDia: any;
 
 describe("combustivelService", () => {
   let spedId: number;
@@ -32,6 +33,7 @@ describe("combustivelService", () => {
     const serviceMod = await import("../src/utils/combustivelService");
     analisarInconsistencias = serviceMod.analisarInconsistencias;
     gerarResumoInconsistencias = serviceMod.gerarResumoInconsistencias;
+    getMovimentacaoDia = serviceMod.getMovimentacaoDia;
 
     await db.open();
 
@@ -279,6 +281,41 @@ describe("combustivelService", () => {
       expect(resumo.porSeveridade.CRITICO).toBe(0);
       expect(resumo.porSeveridade.AVISO).toBe(0);
       expect(resumo.porSeveridade.INFO).toBe(0);
+    });
+  });
+
+  describe("getMovimentacaoDia", () => {
+    it("deve retornar movimento com qtdIni correto quando existir no banco", async () => {
+      // Salvar movimentação com qtdIni específico
+      await saveMovimentacoesDiarias(spedId, [
+        {
+          codItem: "2",
+          dtMov: "2025-11-01",
+          qtdIni: 10255.52, // Valor do arquivo real do usuário
+          qtdEntr: 0,
+          qtdDisponivel: 10255.52,
+          qtdVendas: 294.41,
+          qtdFimFisico: 9961.11,
+          qtdPerda: 0,
+          qtdSobra: 0,
+          qtdFimContabil: 9961.11,
+        },
+      ]);
+
+      // Buscar usando getMovimentacaoDia
+      const resultado = await getMovimentacaoDia(spedId, "2", "2025-11-01");
+
+      expect(resultado.movimento).not.toBeNull();
+      expect(resultado.movimento.qtdIni).toBe(10255.52);
+      expect(resultado.movimento.qtdVendas).toBe(294.41);
+    });
+
+    it("deve retornar null quando não encontrar movimento", async () => {
+      const resultado = await getMovimentacaoDia(spedId, "999", "2099-12-31");
+
+      expect(resultado.movimento).toBeNull();
+      expect(resultado.tanques).toHaveLength(0);
+      expect(resultado.bicos).toHaveLength(0);
     });
   });
 });

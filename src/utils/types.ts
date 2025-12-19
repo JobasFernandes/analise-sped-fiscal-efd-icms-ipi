@@ -333,6 +333,7 @@ export interface VolumeVendasBico1320 {
  */
 export type TipoInconsistenciaCombustivel =
   | "ESTOQUE_MAIOR_SEM_ENTRADA" // Estoque final > inicial sem NF de entrada
+  | "ESTOQUE_INICIAL_ZERADO" // Estoque inicial = 0 com vendas (possível erro de preenchimento)
   | "PERDA_ACIMA_LIMITE" // Perda acima do limite legal (0.6% diesel, 1% gasolina)
   | "SOBRA_ACIMA_LIMITE" // Sobra acima do limite aceitável
   | "DIVERGENCIA_TANQUES" // Soma dos tanques ≠ total do produto

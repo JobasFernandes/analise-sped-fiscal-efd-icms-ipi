@@ -157,6 +157,33 @@ async function verificarEstoqueSemEntrada(
     // Ordenar por data
     movs.sort((a, b) => a.dtMov.localeCompare(b.dtMov));
 
+    // Verificar primeiro dia: se estoque inicial é 0 mas há vendas, é suspeito
+    const primeiroDia = movs[0];
+    if (
+      primeiroDia.qtdIni === 0 &&
+      primeiroDia.qtdVendas > 0 &&
+      primeiroDia.qtdEntr > 0
+    ) {
+      // Estoque inicial zerado mas houve vendas - provavelmente erro de preenchimento
+      // O estoque "disponível" veio apenas das entradas do dia
+      inconsistencias.push({
+        spedId,
+        tipo: "ESTOQUE_INICIAL_ZERADO",
+        severidade: "AVISO",
+        codItem,
+        dtMov: primeiroDia.dtMov,
+        valorEsperado: primeiroDia.qtdDisponivel - primeiroDia.qtdEntr, // Estoque que deveria ter
+        valorEncontrado: 0,
+        diferenca: primeiroDia.qtdDisponivel - primeiroDia.qtdEntr,
+        percentualDiferenca: 100,
+        descricao:
+          `Estoque inicial declarado como 0L no primeiro dia do período, mas há vendas de ${primeiroDia.qtdVendas.toFixed(3)}L. ` +
+          `Isso pode indicar erro de preenchimento no SPED. ` +
+          `O estoque inicial deveria ser o estoque final do dia anterior (do período anterior).`,
+        detectedAt: new Date().toISOString(),
+      });
+    }
+
     for (let i = 1; i < movs.length; i++) {
       const anterior = movs[i - 1];
       const atual = movs[i];
@@ -732,6 +759,8 @@ export function getDescricaoTipoInconsistencia(
   const descricoes: Record<TipoInconsistenciaCombustivel, string> = {
     ESTOQUE_MAIOR_SEM_ENTRADA:
       "Estoque inicial maior que o esperado sem nota de entrada",
+    ESTOQUE_INICIAL_ZERADO:
+      "Estoque inicial zerado com vendas (possível erro de preenchimento no SPED)",
     PERDA_ACIMA_LIMITE: "Perda de combustível acima do limite legal",
     SOBRA_ACIMA_LIMITE: "Sobra de combustível acima do limite aceitável",
     DIVERGENCIA_TANQUES: "Divergência entre soma dos tanques e total do produto",
