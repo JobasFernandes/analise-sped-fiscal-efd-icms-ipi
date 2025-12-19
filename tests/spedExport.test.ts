@@ -98,7 +98,10 @@ describe("SPED Export & Storage", () => {
 |C170|Item 1|
 |C170|Item 2|
 |C190|...|
-|9999|...|`;
+|C990|10|
+|9900|C170|2|
+|9990|5|
+|9999|15|`;
 
       const blob = stringToIso88591Blob(content);
       const filteredBlob = await filterSpedContent(blob, true);
@@ -107,6 +110,40 @@ describe("SPED Export & Storage", () => {
       expect(filteredText).not.toContain("|C170|");
       expect(filteredText).toContain("|C100|");
       expect(filteredText).toContain("|C190|");
+      // Contadores devem ser atualizados
+      expect(filteredText).toContain("|C990|8|"); // 10 - 2 C170
+      expect(filteredText).toContain("|9999|12|"); // 15 - 2 C170 - 1 linha 9900 removida
+    });
+
+    it("filters C170 and child records (C171-C179)", async () => {
+      const content = `|0000|...|
+|C100|...|
+|C170|Item 1|
+|C171|002|5000,000|
+|C170|Item 2|
+|C175|VIN123|
+|C190|...|
+|C990|12|
+|9900|C170|2|
+|9900|C171|1|
+|9900|C175|1|
+|9990|7|
+|9999|18|`;
+
+      const blob = stringToIso88591Blob(content);
+      const filteredBlob = await filterSpedContent(blob, true);
+      const filteredText = await readFileAsText(filteredBlob, "iso-8859-1");
+
+      // C170 e filhos devem ser removidos
+      expect(filteredText).not.toContain("|C170|");
+      expect(filteredText).not.toContain("|C171|");
+      expect(filteredText).not.toContain("|C175|");
+      // Outros registros devem permanecer
+      expect(filteredText).toContain("|C100|");
+      expect(filteredText).toContain("|C190|");
+      // Contadores devem ser atualizados
+      expect(filteredText).toContain("|C990|8|"); // 12 - 4 (2 C170 + 1 C171 + 1 C175)
+      expect(filteredText).toContain("|9999|11|"); // 18 - 4 registros - 3 linhas 9900 removidas
     });
 
     it("returns original content if filter is false", async () => {
