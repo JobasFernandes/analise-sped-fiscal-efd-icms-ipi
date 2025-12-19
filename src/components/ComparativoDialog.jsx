@@ -157,14 +157,24 @@ export default function ComparativoDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-[1100px]">
         <DialogHeader className="pb-4">
-          <div className="flex-1 pr-8">
-            <DialogTitle className="text-xl font-semibold flex items-center gap-2">
-              <Fuel className="h-5 w-5 text-amber-500" />
-              Comparativo de Movimentação
-            </DialogTitle>
-            <DialogDescription className="text-muted-foreground mt-1">
-              {codItem} • {formatarData(dtMov)}
-            </DialogDescription>
+          <div className="flex items-start justify-between">
+            <div className="flex-1 pr-8">
+              <DialogTitle className="text-xl font-semibold flex items-center gap-2">
+                <Fuel className="h-5 w-5 text-amber-500" />
+                Comparativo de Movimentação
+              </DialogTitle>
+              <DialogDescription className="text-muted-foreground mt-1">
+                {codItem} • {formatarData(dtMov)}
+              </DialogDescription>
+            </div>
+            {!loading && (movimentacao || comparativo) && (
+              <ReportButton
+                label="Exportar"
+                size="sm"
+                variant="outline"
+                onExport={handleExportarRelatorio}
+              />
+            )}
           </div>
         </DialogHeader>
 
@@ -194,11 +204,11 @@ export default function ComparativoDialog({
                     <div className="grid grid-cols-2 gap-3">
                       <InfoCard
                         label="Estoque Inicial"
-                        value={formatarLitros(movimentacao.estqIni)}
+                        value={formatarLitros(movimentacao.qtdIni)}
                       />
                       <InfoCard
-                        label="Estoque Final"
-                        value={formatarLitros(movimentacao.estqFin)}
+                        label="Estoque Final Contábil"
+                        value={formatarLitros(movimentacao.qtdFimContabil)}
                       />
                       <InfoCard
                         label="Entradas"
@@ -206,13 +216,17 @@ export default function ComparativoDialog({
                         highlight="green"
                       />
                       <InfoCard
-                        label="Recebimentos"
-                        value={formatarLitros(movimentacao.qtdRec)}
+                        label="Disponível"
+                        value={formatarLitros(movimentacao.qtdDisponivel)}
                       />
                       <InfoCard
                         label="Volume Vendido"
-                        value={formatarLitros(movimentacao.volDispVenda)}
+                        value={formatarLitros(movimentacao.qtdVendas)}
                         highlight="blue"
+                      />
+                      <InfoCard
+                        label="Estoque Físico Final"
+                        value={formatarLitros(movimentacao.qtdFimFisico)}
                       />
                       <InfoCard
                         label="Perdas"
@@ -223,10 +237,6 @@ export default function ComparativoDialog({
                         label="Sobras"
                         value={formatarLitros(movimentacao.qtdSobra)}
                         highlight="amber"
-                      />
-                      <InfoCard
-                        label="Consumo Próprio"
-                        value={formatarLitros(movimentacao.consoPropria)}
                       />
                     </div>
                   ) : (
@@ -250,9 +260,9 @@ export default function ComparativoDialog({
                           >
                             <div className="font-medium">Tanque {t.numTanque}</div>
                             <div className="grid grid-cols-3 gap-2 mt-1 text-xs text-muted-foreground">
-                              <span>Inicial: {formatarLitros(t.estqIni)}</span>
-                              <span>Final: {formatarLitros(t.estqFin)}</span>
-                              <span>Vendido: {formatarLitros(t.volDispVenda)}</span>
+                              <span>Inicial: {formatarLitros(t.qtdIni)}</span>
+                              <span>Final: {formatarLitros(t.qtdFimContabil)}</span>
+                              <span>Vendido: {formatarLitros(t.qtdVendas)}</span>
                             </div>
                           </div>
                         ))}
@@ -264,24 +274,38 @@ export default function ComparativoDialog({
                   {bicos.length > 0 && (
                     <div className="mt-4">
                       <h4 className="font-medium text-sm text-muted-foreground mb-2">
-                        Bicos ({bicos.length})
+                        Bicos ({bicos.length}) - Volume por encerrante
                       </h4>
                       <div className="grid grid-cols-2 gap-2">
-                        {bicos.map((b) => (
-                          <div
-                            key={b.id}
-                            className="bg-muted/50 dark:bg-muted/20 rounded-lg p-2 text-xs"
-                          >
-                            <div className="font-medium">Bico {b.numBico}</div>
-                            <div className="text-muted-foreground">
-                              Aferido: {formatarLitros(b.qtdVendaAfer)}
+                        {bicos.map((b) => {
+                          // Calcula volume vendido pela diferença dos encerrantes
+                          const volumeEncerrante =
+                            (b.encerranteFim || 0) - (b.encerranteIni || 0);
+                          return (
+                            <div
+                              key={b.id}
+                              className="bg-muted/50 dark:bg-muted/20 rounded-lg p-2 text-xs"
+                            >
+                              <div className="font-medium">Bico {b.numBico}</div>
+                              <div className="text-muted-foreground">
+                                Vendido:{" "}
+                                {formatarLitros(
+                                  volumeEncerrante > 0 ? volumeEncerrante : b.qtdVendas
+                                )}
+                              </div>
+                              <div className="text-muted-foreground text-[11px]">
+                                Enc:{" "}
+                                {b.encerranteIni?.toLocaleString("pt-BR", {
+                                  maximumFractionDigits: 0,
+                                })}{" "}
+                                →{" "}
+                                {b.encerranteFim?.toLocaleString("pt-BR", {
+                                  maximumFractionDigits: 0,
+                                })}
+                              </div>
                             </div>
-                            <div className="text-muted-foreground text-[11px]">
-                              Enc: {b.encerranteIni?.toFixed(0)} →{" "}
-                              {b.encerranteFim?.toFixed(0)}
-                            </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     </div>
                   )}
@@ -501,26 +525,16 @@ export default function ComparativoDialog({
         </DialogBody>
 
         <DialogFooter>
-          <div className="flex items-center justify-between w-full">
-            <div className="flex items-center gap-4 text-xs">
-              <span>
-                Produto: <strong>{codItem}</strong>
-              </span>
-              <span>
-                Data: <strong>{formatarData(dtMov)}</strong>
-              </span>
-              <span>
-                Limite ANP: <strong>0,6%</strong> (Res. ANP nº 23/2004)
-              </span>
-            </div>
-            {!loading && (movimentacao || comparativo) && (
-              <ReportButton
-                label="Exportar"
-                size="sm"
-                variant="outline"
-                onExport={handleExportarRelatorio}
-              />
-            )}
+          <div className="flex items-center gap-4 text-xs w-full">
+            <span>
+              Produto: <strong>{codItem}</strong>
+            </span>
+            <span>
+              Data: <strong>{formatarData(dtMov)}</strong>
+            </span>
+            <span>
+              Limite ANP: <strong>0,6%</strong> (Res. ANP nº 23/2004)
+            </span>
           </div>
         </DialogFooter>
       </DialogContent>

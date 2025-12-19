@@ -684,12 +684,15 @@ export class SpedParser {
       combustivelMovDiaria: [...(this.data.combustivelMovDiaria || [])],
       combustivelTanques: [...(this.data.combustivelTanques || [])],
       combustivelBicos: [...(this.data.combustivelBicos || [])],
+      // Produtos (registro 0200)
+      produtos: [...(this.data.produtos || [])],
     };
     this.data.entradas = [];
     this.data.saidas = [];
     this.data.combustivelMovDiaria = [];
     this.data.combustivelTanques = [];
     this.data.combustivelBicos = [];
+    this.data.produtos = [];
     return batch;
   }
 

@@ -9,7 +9,11 @@ import {
   type DayCfopAggRow,
 } from "../index";
 import type { ProcessedData } from "../../utils/types";
-import { saveCombustivelBatch, deleteCombustivelBySpedId } from "./combustivelDao";
+import {
+  saveCombustivelBatch,
+  deleteCombustivelBySpedId,
+  saveProdutos,
+} from "./combustivelDao";
 
 export interface AddSpedMetadata {
   filename: string;
@@ -232,6 +236,13 @@ export async function deleteSped(spedId: number): Promise<void> {
   // Deletar dados de combustíveis (fora da transação principal pois usa outras tabelas)
   await deleteCombustivelBySpedId(spedId);
 
+  // Deletar produtos
+  try {
+    await db.produtos.where({ spedId }).delete();
+  } catch {
+    // Tabela pode não existir em versões antigas
+  }
+
   await db.transaction(
     "rw",
     [
@@ -416,6 +427,7 @@ export async function saveSpedBatch(
     combustivelMovDiaria?: any[];
     combustivelTanques?: any[];
     combustivelBicos?: any[];
+    produtos?: any[];
   }
 ): Promise<void> {
   const docs: DocumentRow[] = [];
@@ -504,6 +516,11 @@ export async function saveSpedBatch(
       combustivelTanques: data.combustivelTanques,
       combustivelBicos: data.combustivelBicos,
     });
+  }
+
+  // Salvar produtos (registro 0200) se presentes
+  if (data.produtos && data.produtos.length > 0) {
+    await saveProdutos(spedId, data.produtos);
   }
 }
 

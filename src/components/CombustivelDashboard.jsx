@@ -23,7 +23,7 @@ import { ReportButton } from "./ui/ReportButton";
 import {
   getMovimentacoesDiariasBySpedId,
   getTotaisPorProduto,
-  getProdutosCombustivel,
+  getProdutosCombustivelComDescricao,
   getInconsistenciasBySpedId,
 } from "../db/daos/combustivelDao";
 import {
@@ -124,12 +124,19 @@ const CombustivelDashboard = ({ spedId }) => {
       descricao: i.descricao,
     }));
 
-    const resumo = resumoInconsistencias || {
-      total: inconsistencias.length,
-      criticas: inconsistencias.filter((i) => i.severidade === "CRITICO").length,
-      avisos: inconsistencias.filter((i) => i.severidade === "AVISO").length,
-      informativas: inconsistencias.filter((i) => i.severidade === "INFO").length,
-      porTipo: {},
+    // Montar resumo para o relatório - converter para formato esperado pela função de exportação
+    const resumoParaRelatorio = {
+      total: resumoInconsistencias?.total || inconsistencias.length,
+      criticas:
+        resumoInconsistencias?.porSeveridade?.CRITICO ||
+        inconsistencias.filter((i) => i.severidade === "CRITICO").length,
+      avisos:
+        resumoInconsistencias?.porSeveridade?.AVISO ||
+        inconsistencias.filter((i) => i.severidade === "AVISO").length,
+      informativas:
+        resumoInconsistencias?.porSeveridade?.INFO ||
+        inconsistencias.filter((i) => i.severidade === "INFO").length,
+      porTipo: resumoInconsistencias?.porTipo || {},
     };
 
     // Período baseado nas datas das inconsistências
@@ -141,7 +148,7 @@ const CombustivelDashboard = ({ spedId }) => {
 
     gerarRelatorioInconsistenciasCombustivel(
       inconsistenciasFormatadas,
-      resumo,
+      resumoParaRelatorio,
       { period: periodo },
       format
     );
@@ -152,13 +159,13 @@ const CombustivelDashboard = ({ spedId }) => {
     try {
       const [movs, prods, totais, incons] = await Promise.all([
         getMovimentacoesDiariasBySpedId(spedId),
-        getProdutosCombustivel(spedId),
+        getProdutosCombustivelComDescricao(spedId),
         getTotaisPorProduto(spedId),
         getInconsistenciasBySpedId(spedId),
       ]);
 
       setMovimentacoes(movs);
-      setProdutos(prods);
+      setProdutos(prods); // Agora é um array de { codItem, descricao }
       setTotaisPorProduto(totais);
       setInconsistencias(incons);
 
@@ -299,8 +306,8 @@ const CombustivelDashboard = ({ spedId }) => {
             >
               <option value="">Todos os produtos</option>
               {produtos.map((p) => (
-                <option key={p} value={p}>
-                  {p}
+                <option key={p.codItem} value={p.codItem}>
+                  {p.descricao ? `${p.codItem} - ${p.descricao}` : p.codItem}
                 </option>
               ))}
             </select>
@@ -568,11 +575,12 @@ const MovimentacaoTab = ({ movimentacoes, onRowClick }) => {
               <th className="text-left py-2 px-3">Produto</th>
               <th className="text-right py-2 px-3">Estoque Inicial</th>
               <th className="text-right py-2 px-3">Entradas</th>
-              <th className="text-right py-2 px-3">Disponível</th>
+              <th className="text-right py-2 px-3">Dispónivel</th>
               <th className="text-right py-2 px-3">Vendas</th>
               <th className="text-right py-2 px-3">Est. Físico</th>
               <th className="text-right py-2 px-3">Perdas</th>
               <th className="text-right py-2 px-3">Sobras</th>
+              <th className="text-right py-2 px-3">% P/S</th>
               <th className="text-right py-2 px-3">Est. Contábil</th>
             </tr>
           </thead>
@@ -604,6 +612,26 @@ const MovimentacaoTab = ({ movimentacoes, onRowClick }) => {
                 </td>
                 <td className="py-2 px-3 text-right text-yellow-600">
                   {m.qtdSobra > 0 ? formatarVolume(m.qtdSobra) : "-"}
+                </td>
+                <td
+                  className={`py-2 px-3 text-right font-medium ${(() => {
+                    const pct =
+                      m.qtdDisponivel > 0
+                        ? ((m.qtdPerda - m.qtdSobra) / m.qtdDisponivel) * 100
+                        : 0;
+                    if (Math.abs(pct) > 0.6) return "text-red-600";
+                    if (Math.abs(pct) > 0.3) return "text-yellow-600";
+                    return "text-green-600";
+                  })()}`}
+                >
+                  {(() => {
+                    const pct =
+                      m.qtdDisponivel > 0
+                        ? ((m.qtdPerda - m.qtdSobra) / m.qtdDisponivel) * 100
+                        : 0;
+                    if (pct === 0) return "-";
+                    return `${pct > 0 ? "-" : "+"}${formatarPercentual(Math.abs(pct))}`;
+                  })()}
                 </td>
                 <td className="py-2 px-3 text-right font-medium">
                   {formatarVolume(m.qtdFimContabil)}
@@ -680,7 +708,7 @@ const InconsistenciasTab = ({
         return (
           <Card
             key={`${i.tipo}-${i.dtMov}-${i.codItem}-${idx}`}
-            className={`p-4 border ${corClasse} cursor-pointer transition-all hover:shadow-md hover:scale-[1.01]`}
+            className={`p-4 border ${corClasse} cursor-pointer`}
             onClick={() => onCardClick?.(i.codItem, i.dtMov)}
             title="Clique para ver comparativo detalhado"
           >

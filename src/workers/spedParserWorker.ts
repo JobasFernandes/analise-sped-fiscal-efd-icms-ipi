@@ -107,7 +107,8 @@ self.onmessage = async function (e: MessageEvent<any>) {
             batch.saidas.length > 0 ||
             batch.combustivelMovDiaria.length > 0 ||
             batch.combustivelTanques.length > 0 ||
-            batch.combustivelBicos.length > 0
+            batch.combustivelBicos.length > 0 ||
+            batch.produtos.length > 0
           ) {
             (self as any).postMessage({ type: "batch", data: batch });
           }
@@ -141,7 +142,8 @@ self.onmessage = async function (e: MessageEvent<any>) {
       batch.saidas.length > 0 ||
       batch.combustivelMovDiaria.length > 0 ||
       batch.combustivelTanques.length > 0 ||
-      batch.combustivelBicos.length > 0
+      batch.combustivelBicos.length > 0 ||
+      batch.produtos.length > 0
     ) {
       (self as any).postMessage({ type: "batch", data: batch });
     }

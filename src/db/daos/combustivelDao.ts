@@ -4,6 +4,7 @@ import {
   type CombustivelTanqueRow,
   type CombustivelBicoRow,
   type CombustivelInconsistenciaRow,
+  type ProdutoRow,
 } from "../index";
 import type {
   MovimentacaoCombustivel1300,
@@ -241,6 +242,94 @@ export async function getProdutosCombustivel(spedId: number): Promise<string[]> 
   const movs = await db.combustivel_mov_diaria.where({ spedId }).toArray();
   const produtos = new Set(movs.map((m) => m.codItem));
   return Array.from(produtos).sort();
+}
+
+/**
+ * Lista todos os produtos de combustível com suas descrições
+ * Busca primeiro na tabela de produtos (0200), depois nas inconsistências
+ */
+export interface ProdutoCombustivel {
+  codItem: string;
+  descricao: string;
+}
+
+export async function getProdutosCombustivelComDescricao(
+  spedId: number
+): Promise<ProdutoCombustivel[]> {
+  const movs = await db.combustivel_mov_diaria.where({ spedId }).toArray();
+  const produtosCodigos = Array.from(new Set(movs.map((m) => m.codItem))).sort();
+
+  // Buscar descrições na tabela de produtos (registro 0200)
+  const descricoesPorCodigo = new Map<string, string>();
+
+  try {
+    const produtos = await db.produtos.where({ spedId }).toArray();
+    for (const p of produtos) {
+      if (p.descrItem && !descricoesPorCodigo.has(p.codItem)) {
+        descricoesPorCodigo.set(p.codItem, p.descrItem);
+      }
+    }
+  } catch {
+    // Tabela pode não existir em versões antigas
+  }
+
+  // Se não encontrou na tabela de produtos, buscar nas inconsistências
+  if (descricoesPorCodigo.size < produtosCodigos.length) {
+    const inconsistencias = await db.combustivel_inconsistencias
+      .where({ spedId })
+      .toArray();
+
+    for (const i of inconsistencias) {
+      if (i.descricaoProduto && !descricoesPorCodigo.has(i.codItem)) {
+        descricoesPorCodigo.set(i.codItem, i.descricaoProduto);
+      }
+    }
+  }
+
+  return produtosCodigos.map((codItem) => {
+    const descricao = descricoesPorCodigo.get(codItem) || "";
+    return { codItem, descricao };
+  });
+}
+
+/**
+ * Salva produtos (registro 0200) no banco
+ */
+export async function saveProdutos(
+  spedId: number,
+  produtos: Array<{
+    codItem: string;
+    descrItem: string;
+    unidInv?: string;
+    tipoItem?: string;
+  }>
+): Promise<void> {
+  if (!produtos || produtos.length === 0) return;
+
+  const rows: ProdutoRow[] = produtos.map((p) => ({
+    spedId,
+    codItem: p.codItem,
+    descrItem: p.descrItem,
+    unidInv: p.unidInv,
+    tipoItem: p.tipoItem,
+  }));
+
+  await db.produtos.bulkAdd(rows);
+}
+
+/**
+ * Busca descrição de um produto pelo código
+ */
+export async function getDescricaoProduto(
+  spedId: number,
+  codItem: string
+): Promise<string | null> {
+  try {
+    const produto = await db.produtos.where({ spedId, codItem }).first();
+    return produto?.descrItem || null;
+  } catch {
+    return null;
+  }
 }
 
 /**

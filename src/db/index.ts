@@ -155,6 +155,10 @@ export class SpedDB extends Dexie {
       combustivel_inconsistencias:
         "++id, spedId, tipo, severidade, codItem, dtMov, [spedId+tipo], [spedId+dtMov], [spedId+severidade]",
     });
+    // v14: adicionar tabela de produtos (Registro 0200) para descrições
+    this.version(14).stores({
+      produtos: "++id, spedId, codItem, [spedId+codItem]",
+    });
   }
 
   // Declaração das tabelas de combustíveis
@@ -162,6 +166,7 @@ export class SpedDB extends Dexie {
   combustivel_tanque!: Table<CombustivelTanqueRow, number>;
   combustivel_bico!: Table<CombustivelBicoRow, number>;
   combustivel_inconsistencias!: Table<CombustivelInconsistenciaRow, number>;
+  produtos!: Table<ProdutoRow, number>;
 }
 
 export const db = new SpedDB();
@@ -316,4 +321,16 @@ export interface CombustivelInconsistenciaRow {
   descricao: string;
   documentosRelacionados?: string; // JSON stringified array
   detectedAt: string; // ISO timestamp
+}
+
+/**
+ * Registro 0200 - Cadastro de Produtos
+ */
+export interface ProdutoRow {
+  id?: number;
+  spedId: number;
+  codItem: string;
+  descrItem: string;
+  unidInv?: string;
+  tipoItem?: string;
 }
