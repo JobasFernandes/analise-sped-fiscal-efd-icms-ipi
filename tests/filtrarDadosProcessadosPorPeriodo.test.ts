@@ -3,12 +3,15 @@ import { filtrarDadosProcessadosPorPeriodo } from "../src/utils/dataProcessor";
 import type { ProcessedData } from "../src/utils/types";
 
 const baseDados: ProcessedData = {
-  periodo: { inicio: new Date("2025-06-01"), fim: new Date("2025-06-30") },
+  periodo: {
+    inicio: new Date("2025-06-01T12:00:00"),
+    fim: new Date("2025-06-30T12:00:00"),
+  },
   entradas: [
     {
       numeroDoc: "1",
       chaveNfe: "NFE1",
-      dataDocumento: new Date("2025-06-01"),
+      dataDocumento: new Date("2025-06-01T12:00:00"),
       dataEntradaSaida: null,
       valorDocumento: 100,
       valorMercadoria: 100,
@@ -19,7 +22,7 @@ const baseDados: ProcessedData = {
     {
       numeroDoc: "2",
       chaveNfe: "NFE2",
-      dataDocumento: new Date("2025-06-15"),
+      dataDocumento: new Date("2025-06-15T12:00:00"),
       dataEntradaSaida: null,
       valorDocumento: 50,
       valorMercadoria: 50,
@@ -72,13 +75,13 @@ describe("filtrarDadosProcessadosPorPeriodo", () => {
     expect(res.periodo).toEqual({ inicio: "2025-06-01", fim: "2025-06-15" });
   });
 
-  it("inclui notas na faixa e ignora as sem data para o filtro", () => {
+  it("inclui notas na faixa e mantém notas sem data", () => {
     const res = filtrarDadosProcessadosPorPeriodo(
       baseDados,
       "2025-06-01",
       "2025-06-15"
     );
     // Apenas notas com data na faixa são incluídas
-    expect(res.entradas.length).toBe(2);
+    expect(res.entradas.length).toBe(3);
   });
 });
