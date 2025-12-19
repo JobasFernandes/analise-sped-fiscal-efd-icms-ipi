@@ -1,9 +1,12 @@
 import { describe, it, expect } from "vitest";
 import { parseXmlNfe } from "../src/utils/xmlParser";
 import fs from "fs";
+import path from "path";
 
 function loadFixture(name: string) {
-  return fs.readFileSync(name, "utf-8");
+  // Usar caminho relativo à raiz do projeto para funcionar no CI
+  const filePath = path.join(__dirname, "..", name);
+  return fs.readFileSync(filePath, "utf-8");
 }
 
 describe("parseXmlNfe", () => {

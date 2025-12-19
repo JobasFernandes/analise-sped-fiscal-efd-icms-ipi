@@ -78,6 +78,7 @@ describe("filtrarDadosProcessadosPorPeriodo", () => {
       "2025-06-01",
       "2025-06-15"
     );
+    // Apenas notas com data na faixa são incluídas
     expect(res.entradas.length).toBe(2);
   });
 });
