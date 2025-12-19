@@ -339,22 +339,24 @@ export class SpedParser {
   process0150(registro: RegistroSped) {
     const c = registro.campos;
     this.data.participantes?.push({
-      codPart: c[2],
-      nome: c[3],
-      codMun: c[8],
-      cnpj: c[5],
-      cpf: c[6],
-      ie: c[7],
+      codPart: c[1],
+      nome: c[2],
+      codMun: c[7],
+      cnpj: c[4],
+      cpf: c[5],
+      ie: c[6],
     });
   }
 
   process0200(registro: RegistroSped) {
     const c = registro.campos;
+    // Layout: |0200|COD_ITEM|DESCR_ITEM|COD_BARRA|COD_ANT_ITEM|UNID_INV|TIPO_ITEM|...
+    // campos[0] = "0200", campos[1] = COD_ITEM, campos[2] = DESCR_ITEM, etc.
     this.data.produtos?.push({
-      codItem: c[2],
-      descrItem: c[3],
-      unidInv: c[6],
-      tipoItem: c[7],
+      codItem: c[1],
+      descrItem: c[2],
+      unidInv: c[5],
+      tipoItem: c[6],
     });
   }
 

@@ -17,7 +17,6 @@ import {
   Minus,
   Droplets,
   Gauge,
-  Download,
 } from "lucide-react";
 import Spinner from "./ui/spinner";
 import { FiscalInsight } from "./ui/FiscalInsight";

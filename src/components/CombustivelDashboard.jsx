@@ -12,7 +12,6 @@ import {
   FileWarning,
   CheckCircle2,
   ExternalLink,
-  Download,
 } from "lucide-react";
 import Card from "./ui/Card";
 import Button from "./ui/Button";
@@ -657,7 +656,7 @@ const MovimentacaoTab = ({ movimentacoes, onRowClick }) => {
 
 const InconsistenciasTab = ({
   inconsistencias,
-  resumoInconsistencias,
+  resumoInconsistencias: _resumoInconsistencias,
   onCardClick,
   onExport,
 }) => {
