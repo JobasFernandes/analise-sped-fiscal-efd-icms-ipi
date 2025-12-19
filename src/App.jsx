@@ -39,6 +39,7 @@ const XmlUpload = lazy(() => import("./components/XmlUpload"));
 const SpedXmlComparison = lazy(() => import("./components/SpedXmlComparison"));
 const OrphanList = lazy(() => import("./components/audit/OrphanList"));
 const GapList = lazy(() => import("./components/audit/GapList"));
+const CombustivelDashboard = lazy(() => import("./components/CombustivelDashboard"));
 
 const LoadingFallback = () => (
   <div className="flex items-center justify-center p-8">
@@ -444,6 +445,11 @@ function App() {
                     <GapList spedId={savedSpedId} />
                   </Suspense>
                 </div>
+              )}
+              {savedSpedId && (
+                <Suspense fallback={<LoadingFallback />}>
+                  <CombustivelDashboard spedId={savedSpedId} dados={dadosProcessados} />
+                </Suspense>
               )}
             </div>
           </div>

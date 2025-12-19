@@ -9,6 +9,7 @@ import {
   type DayCfopAggRow,
 } from "../index";
 import type { ProcessedData } from "../../utils/types";
+import { saveCombustivelBatch, deleteCombustivelBySpedId } from "./combustivelDao";
 
 export interface AddSpedMetadata {
   filename: string;
@@ -228,6 +229,9 @@ export async function listSpeds(): Promise<SpedFileRow[]> {
 }
 
 export async function deleteSped(spedId: number): Promise<void> {
+  // Deletar dados de combustíveis (fora da transação principal pois usa outras tabelas)
+  await deleteCombustivelBySpedId(spedId);
+
   await db.transaction(
     "rw",
     [
@@ -406,7 +410,13 @@ export async function createSpedFile(meta: AddSpedMetadata): Promise<number> {
 
 export async function saveSpedBatch(
   spedId: number,
-  data: { entradas: any[]; saidas: any[] }
+  data: {
+    entradas: any[];
+    saidas: any[];
+    combustivelMovDiaria?: any[];
+    combustivelTanques?: any[];
+    combustivelBicos?: any[];
+  }
 ): Promise<void> {
   const docs: DocumentRow[] = [];
   const items: ItemRow[] = [];
@@ -482,6 +492,19 @@ export async function saveSpedBatch(
     if (items.length) await db.items.bulkAdd(items);
     if (itemsC170.length) await db.items_c170.bulkAdd(itemsC170);
   });
+
+  // Salvar dados de combustíveis se presentes
+  if (
+    (data.combustivelMovDiaria && data.combustivelMovDiaria.length > 0) ||
+    (data.combustivelTanques && data.combustivelTanques.length > 0) ||
+    (data.combustivelBicos && data.combustivelBicos.length > 0)
+  ) {
+    await saveCombustivelBatch(spedId, {
+      combustivelMovDiaria: data.combustivelMovDiaria,
+      combustivelTanques: data.combustivelTanques,
+      combustivelBicos: data.combustivelBicos,
+    });
+  }
 }
 
 export async function updateSpedTotals(

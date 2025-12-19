@@ -270,3 +270,146 @@ export interface RegistroSped {
   campos: string[];
   linha: string;
 }
+
+// =====================================================
+// TIPOS PARA MOVIMENTAÇÃO DE COMBUSTÍVEIS (Bloco 1)
+// =====================================================
+
+/**
+ * Registro 1300 - Movimentação Diária de Combustíveis (por produto)
+ * Campos: COD_ITEM | DT_MOV | QTD_INI | QTD_ENTR | QTD_DISPONIVEL | QTD_VENDAS | QTD_FIM_FISICO | QTD_PERDA | QTD_SOBRA | QTD_FIM_CONTABIL
+ */
+export interface MovimentacaoCombustivel1300 {
+  codItem: string; // Código do produto combustível (ex: 740 = Diesel S10)
+  dtMov: string; // Data da movimentação (ISO yyyy-MM-dd)
+  qtdIni: number; // Quantidade inicial (litros)
+  qtdEntr: number; // Quantidade de entrada (compras/recebimentos)
+  qtdDisponivel: number; // Total disponível (INI + ENTR)
+  qtdVendas: number; // Quantidade vendida
+  qtdFimFisico: number; // Estoque físico final (medição)
+  qtdPerda: number; // Perdas declaradas
+  qtdSobra: number; // Sobras declaradas
+  qtdFimContabil: number; // Estoque contábil final
+}
+
+/**
+ * Registro 1310 - Movimentação Diária por Tanque
+ * Mesmos campos de quantidade do 1300, mas por tanque específico
+ */
+export interface MovimentacaoTanque1310 {
+  codItem: string; // Código do combustível (herdado do 1300 pai)
+  dtMov: string; // Data da movimentação (herdado do 1300 pai)
+  numTanque: string; // Número/identificador do tanque
+  qtdIni: number;
+  qtdEntr: number;
+  qtdDisponivel: number;
+  qtdVendas: number;
+  qtdFimFisico: number;
+  qtdPerda: number;
+  qtdSobra: number;
+  qtdFimContabil: number;
+}
+
+/**
+ * Registro 1320 - Volume de Vendas por Bico (Encerrante)
+ * Registra leituras de encerrante por bico de bomba
+ */
+export interface VolumeVendasBico1320 {
+  codItem: string; // Código do combustível (herdado do 1300 pai)
+  dtMov: string; // Data da movimentação (herdado do 1300 pai)
+  numTanque: string; // Número do tanque (herdado do 1310 pai)
+  numBico: string; // Número do bico
+  numInterv: string; // Número de intervenção
+  motInterv: string; // Motivo da intervenção
+  nomInterv: string; // Nome do interventor
+  encerranteIni: number; // Leitura inicial do encerrante
+  encerranteFim: number; // Leitura final do encerrante
+  qtdAfericao: number; // Quantidade de aferição
+  qtdVendas: number; // Volume vendido pelo bico
+}
+
+/**
+ * Tipo de inconsistência encontrada
+ */
+export type TipoInconsistenciaCombustivel =
+  | "ESTOQUE_MAIOR_SEM_ENTRADA" // Estoque final > inicial sem NF de entrada
+  | "PERDA_ACIMA_LIMITE" // Perda acima do limite legal (0.6% diesel, 1% gasolina)
+  | "SOBRA_ACIMA_LIMITE" // Sobra acima do limite aceitável
+  | "DIVERGENCIA_TANQUES" // Soma dos tanques ≠ total do produto
+  | "DIVERGENCIA_BICOS" // Soma das vendas por bico ≠ vendas do tanque
+  | "DIVERGENCIA_DOCUMENTOS" // Vendas declaradas ≠ soma NFC-e/NF-e
+  | "ENTRADA_SEM_DOCUMENTO" // Entrada declarada sem NF-e correspondente
+  | "ESTOQUE_NEGATIVO" // Estoque ficou negativo em algum momento
+  | "VARIACAO_ANOMALA"; // Variação fora do padrão histórico
+
+/**
+ * Severidade da inconsistência
+ */
+export type SeveridadeInconsistencia = "INFO" | "AVISO" | "CRITICO";
+
+/**
+ * Inconsistência detectada na movimentação de combustíveis
+ */
+export interface InconsistenciaCombustivel {
+  id?: string; // UUID
+  spedId: number; // FK para o arquivo SPED
+  tipo: TipoInconsistenciaCombustivel;
+  severidade: SeveridadeInconsistencia;
+  codItem: string;
+  descricaoProduto?: string;
+  dtMov: string; // Data da movimentação
+  numTanque?: string; // Se aplicável
+  numBico?: string; // Se aplicável
+  valorEsperado: number;
+  valorEncontrado: number;
+  diferenca: number;
+  percentualDiferenca: number;
+  descricao: string; // Descrição legível da inconsistência
+  documentosRelacionados?: string[]; // Chaves de NF-e/NFC-e relacionadas
+  detectedAt: string; // ISO timestamp
+}
+
+/**
+ * Resumo de movimentação por combustível agregado de todos os tanques
+ */
+export interface ResumoMovimentacaoCombustivel {
+  codItem: string;
+  descricaoProduto?: string;
+  dtMov: string;
+  tanques: MovimentacaoTanque1310[];
+  // Totais agregados de todos os tanques
+  totalQtdIni: number;
+  totalQtdEntr: number;
+  totalQtdDisponivel: number;
+  totalQtdVendas: number;
+  totalQtdFimFisico: number;
+  totalQtdPerda: number;
+  totalQtdSobra: number;
+  totalQtdFimContabil: number;
+  // Métricas calculadas
+  percentualPerda: number;
+  percentualSobra: number;
+  diferencaFisicoContabil: number;
+}
+
+/**
+ * Comparativo de vendas: SPED 1300 vs Documentos Fiscais
+ */
+export interface ComparativoVendasCombustivel {
+  codItem: string;
+  descricaoProduto?: string;
+  dtMov: string;
+  vendasSped: number; // Total vendas declarado no 1300
+  vendasNfce: number; // Total vendas em NFC-e (CFOPs 5xxx)
+  vendasNfe: number; // Total vendas em NF-e (CFOPs 5xxx/6xxx)
+  totalDocumentos: number; // vendasNfce + vendasNfe
+  diferenca: number; // vendasSped - totalDocumentos
+  percentualDiferenca: number;
+  documentosVenda: Array<{
+    chave: string;
+    numero: string;
+    tipo: "NFE" | "NFCE";
+    valor: number;
+    quantidade: number;
+  }>;
+}

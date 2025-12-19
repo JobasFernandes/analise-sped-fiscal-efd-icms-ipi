@@ -144,7 +144,24 @@ export class SpedDB extends Dexie {
     this.version(12).stores({
       sped_contents: "id, spedId", // id (uuid), spedId (FK)
     });
+    // v13: adicionar tabelas para movimentação de combustíveis (Registros 1300, 1310, 1320)
+    this.version(13).stores({
+      combustivel_mov_diaria:
+        "++id, spedId, codItem, dtMov, [spedId+codItem+dtMov], [spedId+dtMov]",
+      combustivel_tanque:
+        "++id, spedId, codItem, dtMov, numTanque, [spedId+codItem+dtMov], [spedId+numTanque]",
+      combustivel_bico:
+        "++id, spedId, codItem, dtMov, numTanque, numBico, [spedId+codItem+dtMov], [spedId+numBico]",
+      combustivel_inconsistencias:
+        "++id, spedId, tipo, severidade, codItem, dtMov, [spedId+tipo], [spedId+dtMov], [spedId+severidade]",
+    });
   }
+
+  // Declaração das tabelas de combustíveis
+  combustivel_mov_diaria!: Table<CombustivelMovDiariaRow, number>;
+  combustivel_tanque!: Table<CombustivelTanqueRow, number>;
+  combustivel_bico!: Table<CombustivelBicoRow, number>;
+  combustivel_inconsistencias!: Table<CombustivelInconsistenciaRow, number>;
 }
 
 export const db = new SpedDB();
@@ -221,4 +238,82 @@ export interface DivergenceRow {
   status: "PENDING" | "RESOLVED" | "IGNORED" | "JUSTIFIED";
   comment?: string;
   updatedAt: string; // ISO
+}
+
+/**
+ * Registro 1300 - Movimentação Diária de Combustíveis (por produto)
+ */
+export interface CombustivelMovDiariaRow {
+  id?: number; // auto-increment PK
+  spedId: number; // FK -> SpedFileRow.id
+  codItem: string; // Código do produto combustível
+  dtMov: string; // Data da movimentação (ISO yyyy-MM-dd)
+  qtdIni: number; // Quantidade inicial (litros)
+  qtdEntr: number; // Quantidade de entrada
+  qtdDisponivel: number; // Total disponível
+  qtdVendas: number; // Quantidade vendida
+  qtdFimFisico: number; // Estoque físico final
+  qtdPerda: number; // Perdas declaradas
+  qtdSobra: number; // Sobras declaradas
+  qtdFimContabil: number; // Estoque contábil final
+}
+
+/**
+ * Registro 1310 - Movimentação por Tanque
+ */
+export interface CombustivelTanqueRow {
+  id?: number;
+  spedId: number;
+  codItem: string; // Herdado do 1300 pai
+  dtMov: string; // Herdado do 1300 pai
+  numTanque: string;
+  qtdIni: number;
+  qtdEntr: number;
+  qtdDisponivel: number;
+  qtdVendas: number;
+  qtdFimFisico: number;
+  qtdPerda: number;
+  qtdSobra: number;
+  qtdFimContabil: number;
+}
+
+/**
+ * Registro 1320 - Volume de Vendas por Bico
+ */
+export interface CombustivelBicoRow {
+  id?: number;
+  spedId: number;
+  codItem: string;
+  dtMov: string;
+  numTanque: string;
+  numBico: string;
+  numInterv?: string;
+  motInterv?: string;
+  nomInterv?: string;
+  encerranteIni: number;
+  encerranteFim: number;
+  qtdAfericao: number;
+  qtdVendas: number;
+}
+
+/**
+ * Inconsistências detectadas em combustíveis
+ */
+export interface CombustivelInconsistenciaRow {
+  id?: number;
+  spedId: number;
+  tipo: string; // TipoInconsistenciaCombustivel
+  severidade: "INFO" | "AVISO" | "CRITICO";
+  codItem: string;
+  descricaoProduto?: string;
+  dtMov: string;
+  numTanque?: string;
+  numBico?: string;
+  valorEsperado: number;
+  valorEncontrado: number;
+  diferenca: number;
+  percentualDiferenca: number;
+  descricao: string;
+  documentosRelacionados?: string; // JSON stringified array
+  detectedAt: string; // ISO timestamp
 }

@@ -102,7 +102,13 @@ self.onmessage = async function (e: MessageEvent<any>) {
 
         if (linesProcessed % BATCH_SIZE === 0) {
           const batch = parser.getAndClearBatchData();
-          if (batch.entradas.length > 0 || batch.saidas.length > 0) {
+          if (
+            batch.entradas.length > 0 ||
+            batch.saidas.length > 0 ||
+            batch.combustivelMovDiaria.length > 0 ||
+            batch.combustivelTanques.length > 0 ||
+            batch.combustivelBicos.length > 0
+          ) {
             (self as any).postMessage({ type: "batch", data: batch });
           }
         }
@@ -130,7 +136,13 @@ self.onmessage = async function (e: MessageEvent<any>) {
 
     // Send last batch
     const batch = parser.getAndClearBatchData();
-    if (batch.entradas.length > 0 || batch.saidas.length > 0) {
+    if (
+      batch.entradas.length > 0 ||
+      batch.saidas.length > 0 ||
+      batch.combustivelMovDiaria.length > 0 ||
+      batch.combustivelTanques.length > 0 ||
+      batch.combustivelBicos.length > 0
+    ) {
       (self as any).postMessage({ type: "batch", data: batch });
     }
 

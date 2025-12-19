@@ -13,6 +13,9 @@ import type {
   ApuracaoICMS,
   Inventario,
   RegistroSped,
+  MovimentacaoCombustivel1300,
+  MovimentacaoTanque1310,
+  VolumeVendasBico1320,
 } from "./types";
 
 export class SpedParser {
@@ -48,6 +51,10 @@ export class SpedParser {
     produtos?: Produto[];
     apuracaoICMS?: ApuracaoICMS[];
     inventario?: Inventario[];
+    // Dados de combustíveis (Bloco 1 - Registros 1300, 1310, 1320)
+    combustivelMovDiaria?: MovimentacaoCombustivel1300[];
+    combustivelTanques?: MovimentacaoTanque1310[];
+    combustivelBicos?: VolumeVendasBico1320[];
   };
   constructor() {
     this.resetData();
@@ -87,6 +94,10 @@ export class SpedParser {
         else if (registro.tipo === "E110") this.processE110(registro);
         else if (registro.tipo === "H005") this.processH005(registro);
         else if (registro.tipo === "H010") this.processH010(registro);
+        // Bloco 1 - Movimentação de Combustíveis
+        else if (registro.tipo === "1300") this.process1300(registro);
+        else if (registro.tipo === "1310") this.process1310(registro);
+        else if (registro.tipo === "1320") this.process1320(registro);
       } catch (err) {
         console.warn("Linha SPED ignorada por erro de parsing:", err);
       } finally {
@@ -103,6 +114,10 @@ export class SpedParser {
     this.processarDadosFinais();
     return this.data as unknown as ProcessedData;
   }
+
+  // Estado para parsing de combustíveis (Bloco 1)
+  private currentCombustivel1300: MovimentacaoCombustivel1300 | null = null;
+  private currentTanque1310: MovimentacaoTanque1310 | null = null;
 
   resetData() {
     this.data = {
@@ -125,7 +140,14 @@ export class SpedParser {
       produtos: [],
       apuracaoICMS: [],
       inventario: [],
+      // Dados de combustíveis (Bloco 1)
+      combustivelMovDiaria: [],
+      combustivelTanques: [],
+      combustivelBicos: [],
     };
+    // Resetar estado de combustíveis
+    this.currentCombustivel1300 = null;
+    this.currentTanque1310 = null;
   }
   process0000(registro: RegistroSped) {
     const campos = registro.campos;
@@ -380,6 +402,117 @@ export class SpedParser {
     });
   }
 
+  /**
+   * Registro 1300 - Movimentação Diária de Combustíveis
+   * Layout: |1300|COD_ITEM|DT_MOV|QTD_INI|QTD_ENTR|QTD_DISPONIVEL|QTD_VENDAS|QTD_FIM_FISICO|QTD_PERDA|QTD_SOBRA|QTD_FIM_CONTABIL|
+   */
+  process1300(registro: RegistroSped) {
+    const c = registro.campos;
+    if (c.length < 11) return;
+
+    const dtMovStr = c[2];
+    const dtMov = this.parseDateToIso(dtMovStr);
+
+    this.currentCombustivel1300 = {
+      codItem: c[1] || "",
+      dtMov: dtMov || "",
+      qtdIni: this.parseValor(c[3]),
+      qtdEntr: this.parseValor(c[4]),
+      qtdDisponivel: this.parseValor(c[5]),
+      qtdVendas: this.parseValor(c[6]),
+      qtdFimFisico: this.parseValor(c[7]),
+      qtdPerda: this.parseValor(c[8]),
+      qtdSobra: this.parseValor(c[9]),
+      qtdFimContabil: this.parseValor(c[10]),
+    };
+
+    if (!this.data.combustivelMovDiaria) this.data.combustivelMovDiaria = [];
+    this.data.combustivelMovDiaria.push(this.currentCombustivel1300);
+  }
+
+  /**
+   * Registro 1310 - Movimentação Diária por Tanque
+   * Layout: |1310|NUM_TANQUE|QTD_INI|QTD_ENTR|QTD_DISPONIVEL|QTD_VENDAS|QTD_FIM_FISICO|QTD_PERDA|QTD_SOBRA|QTD_FIM_CONTABIL|
+   */
+  process1310(registro: RegistroSped) {
+    const c = registro.campos;
+    if (c.length < 10) return;
+
+    // Herda codItem e dtMov do registro 1300 pai
+    const codItem = this.currentCombustivel1300?.codItem || "";
+    const dtMov = this.currentCombustivel1300?.dtMov || "";
+
+    this.currentTanque1310 = {
+      codItem,
+      dtMov,
+      numTanque: c[1] || "",
+      qtdIni: this.parseValor(c[2]),
+      qtdEntr: this.parseValor(c[3]),
+      qtdDisponivel: this.parseValor(c[4]),
+      qtdVendas: this.parseValor(c[5]),
+      qtdFimFisico: this.parseValor(c[6]),
+      qtdPerda: this.parseValor(c[7]),
+      qtdSobra: this.parseValor(c[8]),
+      qtdFimContabil: this.parseValor(c[9]),
+    };
+
+    if (!this.data.combustivelTanques) this.data.combustivelTanques = [];
+    this.data.combustivelTanques.push(this.currentTanque1310);
+  }
+
+  /**
+   * Registro 1320 - Volume de Vendas por Bico/Bomba
+   * Layout conforme Guia Prático EFD ICMS/IPI:
+   * |1320|NUM_BICO|NR_INTERV|MOT_INTERV|NOM_INTERV|CNPJ_INTERV|CPF_INTERV|VAL_FECHA|VAL_ABERT|VOL_AFERI|VOL_VENDAS|
+   *
+   * Onde:
+   * - VAL_FECHA (c[7]): Valor do encerrante no FECHAMENTO (final do período)
+   * - VAL_ABERT (c[8]): Valor do encerrante na ABERTURA (início do período)
+   * - VOL_VENDAS = VAL_FECHA - VAL_ABERT (volume vendido no período)
+   */
+  process1320(registro: RegistroSped) {
+    const c = registro.campos;
+    if (c.length < 11) return;
+
+    // Herda codItem e dtMov do 1300, numTanque do 1310
+    const codItem = this.currentCombustivel1300?.codItem || "";
+    const dtMov = this.currentCombustivel1300?.dtMov || "";
+    const numTanque = this.currentTanque1310?.numTanque || "";
+
+    const bico: VolumeVendasBico1320 = {
+      codItem,
+      dtMov,
+      numTanque,
+      numBico: c[1] || "",
+      numInterv: c[2] || "",
+      motInterv: c[3] || "",
+      nomInterv: c[4] || "",
+      // Campos de encerrante conforme Guia Prático:
+      // c[7] = VAL_FECHA (encerrante final/fechamento)
+      // c[8] = VAL_ABERT (encerrante inicial/abertura)
+      encerranteIni: this.parseValor(c[8]), // VAL_ABERT - abertura
+      encerranteFim: this.parseValor(c[7]), // VAL_FECHA - fechamento
+      qtdAfericao: this.parseValor(c[9]), // VOL_AFERI
+      qtdVendas: this.parseValor(c[10]), // VOL_VENDAS
+    };
+
+    if (!this.data.combustivelBicos) this.data.combustivelBicos = [];
+    this.data.combustivelBicos.push(bico);
+  }
+
+  /**
+   * Converte data SPED (DDMMAAAA) para ISO (YYYY-MM-DD)
+   */
+  parseDateToIso(dateStr?: string): string | null {
+    if (!dateStr || dateStr.length !== 8) return null;
+    try {
+      const date = parse(dateStr, "ddMMyyyy", new Date());
+      return format(date, "yyyy-MM-dd");
+    } catch {
+      return null;
+    }
+  }
+
   parseDate(dateStr?: string) {
     if (!dateStr || dateStr.length !== 8) return null;
     try {
@@ -523,6 +656,10 @@ export class SpedParser {
         this.processC190(registro, this.currentNota);
       else if (registro.tipo === "C170" && this.currentNota)
         this.processC170(registro, this.currentNota);
+      // Bloco 1 - Movimentação de Combustíveis
+      else if (registro.tipo === "1300") this.process1300(registro);
+      else if (registro.tipo === "1310") this.process1310(registro);
+      else if (registro.tipo === "1320") this.process1320(registro);
     } catch (err) {
       console.warn("Linha SPED ignorada por erro de parsing:", err);
     }
@@ -543,10 +680,28 @@ export class SpedParser {
     const batch = {
       entradas: [...this.data.entradas],
       saidas: [...this.data.saidas],
+      // Dados de combustíveis
+      combustivelMovDiaria: [...(this.data.combustivelMovDiaria || [])],
+      combustivelTanques: [...(this.data.combustivelTanques || [])],
+      combustivelBicos: [...(this.data.combustivelBicos || [])],
     };
     this.data.entradas = [];
     this.data.saidas = [];
+    this.data.combustivelMovDiaria = [];
+    this.data.combustivelTanques = [];
+    this.data.combustivelBicos = [];
     return batch;
+  }
+
+  /**
+   * Retorna dados de combustíveis acumulados
+   */
+  public getCombustivelData() {
+    return {
+      movDiaria: this.data.combustivelMovDiaria || [],
+      tanques: this.data.combustivelTanques || [],
+      bicos: this.data.combustivelBicos || [],
+    };
   }
 }
 
