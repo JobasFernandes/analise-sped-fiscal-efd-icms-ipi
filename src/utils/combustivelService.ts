@@ -623,6 +623,64 @@ export async function gerarComparativoVendas(
 }
 
 /**
+ * Obtém comparativo detalhado de um dia/produto específico
+ */
+export async function getComparativoVendasDia(
+  spedId: number,
+  codItem: string,
+  dtMov: string
+): Promise<ComparativoVendasCombustivel | null> {
+  const comparativos = await gerarComparativoVendas(spedId);
+  return comparativos.find((c) => c.codItem === codItem && c.dtMov === dtMov) || null;
+}
+
+/**
+ * Obtém dados completos do registro 1300 para um dia/produto específico
+ */
+export async function getMovimentacaoDia(
+  spedId: number,
+  codItem: string,
+  dtMov: string
+): Promise<{
+  movimento: CombustivelMovDiariaRow | null;
+  tanques: CombustivelTanqueRow[];
+  bicos: CombustivelBicoRow[];
+  inconsistencias: InconsistenciaCombustivel[];
+}> {
+  const movimentoResult = await db.combustivel_mov_diaria
+    .where({ spedId, codItem, dtMov })
+    .first();
+  const movimento = movimentoResult ?? null;
+
+  const tanques = movimento
+    ? await db.combustivel_tanque.where({ spedId, codItem, dtMov }).toArray()
+    : [];
+
+  const bicos: CombustivelBicoRow[] = [];
+  for (const tanque of tanques) {
+    const bicosDoTanque = await db.combustivel_bico
+      .where({ spedId, codItem, dtMov, numTanque: tanque.numTanque })
+      .toArray();
+    bicos.push(...bicosDoTanque);
+  }
+
+  const todasInconsistencias = await db.combustivel_inconsistencias
+    .where({ spedId })
+    .toArray();
+
+  const inconsistencias = todasInconsistencias
+    .filter((i) => i.codItem === codItem && i.dtMov === dtMov)
+    .map((i) => ({
+      ...i,
+      documentosRelacionados: i.documentosRelacionados
+        ? JSON.parse(i.documentosRelacionados)
+        : undefined,
+    })) as InconsistenciaCombustivel[];
+
+  return { movimento, tanques, bicos, inconsistencias };
+}
+
+/**
  * Gera resumo de inconsistências agrupadas por tipo e severidade
  */
 export async function gerarResumoInconsistencias(spedId: number): Promise<{

@@ -11,11 +11,13 @@ import {
   RefreshCw,
   FileWarning,
   CheckCircle2,
+  ExternalLink,
 } from "lucide-react";
 import Card from "./ui/Card";
 import Button from "./ui/Button";
 import Spinner from "./ui/spinner";
 import DateInput from "./ui/date-input";
+import ComparativoDialog from "./ComparativoDialog";
 import {
   getMovimentacoesDiariasBySpedId,
   getTotaisPorProduto,
@@ -89,6 +91,18 @@ const CombustivelDashboard = ({ spedId }) => {
   const [abaAtiva, setAbaAtiva] = useState("resumo");
   const [dataInicio, setDataInicio] = useState("");
   const [dataFim, setDataFim] = useState("");
+
+  // Estado para o dialog de comparativo
+  const [dialogOpen, setDialogOpen] = useState(false);
+  const [dialogCodItem, setDialogCodItem] = useState("");
+  const [dialogDtMov, setDialogDtMov] = useState("");
+
+  // Função para abrir o dialog de comparativo
+  const abrirComparativo = (codItem, dtMov) => {
+    setDialogCodItem(codItem);
+    setDialogDtMov(dtMov);
+    setDialogOpen(true);
+  };
 
   const carregarDados = async () => {
     setLoading(true);
@@ -309,12 +323,27 @@ const CombustivelDashboard = ({ spedId }) => {
       )}
 
       {abaAtiva === "movimentacao" && (
-        <MovimentacaoTab movimentacoes={movimentacoesFiltradas} />
+        <MovimentacaoTab
+          movimentacoes={movimentacoesFiltradas}
+          onRowClick={abrirComparativo}
+        />
       )}
 
       {abaAtiva === "inconsistencias" && (
-        <InconsistenciasTab inconsistencias={inconsistenciasFiltradas} />
+        <InconsistenciasTab
+          inconsistencias={inconsistenciasFiltradas}
+          onCardClick={abrirComparativo}
+        />
       )}
+
+      {/* Dialog de Comparativo */}
+      <ComparativoDialog
+        open={dialogOpen}
+        onOpenChange={setDialogOpen}
+        spedId={spedId}
+        codItem={dialogCodItem}
+        dtMov={dialogDtMov}
+      />
     </div>
   );
 };
@@ -474,7 +503,7 @@ const ResumoTab = ({ totaisPorProduto, resumoInconsistencias, movimentacoes }) =
 // ABA MOVIMENTAÇÃO
 // =====================================================
 
-const MovimentacaoTab = ({ movimentacoes }) => {
+const MovimentacaoTab = ({ movimentacoes, onRowClick }) => {
   // Ordenar por data
   const movimentacoesOrdenadas = useMemo(() => {
     return [...movimentacoes].sort((a, b) => b.dtMov.localeCompare(a.dtMov));
@@ -482,6 +511,10 @@ const MovimentacaoTab = ({ movimentacoes }) => {
 
   return (
     <Card className="p-4">
+      <div className="mb-3 text-xs text-muted-foreground flex items-center gap-1">
+        <ExternalLink className="h-3 w-3" />
+        Clique em uma linha para ver o comparativo detalhado
+      </div>
       <div className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead>
@@ -502,7 +535,9 @@ const MovimentacaoTab = ({ movimentacoes }) => {
             {movimentacoesOrdenadas.map((m, idx) => (
               <tr
                 key={`${m.codItem}-${m.dtMov}-${idx}`}
-                className="border-b hover:bg-muted/50"
+                className="border-b hover:bg-muted/50 cursor-pointer transition-colors hover:bg-primary/5"
+                onClick={() => onRowClick?.(m.codItem, m.dtMov)}
+                title="Clique para ver comparativo detalhado"
               >
                 <td className="py-2 px-3">{formatarData(m.dtMov)}</td>
                 <td className="py-2 px-3 font-medium">{m.codItem}</td>
@@ -547,7 +582,7 @@ const MovimentacaoTab = ({ movimentacoes }) => {
 // ABA INCONSISTÊNCIAS
 // =====================================================
 
-const InconsistenciasTab = ({ inconsistencias }) => {
+const InconsistenciasTab = ({ inconsistencias, onCardClick }) => {
   // Ordenar por severidade e data
   const inconsistenciasOrdenadas = useMemo(() => {
     const ordemSeveridade = { CRITICO: 0, AVISO: 1, INFO: 2 };
@@ -575,6 +610,10 @@ const InconsistenciasTab = ({ inconsistencias }) => {
 
   return (
     <div className="space-y-4">
+      <div className="text-xs text-muted-foreground flex items-center gap-1">
+        <ExternalLink className="h-3 w-3" />
+        Clique em uma inconsistência para ver o comparativo detalhado
+      </div>
       {inconsistenciasOrdenadas.map((i, idx) => {
         const IconeSeveridade = iconesSeveridade[i.severidade];
         const corClasse = coresSeveridade[i.severidade];
@@ -582,7 +621,9 @@ const InconsistenciasTab = ({ inconsistencias }) => {
         return (
           <Card
             key={`${i.tipo}-${i.dtMov}-${i.codItem}-${idx}`}
-            className={`p-4 border ${corClasse}`}
+            className={`p-4 border ${corClasse} cursor-pointer transition-all hover:shadow-md hover:scale-[1.01]`}
+            onClick={() => onCardClick?.(i.codItem, i.dtMov)}
+            title="Clique para ver comparativo detalhado"
           >
             <div className="flex items-start gap-3">
               <IconeSeveridade className="h-5 w-5 mt-0.5 flex-shrink-0" />
@@ -594,6 +635,7 @@ const InconsistenciasTab = ({ inconsistencias }) => {
                   <span className="text-xs px-2 py-0.5 rounded-full bg-background">
                     {i.severidade}
                   </span>
+                  <ExternalLink className="h-3 w-3 ml-auto opacity-50" />
                 </div>
                 <p className="text-sm mb-2">{i.descricao}</p>
                 <div className="flex flex-wrap gap-4 text-xs text-muted-foreground">
